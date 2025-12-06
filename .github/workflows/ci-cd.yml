@@ -80,7 +80,7 @@ jobs:
         run: cd api && npm test
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: build
           path: |
@@ -116,7 +116,7 @@ jobs:
         run: npx playwright test
 
       - name: Upload E2E test report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright-report
@@ -319,7 +319,7 @@ jobs:
           npx playwright test
 
       - name: Upload Preview E2E test report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright-report-preview
@@ -580,7 +580,7 @@ jobs:
           npx playwright test
 
       - name: Upload QA E2E test report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright-report-qa

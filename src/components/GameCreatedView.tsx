@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Copy, Gift, Key, Users, WhatsappLogo, FacebookLogo, XLogo, MessengerLogo, ShareNetwork, Envelope, CircleNotch, CheckCircle, ShieldCheck, User } from '@phosphor-icons/react'
+import { Copy, Gift, Key, Users, WhatsappLogo, FacebookLogo, XLogo, MessengerLogo, ShareNetwork, Envelope, CircleNotch, CheckCircle, ShieldCheck, User, UserPlus } from '@phosphor-icons/react'
 import { Game } from '@/lib/types'
 import { useLanguage } from './useLanguage'
 import { copyToClipboard, buildShareableUrl } from '@/lib/game-utils'
@@ -377,6 +377,44 @@ export function GameCreatedView({ game, onContinue, emailResults }: GameCreatedV
                 {t('copyOrganizerLink')}
               </Button>
             </div>
+
+            {/* Invitation Link */}
+            {game.invitationToken && (
+              <div className="border-t pt-4 space-y-3">
+                <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <UserPlus size={24} className="text-green-600 shrink-0 mt-0.5" weight="duotone" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      {t('invitationLink')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t('invitationLinkDesc')}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-background rounded-md p-3 border">
+                  <p className="text-xs font-mono text-muted-foreground break-all select-all">
+                    {buildShareableUrl({ code: game.code, invitation: game.invitationToken, lang: language })}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await copyToClipboard(buildShareableUrl({ code: game.code, invitation: game.invitationToken, lang: language }))
+                      toast.success(t('invitationLinkCopied'))
+                    } catch (err) {
+                      console.error('Failed to copy:', err)
+                    }
+                  }}
+                  className="w-full gap-2"
+                >
+                  <Copy size={16} />
+                  {t('copyInvitationLink')}
+                </Button>
+              </div>
+            )}
 
             {/* Email Notifications Section - Only show if email is configured and there are emails */}
             {emailConfigured && (hasOrganizerEmail || participantsWithEmail > 0) && (

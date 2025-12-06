@@ -42,6 +42,7 @@ export interface Game {
   organizerToken: string
   organizerEmail?: string // Optional email for organizer notifications
   organizerLanguage?: Language // Preferred language for organizer email notifications (only stored when email service is configured)
+  invitationToken?: string // Token for invitation link to allow new participants to join
   createdAt: number
 }
 
@@ -150,6 +151,17 @@ export interface ConfirmAssignmentPayload {
   participantId: string
 }
 
+// Join via invitation action type
+export interface JoinInvitationPayload {
+  action: 'joinInvitation'
+  invitationToken: string
+  participantName: string
+  participantEmail?: string
+  desiredGift?: string
+  wish?: string
+  language?: Language
+}
+
 // Create game request types
 export interface CreateGameParticipant {
   name: string
@@ -189,3 +201,4 @@ export type GameUpdatePayload =
   | UpdateWishPayload
   | UpdateParticipantEmailPayload
   | ConfirmAssignmentPayload
+  | JoinInvitationPayload

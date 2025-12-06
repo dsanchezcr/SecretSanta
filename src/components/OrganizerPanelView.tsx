@@ -1494,6 +1494,38 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
                   </Button>
                 </div>
               </div>
+              
+              {/* Invitation Link */}
+              {game.invitationToken && (
+                <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <UserPlus size={18} className="text-green-600 dark:text-green-400" weight="duotone" />
+                    <p className="text-sm font-medium text-green-700 dark:text-green-300">{t('invitationLink')}</p>
+                  </div>
+                  <p className="text-xs text-green-600 dark:text-green-400 mb-2">{t('invitationLinkDesc')}</p>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={buildShareableUrl({ code: game.code, invitation: game.invitationToken, lang: language })}
+                      className="font-mono text-sm bg-white dark:bg-gray-950"
+                    />
+                    <Button 
+                      onClick={async () => {
+                        try {
+                          await copyToClipboard(buildShareableUrl({ code: game.code, invitation: game.invitationToken, lang: language }))
+                          toast.success(t('invitationLinkCopied'))
+                        } catch (err) {
+                          console.error('Failed to copy:', err)
+                        }
+                      }} 
+                      className="gap-2 shrink-0 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
+                    >
+                      <Copy size={16} />
+                      {t('copyInvitationLink')}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
         </motion.div>

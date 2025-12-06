@@ -41,6 +41,7 @@ export function buildShareableUrl(params: {
   code?: string
   organizer?: string
   participant?: string
+  invitation?: string
   lang?: Language
   view?: string
 }): string {
@@ -49,6 +50,7 @@ export function buildShareableUrl(params: {
   if (params.code) url.searchParams.set('code', params.code)
   if (params.organizer) url.searchParams.set('organizer', params.organizer)
   if (params.participant) url.searchParams.set('participant', params.participant)
+  if (params.invitation) url.searchParams.set('invitation', params.invitation)
   if (params.lang) url.searchParams.set('lang', params.lang)
   if (params.view) url.searchParams.set('view', params.view)
   

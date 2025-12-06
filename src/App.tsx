@@ -13,6 +13,7 @@ import { GameNotFoundView } from '@/components/GameNotFoundView'
 import { ErrorView, type ErrorType } from '@/components/ErrorView'
 import { OrganizerGuideView } from '@/components/OrganizerGuideView'
 import { ParticipantGuideView } from '@/components/ParticipantGuideView'
+import { JoinInvitationView } from '@/components/JoinInvitationView'
 import { Game, Participant } from '@/lib/types'
 import { useLocalStorage } from '@/hooks/use-local-storage'
 import { checkApiStatus, getGameAPI, CreateGameResponse } from '@/lib/api'
@@ -29,6 +30,7 @@ type View =
   | 'error'
   | 'organizer-guide'
   | 'participant-guide'
+  | 'join-invitation'
 
 type BannerType = 'none' | 'api-unavailable' | 'database-unavailable'
 
@@ -61,6 +63,7 @@ function App() {
   const [games, setGames] = useLocalStorage<Record<string, Game>>('games', {})
   const [currentGameCode, setCurrentGameCode] = useState<string>('')
   const [currentParticipant, setCurrentParticipant] = useState<Participant | null>(null)
+  const [currentInvitationToken, setCurrentInvitationToken] = useState<string>('')
   const [bannerType, setBannerType] = useState<BannerType>('none')
   const [emailConfigured, setEmailConfigured] = useState(false)
   const [emailResults, setEmailResults] = useState<CreateGameResponse['emailResults'] | undefined>(undefined)
@@ -238,6 +241,7 @@ function App() {
     const code = params.get('code')
     const organizerParam = params.get('organizer')
     const participantParam = params.get('participant')
+    const invitationParam = params.get('invitation')
     const viewParam = params.get('view')
 
     // Handle path-based navigation (for shareable guide links)
@@ -268,8 +272,13 @@ function App() {
       return
     }
 
-    // If both code and organizer token are present, it's an organizer access
-    if (code && organizerParam) {
+    // If both code and invitation token are present, it's a join invitation
+    if (code && invitationParam) {
+      setCurrentGameCode(code)
+      setCurrentInvitationToken(invitationParam)
+      setTimeout(() => setView('join-invitation'), 0)
+    } else if (code && organizerParam) {
+      // If both code and organizer token are present, it's an organizer access
       setTimeout(() => handleOrganizerAccess(code, organizerParam), 0)
     } else if (code && participantParam) {
       // Participant with unique token - direct access to their assignment
@@ -412,6 +421,22 @@ function App() {
     }
   }, [currentGameCode, handleJoinGame])
 
+  const handleJoinInvitationSuccess = (game: Game, participantId: string) => {
+    // Save the game to local storage
+    setGames((currentGames) => ({
+      ...currentGames,
+      [game.code]: game
+    }))
+    
+    // Find the participant and set as current
+    const participant = game.participants.find(p => p.id === participantId)
+    if (participant) {
+      setCurrentParticipant(participant)
+      setCurrentGameCode(game.code)
+      setView('assignment')
+    }
+  }
+
   const currentGame = games?.[currentGameCode]
 
   return (
@@ -506,6 +531,15 @@ function App() {
 
           {view === 'participant-guide' && (
             <ParticipantGuideView onBack={handleBack} />
+          )}
+
+          {view === 'join-invitation' && currentGameCode && currentInvitationToken && (
+            <JoinInvitationView
+              gameCode={currentGameCode}
+              invitationToken={currentInvitationToken}
+              onJoinSuccess={handleJoinInvitationSuccess}
+              onBack={handleBack}
+            />
           )}
         </div>
         <Toaster position="top-center" />

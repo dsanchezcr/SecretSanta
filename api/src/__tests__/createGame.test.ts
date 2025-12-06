@@ -337,4 +337,125 @@ describe('createGame function', () => {
       expect(uniqueTokens.size).toBe(tokens.length)
     })
   })
+
+  describe('date validation', () => {
+    it('should accept today\'s date', async () => {
+      const today = new Date()
+      const dateStr = today.toISOString().split('T')[0] // YYYY-MM-DD format
+      
+      const requestBody = {
+        name: 'Today\'s Game',
+        date: dateStr,
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      const game = response.jsonBody as Game
+      expect(game.date).toBe(dateStr)
+    })
+
+    it('should accept future dates', async () => {
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + 30)
+      const dateStr = futureDate.toISOString().split('T')[0]
+      
+      const requestBody = {
+        name: 'Future Game',
+        date: dateStr,
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      const game = response.jsonBody as Game
+      expect(game.date).toBe(dateStr)
+    })
+
+    it('should reject past dates', async () => {
+      const pastDate = new Date()
+      pastDate.setDate(pastDate.getDate() - 1)
+      const dateStr = pastDate.toISOString().split('T')[0]
+      
+      const requestBody = {
+        name: 'Past Game',
+        date: dateStr,
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Event date must be today or in the future'
+      })
+    })
+
+    it('should correctly parse dates regardless of server timezone', async () => {
+      // Test that a date string like "2025-12-21" is correctly interpreted
+      // as Dec 21 in local timezone, not as UTC midnight (which could shift to Dec 20)
+      const dateStr = '2025-12-21'
+      
+      const requestBody = {
+        name: 'Christmas 2025',
+        date: dateStr,
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      const game = response.jsonBody as Game
+      // The date should be stored as-is without timezone conversion
+      expect(game.date).toBe('2025-12-21')
+    })
+
+    it('should handle date validation with YYYY-MM-DD format correctly', async () => {
+      // Specific test for the bug: selecting Dec 21 should create game for Dec 21, not Dec 20
+      const testDate = '2025-12-21'
+      
+      const requestBody = {
+        name: 'Test Date Bug',
+        date: testDate,
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      const game = response.jsonBody as Game
+      expect(game.date).toBe(testDate)
+      
+      // Verify the date wasn't shifted by timezone conversion
+      expect(game.date).not.toBe('2025-12-20')
+      expect(game.date).not.toBe('2025-12-22')
+    })
+  })
 })

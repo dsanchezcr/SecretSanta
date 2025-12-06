@@ -45,8 +45,15 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
     if (body.date) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const eventDate = new Date(body.date)
-      eventDate.setHours(0, 0, 0, 0)
+      
+      // Parse YYYY-MM-DD format correctly to avoid timezone issues
+      // Split the date string and create date in local timezone
+      const dateParts = body.date.split('-')
+      const eventDate = new Date(
+        parseInt(dateParts[0], 10),  // year
+        parseInt(dateParts[1], 10) - 1,  // month (0-indexed)
+        parseInt(dateParts[2], 10)  // day
+      )
       
       if (eventDate < today) {
         const error = createErrorResponse(

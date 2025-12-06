@@ -92,6 +92,7 @@ export function ParticipantGuideView({ onBack }: ParticipantGuideViewProps) {
               <li>{t('guideWishItem1')}</li>
               <li>{t('guideWishItem2')}</li>
               <li>{t('guideWishItem3')}</li>
+              <li>{t('guideWishItem4')}</li>
             </ul>
           </div>
         </Card>

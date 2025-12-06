@@ -50,8 +50,8 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       // Validate format and split the date string
       const dateParts = body.date.split('-')
       
-      // Validate we have exactly 3 parts and each part is a valid integer without whitespace
-      if (dateParts.length !== 3 || !dateParts.every(part => /^\d+$/.test(part))) {
+      // Validate strict YYYY-MM-DD format (4-digit year, 2-digit month, 2-digit day)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
         const error = createErrorResponse(
           ApiErrorCode.VALIDATION_ERROR,
           'Invalid date format. Expected YYYY-MM-DD',
@@ -93,7 +93,7 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       ) {
         const error = createErrorResponse(
           ApiErrorCode.VALIDATION_ERROR,
-          'Invalid calendar date',
+          'Invalid calendar date. The date does not exist (e.g., February 31, April 31).',
           undefined,
           requestId
         )

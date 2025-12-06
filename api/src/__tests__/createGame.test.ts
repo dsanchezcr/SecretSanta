@@ -516,7 +516,46 @@ describe('createGame function', () => {
       // Should reject the invalid calendar date
       expect(response.status).toBe(400)
       expect(response.jsonBody).toEqual({
-        error: 'Invalid calendar date'
+        error: 'Invalid calendar date. The date does not exist (e.g., February 31, April 31).'
+      })
+    })
+
+    it('should accept February 29th in leap year', async () => {
+      const requestBody = {
+        name: 'Leap Year Date',
+        date: '2028-02-29',  // 2028 is a leap year (future date)
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      const game = response.jsonBody as Game
+      expect(game.date).toBe('2028-02-29')
+    })
+
+    it('should reject February 29th in non-leap year', async () => {
+      const requestBody = {
+        name: 'Non-Leap Year Date',
+        date: '2025-02-29',  // 2025 is not a leap year
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid calendar date. The date does not exist (e.g., February 31, April 31).'
       })
     })
 
@@ -599,5 +638,46 @@ describe('createGame function', () => {
         error: 'Invalid date values. Year must be 1900-2100, month 1-12, day 1-31'
       })
     })
+
+    it('should reject date without leading zeros', async () => {
+      const requestBody = {
+        name: 'No Leading Zeros',
+        date: '2025-1-5',  // Should be 2025-01-05
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      })
+    })
+
+    it('should reject date with extra digits in year', async () => {
+      const requestBody = {
+        name: 'Extra Year Digits',
+        date: '02025-01-01',  // 5-digit year
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      })
+    })
+
   })
 })

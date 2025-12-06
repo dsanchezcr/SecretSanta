@@ -213,6 +213,49 @@ test.describe('Core User Flows', () => {
     await expect(page.getByRole('heading', { name: /privacy|privacidad|confidentialité/i })).toBeVisible()
   })
 
+  test('should navigate directly to guide pages via path-based URLs', async ({ page }) => {
+    // Test organizer guide via path-based URL (direct link sharing)
+    await page.goto('/organizer-guide')
+    await expect(page.getByRole('heading', { name: /organizer guide|guía del organizador|guide de l'organisateur/i })).toBeVisible()
+    
+    // Verify URL is correct
+    expect(page.url()).toContain('/organizer-guide')
+    
+    // Navigate back to home
+    await page.getByRole('button', { name: /back|atrás|retour/i }).click()
+    await expect(page.getByRole('heading', { name: /secret santa|amigo secreto/i })).toBeVisible()
+    
+    // Test participant guide via path-based URL
+    await page.goto('/participant-guide')
+    await expect(page.getByRole('heading', { name: /participant guide|guía del participante|guide du participant/i })).toBeVisible()
+    expect(page.url()).toContain('/participant-guide')
+    
+    // Test privacy page via path-based URL
+    await page.goto('/privacy')
+    await expect(page.getByRole('heading', { name: /privacy|privacidad|confidentialité/i })).toBeVisible()
+    expect(page.url()).toContain('/privacy')
+  })
+
+  test('should preserve language parameter in path-based URLs', async ({ page }) => {
+    // Test organizer guide with Spanish language
+    await page.goto('/organizer-guide?lang=es')
+    await expect(page.getByRole('heading', { name: /guía del organizador/i })).toBeVisible()
+    expect(page.url()).toContain('/organizer-guide')
+    expect(page.url()).toContain('lang=es')
+    
+    // Test participant guide with German language
+    await page.goto('/participant-guide?lang=de')
+    await expect(page.getByRole('heading', { name: /teilnehmer.leitfaden/i })).toBeVisible()
+    expect(page.url()).toContain('/participant-guide')
+    expect(page.url()).toContain('lang=de')
+    
+    // Test privacy page with French language
+    await page.goto('/privacy?lang=fr')
+    await expect(page.getByRole('heading', { name: /confidentialité/i })).toBeVisible()
+    expect(page.url()).toContain('/privacy')
+    expect(page.url()).toContain('lang=fr')
+  })
+
   test('should display protected game configuration', async ({ page }) => {
     await page.goto('/')
     

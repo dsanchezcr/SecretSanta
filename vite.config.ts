@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import fs from 'node:fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -32,12 +33,38 @@ const suppressCSSWarnings = {
   }
 }
 
+// Custom plugin to copy staticwebapp.config.json to dist folder
+const copyStaticWebAppConfig = {
+  name: 'copy-staticwebapp-config',
+  apply: 'build',
+  closeBundle() {
+    const source = path.resolve(__dirname, 'staticwebapp.config.json')
+    const dest = path.resolve(__dirname, 'dist', 'staticwebapp.config.json')
+    
+    // Ensure the source file exists
+    if (!fs.existsSync(source)) {
+      console.warn('⚠ Warning: staticwebapp.config.json not found, skipping copy')
+      return
+    }
+    
+    // Ensure the dist directory exists
+    const distDir = path.dirname(dest)
+    if (!fs.existsSync(distDir)) {
+      fs.mkdirSync(distDir, { recursive: true })
+    }
+    
+    fs.copyFileSync(source, dest)
+    console.log('✓ Copied staticwebapp.config.json to dist/')
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     suppressCSSWarnings,
+    copyStaticWebAppConfig,
   ],
   resolve: {
     alias: {

@@ -45,8 +45,63 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
     if (body.date) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const eventDate = new Date(body.date)
-      eventDate.setHours(0, 0, 0, 0)
+      
+      // Parse YYYY-MM-DD format correctly to avoid timezone issues
+      // Validate format and split the date string
+      const dateParts = body.date.split('-')
+      
+      // Validate strict YYYY-MM-DD format (4-digit year, 2-digit month, 2-digit day)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
+        const error = createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          'Invalid date format. Expected YYYY-MM-DD',
+          undefined,
+          requestId
+        )
+        return {
+          status: getHttpStatusForError(ApiErrorCode.VALIDATION_ERROR),
+          jsonBody: { error: error.message }
+        }
+      }
+      
+      const year = parseInt(dateParts[0], 10)
+      const month = parseInt(dateParts[1], 10)
+      const day = parseInt(dateParts[2], 10)
+      
+      // Validate reasonable ranges for date components
+      if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+        const error = createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          'Invalid date values. Year must be 1900-2100, month 1-12, day 1-31',
+          undefined,
+          requestId
+        )
+        return {
+          status: getHttpStatusForError(ApiErrorCode.VALIDATION_ERROR),
+          jsonBody: { error: error.message }
+        }
+      }
+      
+      // Create date in local timezone
+      const eventDate = new Date(year, month - 1, day)
+      
+      // Reject if date was normalized (e.g., Feb 31 -> Mar 3)
+      if (
+        eventDate.getFullYear() !== year ||
+        eventDate.getMonth() !== month - 1 ||
+        eventDate.getDate() !== day
+      ) {
+        const error = createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          'Invalid calendar date. The date does not exist (e.g., February 31, April 31).',
+          undefined,
+          requestId
+        )
+        return {
+          status: getHttpStatusForError(ApiErrorCode.VALIDATION_ERROR),
+          jsonBody: { error: error.message }
+        }
+      }
       
       if (eventDate < today) {
         const error = createErrorResponse(

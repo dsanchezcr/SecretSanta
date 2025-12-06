@@ -1446,7 +1446,7 @@ describe('updateGame function', () => {
       
       const updatedGame = mockUpdateGame.mock.calls[0][0]
       // All participants should have cleared states
-      updatedGame.participants.forEach((p: any) => {
+      updatedGame.participants.forEach((p: { hasConfirmedAssignment: boolean; hasPendingReassignmentRequest: boolean }) => {
         expect(p.hasConfirmedAssignment).toBe(false)
         expect(p.hasPendingReassignmentRequest).toBe(false)
       })

@@ -85,6 +85,11 @@ export function setAnalyticsDeclined(): void {
  * Initialize Google Analytics if consent is given and in production
  */
 export function initializeAnalytics(): void {
+  // Check if running in browser environment
+  if (typeof window === 'undefined') {
+    return
+  }
+
   // Only load in production environment
   if (!isProduction) {
     return
@@ -124,6 +129,8 @@ export function initializeAnalytics(): void {
  * Track a page view (only if analytics is initialized)
  */
 export function trackPageView(page: string): void {
+  if (typeof window === 'undefined') return
+
   if (window.gtag && isProduction && hasAnalyticsConsent()) {
     window.gtag('event', 'page_view', {
       page_path: page,

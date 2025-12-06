@@ -11,7 +11,8 @@ import { hasAnalyticsConsent, hasDeclinedAnalytics, setAnalyticsConsent, setAnal
 export function CookieConsentBanner() {
   const { t } = useLanguage()
   const [isVisible, setIsVisible] = useState(() => {
-    // Check if user has already made a choice
+    // Check if user has already made a choice (SSR-safe)
+    if (typeof window === 'undefined') return false
     return !hasAnalyticsConsent() && !hasDeclinedAnalytics()
   })
 

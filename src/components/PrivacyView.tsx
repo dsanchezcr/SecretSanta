@@ -14,7 +14,11 @@ interface PrivacyViewProps {
 
 export function PrivacyView({ onBack }: PrivacyViewProps) {
   const { t } = useLanguage()
-  const [analyticsConsent, setAnalyticsConsentState] = useState(hasAnalyticsConsent())
+  const [analyticsConsent, setAnalyticsConsentState] = useState(() => {
+    // Initialize from localStorage on mount (SSR-safe)
+    if (typeof window === 'undefined') return false
+    return hasAnalyticsConsent()
+  })
 
   const handleConsentChange = (consent: boolean) => {
     if (consent) {

@@ -113,7 +113,7 @@ export function initializeAnalytics(): void {
   // Load gtag.js script
   const script = document.createElement('script')
   script.async = true
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_TRACKING_ID)}`
   document.head.appendChild(script)
 
   // Initialize dataLayer

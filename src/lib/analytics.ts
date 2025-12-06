@@ -2,8 +2,9 @@
  * Google Analytics integration with consent management
  */
 
-// Google Analytics tracking ID (only used in production)
-const GA_TRACKING_ID = 'G-B2K4GQ481R'
+// Google Analytics tracking ID from environment variable
+// Falls back to production tracking ID if not set
+const GA_TRACKING_ID = import.meta.env.VITE_GA_TRACKING_ID || 'G-B2K4GQ481R'
 
 // Check if we're in production environment
 const isProduction = import.meta.env.PROD
@@ -76,6 +77,12 @@ export function initializeAnalytics(): void {
   // Only load in production environment
   if (!isProduction) {
     console.log('[Analytics] Disabled in non-production environment')
+    return
+  }
+
+  // Check if tracking ID is configured
+  if (!GA_TRACKING_ID) {
+    console.log('[Analytics] No tracking ID configured')
     return
   }
 

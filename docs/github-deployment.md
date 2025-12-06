@@ -850,14 +850,30 @@ This application includes optional Google Analytics for anonymous usage tracking
 - **Requires user consent**: A cookie consent banner appears on first visit, requiring explicit user approval
 - **GDPR compliant**: Users can decline analytics or opt out at any time via the Privacy Policy page
 - **Anonymous data only**: Collects page views and interaction patterns without identifying users
-- **Tracking ID**: Hardcoded as `G-B2K4GQ481R` in `src/lib/analytics.ts`
+- **Tracking ID**: Configured via `VITE_GA_TRACKING_ID` environment variable, defaults to `G-B2K4GQ481R`
+
+**Configuring the tracking ID:**
+
+You can customize the Google Analytics tracking ID using environment variables:
+
+```bash
+# During build (production)
+VITE_GA_TRACKING_ID=G-YOUR-TRACKING-ID npm run build
+
+# In Azure Static Web Apps, set as an application setting:
+# Settings → Configuration → Application settings
+# Name: VITE_GA_TRACKING_ID
+# Value: G-YOUR-TRACKING-ID
+```
+
+If `VITE_GA_TRACKING_ID` is not set, it defaults to `G-B2K4GQ481R`. To disable analytics entirely, set `VITE_GA_TRACKING_ID` to an empty string or don't set it at all (the default will still be used, so delete the fallback in `src/lib/analytics.ts` if you want complete removal).
 
 **Privacy implications for self-hosted deployments:**
 
 If you deploy this application for your organization:
 1. Review your local privacy regulations (GDPR, CCPA, etc.)
 2. Consider whether analytics are needed for your use case
-3. Update the tracking ID if using a different Google Analytics property
+3. Set `VITE_GA_TRACKING_ID` to your own Google Analytics property ID
 4. Ensure your privacy policy reflects the use of Google Analytics
 5. The application stores user consent preferences in browser localStorage
 
@@ -868,8 +884,9 @@ Analytics are automatically disabled in:
 - PR preview environments
 - QA environment
 - When users decline consent
+- When `VITE_GA_TRACKING_ID` is not configured (and default is removed)
 
-To completely remove analytics, delete `src/lib/analytics.ts` and remove the import from `src/App.tsx`.
+To completely remove analytics functionality, delete `src/lib/analytics.ts` and remove the import from `src/App.tsx`.
 
 ---
 

@@ -201,6 +201,7 @@ function App() {
         setView('select-participant')
       } catch {
         setView('game-not-found')
+        return
       }
     } finally {
       setIsLoadingGame(false)

@@ -7,6 +7,9 @@
 // If unset or empty, analytics are completely disabled
 const GA_TRACKING_ID = import.meta.env.VITE_GA_TRACKING_ID || ''
 
+// Google Analytics ID pattern (GA4 format: G-XXXXXXXXXX)
+const GA_ID_PATTERN = /^G-[A-Z0-9]+$/
+
 // Check if we're in production environment
 const isProduction = import.meta.env.PROD
 
@@ -41,8 +44,8 @@ export function setAnalyticsConsent(consent: boolean): void {
       window.localStorage.removeItem(DECLINED_KEY)
       initializeAnalytics()
     }
-  } catch (error) {
-    console.warn('Error saving analytics consent:', error)
+  } catch {
+    // Silently fail if localStorage is unavailable
   }
 }
 
@@ -66,8 +69,15 @@ export function setAnalyticsDeclined(): void {
   try {
     window.localStorage.setItem(DECLINED_KEY, 'true')
     window.localStorage.removeItem(CONSENT_KEY)
-  } catch (error) {
-    console.warn('Error saving analytics declined:', error)
+    
+    // Disable gtag if already loaded
+    if (window.gtag) {
+      window.gtag('consent', 'update', {
+        'analytics_storage': 'denied'
+      })
+    }
+  } catch {
+    // Silently fail if localStorage is unavailable
   }
 }
 
@@ -80,8 +90,8 @@ export function initializeAnalytics(): void {
     return
   }
 
-  // Check if tracking ID is configured
-  if (!GA_TRACKING_ID || GA_TRACKING_ID.trim() === '') {
+  // Check if tracking ID is configured and valid
+  if (!GA_TRACKING_ID || GA_TRACKING_ID.trim() === '' || !GA_ID_PATTERN.test(GA_TRACKING_ID)) {
     return
   }
 

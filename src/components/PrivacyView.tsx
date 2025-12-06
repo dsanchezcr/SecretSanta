@@ -176,6 +176,7 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
                 <div className="flex gap-2">
                   {!analyticsConsent && (
                     <Button
+                      type="button"
                       size="sm"
                       onClick={() => handleConsentChange(true)}
                       className="flex-1 sm:flex-none"
@@ -185,6 +186,7 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
                   )}
                   {analyticsConsent && (
                     <Button
+                      type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => handleConsentChange(false)}

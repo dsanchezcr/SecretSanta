@@ -884,7 +884,7 @@ Analytics are automatically disabled in:
 - PR preview environments
 - QA environment
 - When users decline consent
-- When `VITE_GA_TRACKING_ID` is not configured (and default is removed)
+- When `VITE_GA_TRACKING_ID` is not configured (defaults to empty/disabled)
 
 To completely remove analytics functionality, delete `src/lib/analytics.ts` and remove the import from `src/App.tsx`.
 

@@ -1,0 +1,62 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "dsanchezcr"
+    labels:
+      - "dependencies"
+      - "frontend"
+    groups:
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react*"
+
+  - package-ecosystem: "npm"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:30"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "dsanchezcr"
+    labels:
+      - "dependencies"
+      - "api"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    reviewers:
+      - "dsanchezcr"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  - package-ecosystem: "devcontainers"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    reviewers:
+      - "dsanchezcr"
+    labels:
+      - "dependencies"
+      - "devcontainers"

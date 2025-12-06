@@ -1,0 +1,40 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug API (Azure Functions)",
+            "type": "node",
+            "request": "attach",
+            "restart": true,
+            "port": 9229,
+            "skipFiles": ["<node_internals>/**"],
+            "presentation": {
+                "hidden": true
+            }
+        },
+        {
+            "name": "Debug Frontend (Vite)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev"],
+            "console": "integratedTerminal",
+            "presentation": {
+                "hidden": true
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "🚀 Full Stack (Frontend + API + Emulators)",
+            "configurations": ["Debug API (Azure Functions)", "Debug Frontend (Vite)"],
+            "stopAll": true,
+            "preLaunchTask": "full-stack-start",
+            "presentation": {
+                "hidden": false,
+                "group": "Debug",
+                "order": 1
+            }
+        }
+    ]
+}

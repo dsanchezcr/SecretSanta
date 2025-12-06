@@ -1,0 +1,766 @@
+# ============================================================================
+# Secret Santa - CI/CD Pipeline
+# ============================================================================
+# Environment Strategy:
+# - PR: Ephemeral resource group per PR (auto-created and deleted)
+# - QA: Isolated resource group (`secretsanta-qa`) (deployed on main)
+# - Prod: Production environment (deployed on main after QA E2E tests pass)
+# 
+# Note: Staging environments are ENABLED for GitHub Actions deployments.
+#       When deploying via deployment token, the action requires staging support.
+#
+# Pipeline Flow:
+# 1. Build & Test (lint, build, unit tests)
+# 2. E2E Tests (runs against local dev server)
+# 3. Deploy Infrastructure (PR or QA)
+# 4. Deploy Application (Preview, QA, or Production)
+# 5. E2E Tests against QA (validates deployed environment)
+# 6. Deploy to Production (after QA E2E pass)
+#
+# Infrastructure is auto-provisioned with all environment variables configured:
+# - Cosmos DB connection
+# - Application Insights
+# - Azure Communication Services (if enabled)
+# ============================================================================
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  AZURE_LOCATION: 'centralus'
+  PROJECT_NAME: 'secretsanta'
+  AZURE_RESOURCE_GROUP: 'secretsanta'
+  AZURE_QA_RESOURCE_GROUP: 'secretsanta-qa'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ==========================================================================
+  # BUILD & TEST
+  # ==========================================================================
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd api && npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build API
+        run: cd api && npm run build
+
+      - name: Run API tests
+        run: cd api && npm test
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: build
+          path: |
+            dist/
+            api/dist/
+          retention-days: 1
+
+  # ==========================================================================
+  # E2E TESTS (runs against local dev server)
+  # ==========================================================================
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npx playwright test
+
+      - name: Upload E2E test report
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: E2E Test Summary
+        if: always()
+        run: |
+          echo "## 🎭 E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f playwright-report/results.json ]; then
+            # Parse results from JSON
+            TOTAL=$(jq '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped' playwright-report/results.json)
+            PASSED=$(jq '.stats.expected' playwright-report/results.json)
+            FAILED=$(jq '.stats.unexpected' playwright-report/results.json)
+            FLAKY=$(jq '.stats.flaky' playwright-report/results.json)
+            SKIPPED=$(jq '.stats.skipped' playwright-report/results.json)
+            DURATION=$(jq '.stats.duration' playwright-report/results.json)
+            DURATION_SEC=$(echo "scale=2; $DURATION / 1000" | bc)
+            
+            if [ "$FAILED" -eq 0 ]; then
+              echo "### ✅ All Tests Passed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "### ❌ Some Tests Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| ✅ Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
+            echo "| ❌ Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⚠️ Flaky | $FLAKY |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⏭️ Skipped | $SKIPPED |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Total** | **$TOTAL** |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⏱️ **Duration:** ${DURATION_SEC}s" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # List failed tests if any
+            if [ "$FAILED" -gt 0 ]; then
+              echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              jq -r '.suites[].suites[]?.specs[]? | select(.ok == false) | "- ❌ \(.title)"' playwright-report/results.json >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+              jq -r '.suites[].specs[]? | select(.ok == false) | "- ❌ \(.title)"' playwright-report/results.json >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ E2E tests may have failed. Check the logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 **Full Report:** Download the \`playwright-report\` artifact for detailed HTML report." >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # PR INFRASTRUCTURE DEPLOYMENT
+  # ==========================================================================
+  deploy-pr-infrastructure:
+    name: Deploy PR Infrastructure
+    runs-on: ubuntu-latest
+    needs: e2e
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    outputs:
+      resource_group: ${{ steps.rg.outputs.name }}
+      static_web_app_token: ${{ steps.infra.outputs.deploymentToken }}
+      static_web_app_url: ${{ steps.infra.outputs.staticWebAppUrl }}
+      static_web_app_name: ${{ steps.infra.outputs.staticWebAppName }}
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create Resource Group for PR
+        id: rg
+        run: |
+          RG_NAME="${{ env.PROJECT_NAME }}-pr-${{ github.event.pull_request.number }}"
+          echo "name=$RG_NAME" >> $GITHUB_OUTPUT
+          az group create --name "$RG_NAME" --location "${{ env.AZURE_LOCATION }}" --tags "pr=${{ github.event.pull_request.number }}" "repo=${{ github.repository }}"
+          echo "✅ Created resource group: $RG_NAME"
+
+      - name: Validate PR Infrastructure
+        run: |
+          echo "Validating PR Bicep template..."
+          az deployment group validate \
+            --resource-group ${{ steps.rg.outputs.name }} \
+            --template-file ./infra/main.bicep \
+            --parameters \
+              projectName=${{ env.PROJECT_NAME }} \
+              environment=pr \
+              prNumber=${{ github.event.pull_request.number }} \
+              staticWebAppSku=Free \
+              enableEmailService=false \
+              repositoryUrl=https://github.com/${{ github.repository }} \
+              repositoryBranch=${{ github.head_ref }} \
+              deploymentId=pr-${{ github.event.pull_request.number }}
+          echo "✅ PR template validation passed"
+
+      - name: Deploy Infrastructure
+        id: infra
+        uses: azure/arm-deploy@v2
+        with:
+          scope: resourcegroup
+          resourceGroupName: ${{ steps.rg.outputs.name }}
+          template: ./infra/main.bicep
+          parameters: >
+            projectName=${{ env.PROJECT_NAME }}
+            environment=pr
+            prNumber=${{ github.event.pull_request.number }}
+            staticWebAppSku=Free
+            enableEmailService=false
+            repositoryUrl=https://github.com/${{ github.repository }}
+            repositoryBranch=${{ github.head_ref }}
+            deploymentId=pr-${{ github.event.pull_request.number }}
+          deploymentMode: Incremental
+          failOnStdErr: true
+
+      - name: Output Infrastructure Details
+        run: |
+          echo "## 🏗️ PR Infrastructure Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource Group | \`${{ steps.rg.outputs.name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Static Web App | ${{ steps.infra.outputs.staticWebAppUrl }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cosmos DB | ${{ steps.infra.outputs.cosmosAccountName }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| App Insights | ${{ steps.infra.outputs.appInsightsName }} |" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # PR PREVIEW DEPLOYMENT
+  # ==========================================================================
+  preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: deploy-pr-infrastructure
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.static_web_app_url }}
+    environment:
+      name: pr
+      url: ${{ steps.deploy.outputs.static_web_app_url }}
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+
+      - name: Deploy to Preview
+        id: deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ needs.deploy-pr-infrastructure.outputs.static_web_app_token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: dist
+          api_location: api
+          output_location: .
+          skip_app_build: true
+          skip_api_build: false
+
+  # ==========================================================================
+  # E2E TESTS AGAINST PR PREVIEW ENVIRONMENT
+  # ==========================================================================
+  e2e-pr:
+    name: E2E Tests (Preview)
+    runs-on: ubuntu-latest
+    needs: [preview]
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for preview deployment to stabilize
+        run: |
+          echo "Waiting 30 seconds for preview deployment to stabilize..."
+          sleep 30
+
+      - name: Run E2E tests against Preview
+        env:
+          BASE_URL: ${{ needs.preview.outputs.preview_url }}
+        run: |
+          echo "Running E2E tests against Preview: $BASE_URL"
+          npx playwright test
+
+      - name: Upload Preview E2E test report
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: playwright-report-preview
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Preview E2E Test Summary
+        if: always()
+        run: |
+          echo "## 🎭 Preview E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tested URL:** ${{ needs.preview.outputs.preview_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f playwright-report/results.json ]; then
+            # Parse results from JSON
+            TOTAL=$(jq '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped' playwright-report/results.json)
+            PASSED=$(jq '.stats.expected' playwright-report/results.json)
+            FAILED=$(jq '.stats.unexpected' playwright-report/results.json)
+            FLAKY=$(jq '.stats.flaky' playwright-report/results.json)
+            SKIPPED=$(jq '.stats.skipped' playwright-report/results.json)
+            DURATION=$(jq '.stats.duration' playwright-report/results.json)
+            DURATION_SEC=$(echo "scale=2; $DURATION / 1000" | bc)
+            
+            if [ "$FAILED" -eq 0 ]; then
+              echo "### ✅ All Tests Passed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "### ❌ Some Tests Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| ✅ Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
+            echo "| ❌ Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⚠️ Flaky | $FLAKY |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⏭️ Skipped | $SKIPPED |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Total** | **$TOTAL** |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⏱️ **Duration:** ${DURATION_SEC}s" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # List failed tests if any
+            if [ "$FAILED" -gt 0 ]; then
+              echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              jq -r '.suites[].suites[]?.specs[]? | select(.ok == false) | "- ❌ \(.title)"' playwright-report/results.json >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+              jq -r '.suites[].specs[]? | select(.ok == false) | "- ❌ \(.title)"' playwright-report/results.json >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ Preview E2E tests may have failed. Check the logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 **Full Report:** Download the \`playwright-report-preview\` artifact for detailed HTML report." >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # CLOSE PR - DELETE INFRASTRUCTURE
+  # ==========================================================================
+  close-preview:
+    name: Close Preview & Delete Infrastructure
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Delete Resource Group
+        run: |
+          RG_NAME="${{ env.PROJECT_NAME }}-pr-${{ github.event.pull_request.number }}"
+          echo "🗑️ Deleting resource group: $RG_NAME"
+          az group delete --name "$RG_NAME" --yes --no-wait
+          echo "✅ Resource group deletion initiated (running in background)"
+
+      - name: Comment PR
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const rg = '${{ env.PROJECT_NAME }}-pr-${{ github.event.pull_request.number }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🧹 Preview Environment Cleaned Up\n\nResource group \`${rg}\` is being deleted.\n\n_All Azure resources for this PR have been removed._`
+            });
+
+  # ==========================================================================
+  # DEPLOY QA INFRASTRUCTURE (Isolated resource group)
+  # ==========================================================================
+  deploy-qa-infrastructure:
+    name: Deploy QA Infrastructure
+    runs-on: ubuntu-latest
+    needs: e2e
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    outputs:
+      resource_group: ${{ steps.rg.outputs.name }}
+      static_web_app_url: ${{ steps.infra.outputs.staticWebAppUrl }}
+      static_web_app_name: ${{ steps.infra.outputs.staticWebAppName }}
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create/Verify QA Resource Group
+        id: rg
+        run: |
+          RG_NAME="${{ env.AZURE_QA_RESOURCE_GROUP }}"
+          echo "name=$RG_NAME" >> $GITHUB_OUTPUT
+          az group create --name "$RG_NAME" --location "${{ env.AZURE_LOCATION }}" --tags "environment=qa" "project=${{ env.PROJECT_NAME }}"
+          echo "✅ QA resource group ready: $RG_NAME"
+
+      - name: Validate QA Infrastructure
+        id: validate
+        run: |
+          echo "Validating Bicep template for QA environment..."
+          az deployment group validate \
+            --resource-group ${{ steps.rg.outputs.name }} \
+            --template-file ./infra/main.bicep \
+            --parameters ./infra/parameters.qa.json deploymentId=qa-stable
+          echo "✅ Template validation passed"
+
+      - name: Deploy QA Infrastructure
+        id: infra
+        uses: azure/arm-deploy@v2
+        with:
+          scope: resourcegroup
+          resourceGroupName: ${{ steps.rg.outputs.name }}
+          template: ./infra/main.bicep
+          parameters: ./infra/parameters.qa.json deploymentId=qa-stable
+          deploymentMode: Incremental
+          failOnStdErr: true
+
+      - name: Verify QA Resources
+        run: |
+          echo "Verifying QA resources in dedicated resource group..."
+          RG="${{ steps.rg.outputs.name }}"
+          COSMOS=$(az cosmosdb show --name "${{ steps.infra.outputs.cosmosAccountName }}" --resource-group "$RG" 2>/dev/null && echo "✅ Cosmos DB (Free Tier)" || echo "❌ Cosmos DB missing")
+          SWA=$(az staticwebapp show --name "${{ steps.infra.outputs.staticWebAppName }}" --resource-group "$RG" 2>/dev/null && echo "✅ Static Web App (Free)" || echo "❌ Static Web App missing")
+          INSIGHTS=$(az monitor app-insights component show --app "${{ steps.infra.outputs.appInsightsName }}" --resource-group "$RG" 2>/dev/null && echo "✅ App Insights" || echo "❌ App Insights missing")
+          echo "$COSMOS"
+          echo "$SWA"
+          echo "$INSIGHTS"
+          echo ""
+          echo "📋 QA deployment complete - isolated environment ready"
+
+      - name: QA Infrastructure Summary
+        run: |
+          echo "## 🏗️ QA Infrastructure Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource Group | \`${{ steps.rg.outputs.name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Static Web App | ${{ steps.infra.outputs.staticWebAppUrl }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cosmos DB | \`${{ steps.infra.outputs.cosmosAccountName }}\` (Free Tier) |" >> $GITHUB_STEP_SUMMARY
+          echo "| App Insights | \`${{ steps.infra.outputs.appInsightsName }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tier:** Free (isolated from production)" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # QA DEPLOYMENT
+  # ==========================================================================
+  deploy-qa:
+    name: Deploy to QA
+    runs-on: ubuntu-latest
+    needs: deploy-qa-infrastructure
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    outputs:
+      deployed_url: ${{ steps.deploy.outputs.static_web_app_url }}
+    environment:
+      name: qa
+      url: ${{ steps.deploy.outputs.static_web_app_url }}
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+
+      - name: Get Static Web App Token
+        id: swa-token
+        run: |
+          TOKEN=$(az staticwebapp secrets list --name "${{ needs.deploy-qa-infrastructure.outputs.static_web_app_name }}" --resource-group "${{ needs.deploy-qa-infrastructure.outputs.resource_group }}" --query "properties.apiKey" -o tsv)
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Deploy to QA
+        id: deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: dist
+          api_location: api
+          output_location: .
+          skip_app_build: true
+          skip_api_build: false
+
+      - name: QA Deployment Summary
+        run: |
+          echo "## 🟢 QA Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.deploy.outputs.static_web_app_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Resource Group:** \`${{ needs.deploy-qa-infrastructure.outputs.resource_group }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Resources (Free Tier):" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Static Web App (Free)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Cosmos DB (Free Tier)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Application Insights" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Azure Communication Services" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # E2E TESTS AGAINST QA ENVIRONMENT
+  # ==========================================================================
+  e2e-qa:
+    name: E2E Tests (QA)
+    runs-on: ubuntu-latest
+    needs: [deploy-qa, deploy-qa-infrastructure]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for QA deployment to stabilize
+        run: |
+          echo "Waiting 30 seconds for QA deployment to stabilize..."
+          sleep 30
+
+      - name: Run E2E tests against QA
+        env:
+          BASE_URL: ${{ needs.deploy-qa.outputs.deployed_url }}
+        run: |
+          echo "Running E2E tests against QA: $BASE_URL"
+          npx playwright test
+
+      - name: Upload QA E2E test report
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: playwright-report-qa
+          path: playwright-report/
+          retention-days: 7
+
+      - name: QA E2E Test Summary
+        if: always()
+        run: |
+          echo "## 🎭 QA E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tested URL:** ${{ needs.deploy-qa.outputs.deployed_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f playwright-report/results.json ]; then
+            # Parse results from JSON
+            TOTAL=$(jq '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped' playwright-report/results.json)
+            PASSED=$(jq '.stats.expected' playwright-report/results.json)
+            FAILED=$(jq '.stats.unexpected' playwright-report/results.json)
+            FLAKY=$(jq '.stats.flaky' playwright-report/results.json)
+            SKIPPED=$(jq '.stats.skipped' playwright-report/results.json)
+            DURATION=$(jq '.stats.duration' playwright-report/results.json)
+            DURATION_SEC=$(echo "scale=2; $DURATION / 1000" | bc)
+            
+            if [ "$FAILED" -eq 0 ]; then
+              echo "### ✅ All Tests Passed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "### ❌ Some Tests Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| ✅ Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
+            echo "| ❌ Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⚠️ Flaky | $FLAKY |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⏭️ Skipped | $SKIPPED |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Total** | **$TOTAL** |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⏱️ **Duration:** ${DURATION_SEC}s" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # List failed tests if any
+            if [ "$FAILED" -gt 0 ]; then
+              echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              jq -r '.suites[].suites[]?.specs[]? | select(.ok == false) | "- ❌ \(.title)"' playwright-report/results.json >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+              jq -r '.suites[].specs[]? | select(.ok == false) | "- ❌ \(.title)"' playwright-report/results.json >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ QA E2E tests may have failed. Check the logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 **Full Report:** Download the \`playwright-report-qa\` artifact for detailed HTML report." >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # DEPLOY PRODUCTION INFRASTRUCTURE
+  # ==========================================================================
+  deploy-prod-infrastructure:
+    name: Deploy Production Infrastructure
+    runs-on: ubuntu-latest
+    needs: e2e-qa
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    outputs:
+      static_web_app_url: ${{ steps.prod-infra.outputs.staticWebAppUrl }}
+      static_web_app_name: ${{ steps.prod-infra.outputs.staticWebAppName }}
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create/Verify Production Resource Group
+        run: |
+          az group create --name "${{ env.AZURE_RESOURCE_GROUP }}" --location "${{ env.AZURE_LOCATION }}" --tags "environment=prod" "project=${{ env.PROJECT_NAME }}"
+          echo "✅ Production resource group ready: ${{ env.AZURE_RESOURCE_GROUP }}"
+
+      - name: Validate Production Infrastructure
+        id: validate
+        run: |
+          echo "Validating Bicep template against current resources..."
+          az deployment group validate \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --template-file ./infra/main.bicep \
+            --parameters ./infra/parameters.prod.json deploymentId=prod-stable
+          echo "✅ Template validation passed"
+
+      - name: Deploy Production Infrastructure
+        id: prod-infra
+        uses: azure/arm-deploy@v2
+        with:
+          scope: resourcegroup
+          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
+          template: ./infra/main.bicep
+          parameters: ./infra/parameters.prod.json deploymentId=prod-stable
+          deploymentMode: Incremental
+          failOnStdErr: true
+
+      - name: Verify Production Resources
+        run: |
+          echo "Verifying Production resources..."
+          COSMOS=$(az cosmosdb show --name "${{ steps.prod-infra.outputs.cosmosAccountName }}" --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" 2>/dev/null && echo "✅ Cosmos DB (Serverless)" || echo "❌ Cosmos DB missing")
+          SWA=$(az staticwebapp show --name "${{ steps.prod-infra.outputs.staticWebAppName }}" --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" 2>/dev/null && echo "✅ Static Web App (Standard)" || echo "❌ Static Web App missing")
+          INSIGHTS=$(az monitor app-insights component show --app "${{ steps.prod-infra.outputs.appInsightsName }}" --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" 2>/dev/null && echo "✅ App Insights (90-day retention)" || echo "❌ App Insights missing")
+          echo "$COSMOS"
+          echo "$SWA"
+          echo "$INSIGHTS"
+          echo ""
+          echo "📋 Production deployment complete - production-ready infrastructure verified"
+
+      - name: Production Infrastructure Summary
+        run: |
+          echo "## 🏗️ Production Infrastructure Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource Group | \`${{ env.AZURE_RESOURCE_GROUP }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Static Web App | ${{ steps.prod-infra.outputs.staticWebAppUrl }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cosmos DB | \`${{ steps.prod-infra.outputs.cosmosAccountName }}\` (Serverless) |" >> $GITHUB_STEP_SUMMARY
+          echo "| App Insights | \`${{ steps.prod-infra.outputs.appInsightsName }}\` (90-day retention) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tier:** Production (Standard SWA, Serverless Cosmos DB)" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # PRODUCTION DEPLOYMENT (requires approval)
+  # ==========================================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-prod-infrastructure
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.static_web_app_url }}
+    
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+
+      - name: Get Static Web App Token
+        id: swa-token
+        run: |
+          TOKEN=$(az staticwebapp secrets list --name "${{ needs.deploy-prod-infrastructure.outputs.static_web_app_name }}" --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --query "properties.apiKey" -o tsv)
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Production
+        id: deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: dist
+          api_location: api
+          output_location: .
+          skip_app_build: true
+          skip_api_build: false
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🎉 Production Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.deploy.outputs.static_web_app_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Resources (Production Tier):" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Static Web App (Standard - SLA, custom domains)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Cosmos DB (Serverless - unlimited scaling)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Application Insights (90-day retention)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Azure Communication Services" >> $GITHUB_STEP_SUMMARY

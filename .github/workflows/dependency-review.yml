@@ -1,0 +1,56 @@
+# ============================================================================
+# Dependency Review
+# ============================================================================
+# Checks pull requests for new dependencies with known vulnerabilities.
+# Runs automatically on all pull requests that modify package.json, 
+# package-lock.json, or npm-shrinkwrap.json files.
+#
+# Blocks merge if vulnerable dependencies are found.
+# ============================================================================
+
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'api/package.json'
+      - 'api/package-lock.json'
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          # Fail the workflow on:
+          fail-on-severity: high  # moderate, high, critical
+          
+          # Comment on PR with findings
+          comment-summary-in-pr: always
+          
+          # Deny specific restrictive licenses (SPDX identifiers only)
+          deny-licenses: >-
+            GPL-2.0,
+            GPL-3.0,
+            AGPL-3.0
+
+      - name: npm audit
+        continue-on-error: true
+        run: |
+          npm audit --audit-level=moderate
+          cd api
+          npm audit --audit-level=moderate

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": { "value": "secretsanta" },
+    "environment": { "value": "prod" },
+    "staticWebAppSku": { "value": "Standard" },
+    "enableEmailService": { "value": true },
+    "emailDataLocation": { "value": "United States" },
+    "repositoryUrl": { "value": "https://github.com/dsanchezcr/secretsanta" },
+    "repositoryBranch": { "value": "main" }
+  }
+}

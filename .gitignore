@@ -1,0 +1,67 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+dist-ssr
+*-dist
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test outputs
+**/agent-eval-report*
+coverage
+playwright-report
+test-results
+
+# Build artifacts
+packages
+pids
+.file-manifest
+
+# Azure Functions
+api/dist
+api/node_modules
+api/local.settings.json
+api/.vscode
+api/coverage
+
+# Azure deployment
+.deployment-config.json
+deployment-output.json
+.github-actions-config.json
+
+# Azurite storage emulator
+__azurite_db_*.json
+__blobstorage__
+__queuestorage__
+
+# OS files
+Thumbs.db

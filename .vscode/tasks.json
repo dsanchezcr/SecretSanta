@@ -1,0 +1,241 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		// ============================================================================
+		// DOCKER & EMULATOR SETUP
+		// ============================================================================
+		{
+			"type": "shell",
+			"label": "docker-compose-up",
+			"command": "docker-compose",
+			"args": ["up", "-d"],
+			"presentation": {
+				"reveal": "silent",
+				"panel": "new"
+			},
+			"problemMatcher": [],
+			"runOptions": {
+				"runOn": "folderOpen"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "docker-compose-down",
+			"command": "docker-compose",
+			"args": ["down"],
+			"presentation": {
+				"reveal": "silent",
+				"panel": "new"
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "docker-compose-logs",
+			"command": "docker-compose",
+			"args": ["logs", "-f"],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "full-stack-start",
+			"dependsOn": ["docker-compose-up", "npm install (functions)", "npm watch (functions)", "func: host start"],
+			"dependsOrder": "sequence",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "silent"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "setup-and-start-api",
+			"dependsOn": ["docker-compose-up", "npm install (functions)", "npm watch (functions)", "func: host start"],
+			"dependsOrder": "sequence",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "silent"
+			}
+		},
+		// ============================================================================
+		// AZURE FUNCTIONS API TASKS
+		// ============================================================================
+		{
+			"type": "func",
+			"label": "func: host start",
+			"command": "host start",
+			"problemMatcher": "$func-node-watch",
+			"isBackground": true,
+			"dependsOn": "npm watch (functions)",
+			"options": {
+				"cwd": "${workspaceFolder}/api"
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "npm install (functions)",
+			"command": "npm install",
+			"options": {
+				"cwd": "${workspaceFolder}/api"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "npm watch (functions)",
+			"command": "npm run watch",
+			"dependsOn": "npm install (functions)",
+			"problemMatcher": "$tsc-watch",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"isBackground": true,
+			"options": {
+				"cwd": "${workspaceFolder}/api"
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "npm build (functions)",
+			"command": "npm run build",
+			"dependsOn": "npm install (functions)",
+			"problemMatcher": "$tsc",
+			"options": {
+				"cwd": "${workspaceFolder}/api"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "npm test (functions)",
+			"command": "npm test",
+			"dependsOn": "npm install (functions)",
+			"options": {
+				"cwd": "${workspaceFolder}/api"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "npm prune (functions)",
+			"command": "npm prune --production",
+			"dependsOn": "npm build (functions)",
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}/api"
+			}
+		},
+		// ============================================================================
+		// FRONTEND TASKS
+		// ============================================================================
+		{
+			"type": "shell",
+			"label": "npm install (frontend)",
+			"command": "npm install",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "npm: dev (frontend)",
+			"command": "npm run dev",
+			"dependsOn": "npm install (frontend)",
+			"problemMatcher": [],
+			"isBackground": true,
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "npm: build (frontend)",
+			"command": "npm run build",
+			"dependsOn": "npm install (frontend)",
+			"problemMatcher": "$tsc",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "npm: lint",
+			"command": "npm run lint",
+			"dependsOn": "npm install (frontend)",
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			}
+		},
+		// ============================================================================
+		// END-TO-END TESTING
+		// ============================================================================
+		{
+			"type": "shell",
+			"label": "npm: e2e tests",
+			"command": "npm run test:e2e",
+			"dependsOn": "npm install (frontend)",
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "npm: e2e tests (UI mode)",
+			"command": "npm run test:e2e:ui",
+			"dependsOn": "npm install (frontend)",
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "npm: e2e tests (show report)",
+			"command": "npm run test:e2e:report",
+			"problemMatcher": [],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			}
+		},
+		// ============================================================================
+		// FULL STACK
+		// ============================================================================
+		{
+			"label": "Start Full Stack",
+			"dependsOn": ["docker-compose-up", "npm: dev (frontend)", "func: host start"],
+			"dependsOrder": "parallel",
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
+		},
+		{
+			"label": "Stop Full Stack",
+			"dependsOn": ["docker-compose-down"],
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "silent"
+			}
+		}
+	]
+}

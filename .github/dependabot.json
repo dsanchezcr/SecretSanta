@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "vulnerabilities": [
+    {
+      "package": "*",
+      "vulnerability": "Any unpatched vulnerability",
+      "cve": null,
+      "cvss_score": 0,
+      "cvss_vector": null,
+      "cwe": ["CWE-0"],
+      "advisory": "Security vulnerabilities of any severity should be reported privately",
+      "severity": "critical",
+      "cwes": [],
+      "affected_versions": "*",
+      "patched_versions": "*",
+      "unaffected_versions": []
+    }
+  ],
+  "paths": [
+    "node_modules/",
+    ".git/",
+    "dist/",
+    "coverage/",
+    "build/"
+  ],
+  "contact": "github@dsanchezcr.com",
+  "policy": "https://github.com/dsanchezcr/secretsanta/blob/main/SECURITY.md"
+}

@@ -1,0 +1,30 @@
+# Source maps (optional, remove if you want debugging)
+*.js.map
+
+# Git
+.git*
+.gitignore
+
+# VS Code
+.vscode
+
+# Local settings (contains secrets)
+local.settings.json
+
+# Config files not needed in deployment
+jest.config.js
+
+# Test files and folders
+**/__tests__/**
+**/*.test.js
+**/*.test.ts
+**/*.spec.js
+**/*.spec.ts
+
+# Coverage reports
+coverage/
+
+# Other unnecessary files
+README.md
+.env*
+.npmrc

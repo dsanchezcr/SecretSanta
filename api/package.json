@@ -1,0 +1,32 @@
+{
+  "name": "secretsanta-api",
+  "version": "1.0.0",
+  "description": "Azure Functions API for Secret Santa",
+  "main": "dist/index.js",
+  "scripts": {
+    "setup": "node ../scripts/setup-local-settings.js",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "prestart": "npm run build",
+    "start": "func start",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "@azure/communication-email": "^1.1.0",
+    "@azure/cosmos": "^4.2.0",
+    "@azure/functions": "^4.6.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.1",
+    "azure-functions-core-tools": "^4.0.6610",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

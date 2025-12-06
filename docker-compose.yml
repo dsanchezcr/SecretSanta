@@ -1,0 +1,66 @@
+version: '3.9'
+
+services:
+  # ============================================================================
+  # Cosmos DB Emulator
+  # ============================================================================
+  # Local development database using official Azure Cosmos DB Emulator
+  # Emulates SQL API behavior on localhost:8081
+  # Certificate is automatically generated on first run
+  cosmos-db:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+    container_name: cosmosdb-emulator
+    ports:
+      - "8081:8081"
+    environment:
+      # Emulator environment variables
+      AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 3
+      AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE: 'true'
+    volumes:
+      # Data persistence for Codespaces reliability
+      - cosmos-db-data:/data/db
+    networks:
+      - secretsanta-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8081/_explorer/emulator.pem"]
+      interval: 5s
+      timeout: 10s
+      retries: 24
+      start_period: 30s
+    restart: unless-stopped
+
+  # ============================================================================
+  # Azurite (Azure Storage Emulator)
+  # ============================================================================
+  # Local development storage emulating Azure Blob Storage and Queue Storage
+  # Useful for testing storage integration (if needed in future)
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: azurite-emulator
+    ports:
+      - "10000:10000"  # Blob Storage
+      - "10001:10001"  # Queue Storage
+      - "10002:10002"  # Table Storage
+    environment:
+      AZURITE_ACCOUNTS: "devstoreaccount1:${AZURITE_KEY:-Eby8vdM02xNOcqFlqUwJPLMRObU1XQEFvgoKj41eZWc=}"
+    volumes:
+      - azurite-data:/data
+    networks:
+      - secretsanta-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10000/devstoreaccount1?comp=properties"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  cosmos-db-data:
+    driver: local
+  azurite-data:
+    driver: local
+
+networks:
+  secretsanta-network:
+    driver: bridge

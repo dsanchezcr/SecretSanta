@@ -581,7 +581,8 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
     setEditParticipantName(participant.name)
     setEditParticipantEmail(participant.email || '')
     setEditParticipantDesiredGift(participant.desiredGift || '')
-    setEditParticipantWish(participant.wish || '')
+    // Load wish if participant has added one, otherwise use desiredGift from organizer
+    setEditParticipantWish(participant.wish || participant.desiredGift || '')
     setEditParticipantConfirmed(participant.hasConfirmedAssignment || false)
     setShowEditParticipantDialog(true)
   }

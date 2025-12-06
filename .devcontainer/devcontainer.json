@@ -58,7 +58,7 @@
       "onAutoForward": "silent"
     }
   },
-  "postCreateCommand": "curl -fsSL https://get.docker.com | sh && npm install && cd api && npm install && node ../scripts/setup-local-settings.js",
+  "postCreateCommand": "bash .devcontainer/setup.sh",
   "postStartCommand": "echo '🎁 Secret Santa development environment ready! Press F5 to start.'",
   "remoteUser": "root",
   "containerEnv": {

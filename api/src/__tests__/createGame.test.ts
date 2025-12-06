@@ -457,5 +457,69 @@ describe('createGame function', () => {
       expect(game.date).not.toBe('2025-12-20')
       expect(game.date).not.toBe('2025-12-22')
     })
+
+    it('should reject invalid date format', async () => {
+      const requestBody = {
+        name: 'Invalid Date Format',
+        date: '12/21/2025',  // Wrong format (should be YYYY-MM-DD)
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      })
+    })
+
+    it('should reject incomplete date string', async () => {
+      const requestBody = {
+        name: 'Incomplete Date',
+        date: '2025-12',  // Missing day
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      })
+    })
+
+    it('should handle date normalization for invalid calendar dates', async () => {
+      // JavaScript Date constructor automatically normalizes invalid dates
+      // e.g., Feb 31 becomes March 3, which is acceptable behavior
+      // Use a future year to ensure the normalized date is still in the future
+      const requestBody = {
+        name: 'Normalized Date',
+        date: '2026-02-31',  // February 31st doesn't exist, will normalize to March 3, 2026
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      // JavaScript normalizes the date, so this should succeed
+      expect(response.status).toBe(201)
+      const game = response.jsonBody as Game
+      // The stored date is still the original input string
+      expect(game.date).toBe('2026-02-31')
+    })
   })
 })

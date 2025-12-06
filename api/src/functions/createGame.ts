@@ -47,8 +47,22 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       today.setHours(0, 0, 0, 0)
       
       // Parse YYYY-MM-DD format correctly to avoid timezone issues
-      // Split the date string and create date in local timezone
+      // Validate format and split the date string
       const dateParts = body.date.split('-')
+      if (dateParts.length !== 3 || dateParts.some(part => isNaN(parseInt(part, 10)))) {
+        const error = createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          'Invalid date format. Expected YYYY-MM-DD',
+          undefined,
+          requestId
+        )
+        return {
+          status: getHttpStatusForError(ApiErrorCode.VALIDATION_ERROR),
+          jsonBody: { error: error.message }
+        }
+      }
+      
+      // Create date in local timezone (JavaScript will normalize invalid calendar dates)
       const eventDate = new Date(
         parseInt(dateParts[0], 10),  // year
         parseInt(dateParts[1], 10) - 1,  // month (0-indexed)

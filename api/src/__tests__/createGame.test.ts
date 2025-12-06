@@ -409,12 +409,14 @@ describe('createGame function', () => {
     })
 
     it('should correctly parse dates regardless of server timezone', async () => {
-      // Test that a date string like "2025-12-21" is correctly interpreted
-      // as Dec 21 in local timezone, not as UTC midnight (which could shift to Dec 20)
-      const dateStr = '2025-12-21'
+      // Test that a date string is correctly interpreted in local timezone,
+      // not as UTC midnight (which could shift to previous day in negative UTC offsets)
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + 30)
+      const dateStr = futureDate.toISOString().split('T')[0]
       
       const requestBody = {
-        name: 'Christmas 2025',
+        name: 'Future Event',
         date: dateStr,
         participants: [
           { name: 'Alice' },
@@ -429,12 +431,14 @@ describe('createGame function', () => {
       expect(response.status).toBe(201)
       const game = response.jsonBody as Game
       // The date should be stored as-is without timezone conversion
-      expect(game.date).toBe('2025-12-21')
+      expect(game.date).toBe(dateStr)
     })
 
     it('should handle date validation with YYYY-MM-DD format correctly', async () => {
-      // Specific test for the bug: selecting Dec 21 should create game for Dec 21, not Dec 20
-      const testDate = '2025-12-21'
+      // Specific test for the bug: selecting a date should create game for that exact date, not shifted by timezone
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + 30)
+      const testDate = futureDate.toISOString().split('T')[0]
       
       const requestBody = {
         name: 'Test Date Bug',
@@ -454,8 +458,13 @@ describe('createGame function', () => {
       expect(game.date).toBe(testDate)
       
       // Verify the date wasn't shifted by timezone conversion
-      expect(game.date).not.toBe('2025-12-20')
-      expect(game.date).not.toBe('2025-12-22')
+      const dayBefore = new Date(futureDate)
+      dayBefore.setDate(dayBefore.getDate() - 1)
+      const dayAfter = new Date(futureDate)
+      dayAfter.setDate(dayAfter.getDate() + 1)
+      
+      expect(game.date).not.toBe(dayBefore.toISOString().split('T')[0])
+      expect(game.date).not.toBe(dayAfter.toISOString().split('T')[0])
     })
 
     it('should reject invalid date format', async () => {

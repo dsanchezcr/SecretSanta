@@ -47,9 +47,6 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       today.setHours(0, 0, 0, 0)
       
       // Parse YYYY-MM-DD format correctly to avoid timezone issues
-      // Validate format and split the date string
-      const dateParts = body.date.split('-')
-      
       // Validate strict YYYY-MM-DD format (4-digit year, 2-digit month, 2-digit day)
       if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
         const error = createErrorResponse(
@@ -64,6 +61,8 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
         }
       }
       
+      // Split the date string after format validation passes
+      const dateParts = body.date.split('-')
       const year = parseInt(dateParts[0], 10)
       const month = parseInt(dateParts[1], 10)
       const day = parseInt(dateParts[2], 10)

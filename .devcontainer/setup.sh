@@ -10,10 +10,9 @@ echo "📦 Installing npm dependencies..."
 npm install
 
 echo "⚙️  Setting up API..."
-cd api
-npm install
+(cd api && npm install)
 
 echo "🔧 Creating local settings..."
-node ../scripts/setup-local-settings.js
+(cd api && node ../scripts/setup-local-settings.js)
 
 echo "✅ Setup complete!"

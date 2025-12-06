@@ -206,7 +206,7 @@ export function JoinInvitationView({ gameCode, invitationToken, onJoinSuccess, o
               ) : (
                 <>
                   <UserPlus className="w-5 h-5" weight="bold" />
-                  {t('joinGame')}
+                  {t('joinGameButton')}
                 </>
               )}
             </Button>

@@ -454,25 +454,3 @@ export function joinInvitationLocal(
 
   return { game: updatedGame, participantId: newParticipant.id }
 }
-
-// Helper: Generate assignments (imported from game-utils)
-function generateAssignments(participants: Participant[]): Assignment[] {
-  if (participants.length < 3) {
-    throw new Error('Need at least 3 participants')
-  }
-
-  const shuffled = [...participants].sort(() => Math.random() - 0.5)
-  const assignments: Assignment[] = []
-
-  for (let i = 0; i < shuffled.length; i++) {
-    const giver = shuffled[i]
-    const receiver = shuffled[(i + 1) % shuffled.length]
-    
-    assignments.push({
-      giverId: giver.id,
-      receiverId: receiver.id
-    })
-  }
-
-  return assignments
-}

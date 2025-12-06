@@ -28,11 +28,16 @@ export function CookieConsentBanner() {
   if (!isVisible) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t-2 border-gray-200 dark:border-gray-700 shadow-lg">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cookie-consent-title"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t-2 border-gray-200 dark:border-gray-700 shadow-lg"
+    >
       <div className="max-w-7xl mx-auto p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 id="cookie-consent-title" className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               {t('cookieConsentTitle')}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -59,6 +64,7 @@ export function CookieConsentBanner() {
         </div>
       </div>
       <button
+        type="button"
         onClick={handleDecline}
         className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
         aria-label="Close"

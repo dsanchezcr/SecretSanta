@@ -54,8 +54,8 @@ This application uses the following third-party services:
 - Only loads in production environment
 - Requires explicit user consent via cookie consent banner
 - Collects anonymous usage data (page views, interaction patterns)
-- Users can opt out at any time through the privacy policy settings
-- Tracking ID is configured during deployment
+- Users can opt out at any time through the privacy policy page
+- Tracking ID is configured via `VITE_GA_TRACKING_ID` environment variable (required for analytics to work)
 
 ## Automated Security Scanning
 

@@ -848,9 +848,9 @@ This application includes optional Google Analytics for anonymous usage tracking
 
 - **Only loads in production**: Non-production environments (PR previews, QA) do not load Google Analytics
 - **Requires user consent**: A cookie consent banner appears on first visit, requiring explicit user approval
-- **GDPR compliant**: Users can decline analytics or opt out at any time via the Privacy Policy page
+- **GDPR compliant**: Users can decline analytics via the cookie consent banner on first visit, or change their preference at any time via the Privacy Policy page
 - **Anonymous data only**: Collects page views and interaction patterns without identifying users
-- **Tracking ID**: Configured via `VITE_GA_TRACKING_ID` environment variable, defaults to `G-B2K4GQ481R`
+- **Tracking ID**: Configured via `VITE_GA_TRACKING_ID` environment variable (disabled by default)
 
 **Configuring the tracking ID:**
 
@@ -866,14 +866,14 @@ VITE_GA_TRACKING_ID=G-YOUR-TRACKING-ID npm run build
 # Value: G-YOUR-TRACKING-ID
 ```
 
-If `VITE_GA_TRACKING_ID` is not set, it defaults to `G-B2K4GQ481R`. To disable analytics entirely, set `VITE_GA_TRACKING_ID` to an empty string or don't set it at all (the default will still be used, so delete the fallback in `src/lib/analytics.ts` if you want complete removal).
+If `VITE_GA_TRACKING_ID` is not set or is empty, analytics are completely disabled (no tracking data is sent).
 
 **Privacy implications for self-hosted deployments:**
 
 If you deploy this application for your organization:
 1. Review your local privacy regulations (GDPR, CCPA, etc.)
 2. Consider whether analytics are needed for your use case
-3. Set `VITE_GA_TRACKING_ID` to your own Google Analytics property ID
+3. Set `VITE_GA_TRACKING_ID` to your own Google Analytics property ID (analytics are disabled if not set)
 4. Ensure your privacy policy reflects the use of Google Analytics
 5. The application stores user consent preferences in browser localStorage
 

@@ -3,11 +3,9 @@
  */
 
 // Google Analytics tracking ID from environment variable
-// Falls back to production tracking ID if not set
-// Set to empty string to disable analytics completely
-const GA_TRACKING_ID = import.meta.env.VITE_GA_TRACKING_ID !== undefined 
-  ? import.meta.env.VITE_GA_TRACKING_ID 
-  : 'G-B2K4GQ481R'
+// Set VITE_GA_TRACKING_ID to your own property to enable analytics
+// If unset or empty, analytics are completely disabled
+const GA_TRACKING_ID = import.meta.env.VITE_GA_TRACKING_ID || ''
 
 // Check if we're in production environment
 const isProduction = import.meta.env.PROD
@@ -79,25 +77,21 @@ export function setAnalyticsDeclined(): void {
 export function initializeAnalytics(): void {
   // Only load in production environment
   if (!isProduction) {
-    console.log('[Analytics] Disabled in non-production environment')
     return
   }
 
   // Check if tracking ID is configured
   if (!GA_TRACKING_ID || GA_TRACKING_ID.trim() === '') {
-    console.log('[Analytics] No tracking ID configured')
     return
   }
 
   // Check for user consent
   if (!hasAnalyticsConsent()) {
-    console.log('[Analytics] User consent not given')
     return
   }
 
   // Check if already initialized
   if (window.gtag) {
-    console.log('[Analytics] Already initialized')
     return
   }
 
@@ -114,8 +108,6 @@ export function initializeAnalytics(): void {
   }
   window.gtag('js', new Date())
   window.gtag('config', GA_TRACKING_ID)
-
-  console.log('[Analytics] Initialized')
 }
 
 /**

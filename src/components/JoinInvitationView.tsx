@@ -10,15 +10,18 @@ import { LanguageToggle } from './LanguageToggle'
 import { toast } from 'sonner'
 import { isValidEmail } from '@/lib/utils'
 import { Game } from '@/lib/types'
+import { checkApiStatus } from '@/lib/api'
+import { joinInvitationLocal } from '@/lib/local-game-operations'
 
 interface JoinInvitationViewProps {
   gameCode: string
   invitationToken: string
+  game?: Game // Optional game for local storage fallback
   onJoinSuccess: (game: Game, participantId: string) => void
   onBack: () => void
 }
 
-export function JoinInvitationView({ gameCode, invitationToken, onJoinSuccess, onBack }: JoinInvitationViewProps) {
+export function JoinInvitationView({ gameCode, invitationToken, game, onJoinSuccess, onBack }: JoinInvitationViewProps) {
   const { t, language } = useLanguage()
   const [isJoining, setIsJoining] = useState(false)
   
@@ -46,7 +49,31 @@ export function JoinInvitationView({ gameCode, invitationToken, onJoinSuccess, o
     setIsJoining(true)
     
     try {
-      // Try API first
+      // Check API status first
+      const apiStatus = await checkApiStatus()
+      
+      // If API is unavailable or database is not connected, use local storage
+      if (!apiStatus.available || !apiStatus.databaseConnected) {
+        if (!game) {
+          throw new Error('Game not found in local storage')
+        }
+        
+        // Use local storage fallback
+        const { game: updatedGame, participantId } = joinInvitationLocal(
+          game,
+          invitationToken,
+          trimmedName,
+          trimmedEmail || undefined,
+          desiredGift.trim() || undefined,
+          wish.trim() || undefined
+        )
+        
+        toast.success(t('joinSuccess'))
+        onJoinSuccess(updatedGame, participantId)
+        return
+      }
+      
+      // Try API
       const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
       const response = await fetch(`${API_BASE_URL}/games/${gameCode}`, {
         method: 'PATCH',

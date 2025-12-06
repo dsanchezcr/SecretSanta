@@ -537,6 +537,7 @@ function App() {
             <JoinInvitationView
               gameCode={currentGameCode}
               invitationToken={currentInvitationToken}
+              game={currentGame}
               onJoinSuccess={handleJoinInvitationSuccess}
               onBack={handleBack}
             />

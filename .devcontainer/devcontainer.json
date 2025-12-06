@@ -59,7 +59,7 @@
     }
   },
   "postCreateCommand": "bash .devcontainer/setup.sh",
-  "postStartCommand": "echo '🎁 Secret Santa development environment ready! Press F5 to start.'",
+  "postStartCommand": "echo '🎁 Secret Santa development environment ready!' && echo '' && echo 'ℹ️  If you see extension errors:' && echo '   - Wait for VS Code extensions to finish installing' && echo '   - Reload the window if needed (Ctrl+Shift+P > Reload Window)' && echo '' && echo '🚀 Press F5 to start debugging!'",
   "remoteUser": "root",
   "containerEnv": {
     "NODE_ENV": "development",

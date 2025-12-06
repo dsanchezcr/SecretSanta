@@ -43,6 +43,20 @@ Include as much of the information listed below as you can to help us better und
 - Use resource group RBAC for access control
 - Enable audit logging
 
+## Third-Party Services
+
+This application uses the following third-party services:
+
+- **Azure Communication Services**: For sending notification emails (optional, only when explicitly requested by users)
+- **Google Analytics**: For anonymous usage analytics (optional, requires user consent via cookie banner, only in production)
+
+### Google Analytics
+- Only loads in production environment
+- Requires explicit user consent via cookie consent banner
+- Collects anonymous usage data (page views, interaction patterns)
+- Users can opt out at any time through the privacy policy settings
+- Tracking ID is configured during deployment
+
 ## Automated Security Scanning
 
 This project uses:

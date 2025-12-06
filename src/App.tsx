@@ -13,9 +13,11 @@ import { GameNotFoundView } from '@/components/GameNotFoundView'
 import { ErrorView, type ErrorType } from '@/components/ErrorView'
 import { OrganizerGuideView } from '@/components/OrganizerGuideView'
 import { ParticipantGuideView } from '@/components/ParticipantGuideView'
+import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { Game, Participant } from '@/lib/types'
 import { useLocalStorage } from '@/hooks/use-local-storage'
 import { checkApiStatus, getGameAPI, CreateGameResponse } from '@/lib/api'
+import { initializeAnalytics } from '@/lib/analytics'
 
 type View =
   | 'home'
@@ -83,6 +85,9 @@ function App() {
     }
     
     checkStatus()
+    
+    // Initialize Google Analytics if user has consented
+    initializeAnalytics()
     
     // Re-check every 30 seconds
     const interval = setInterval(checkStatus, 30000)
@@ -509,6 +514,7 @@ function App() {
           )}
         </div>
         <Toaster position="top-center" />
+        <CookieConsentBanner />
       </div>
     </LanguageProvider>
   )

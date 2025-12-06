@@ -128,11 +128,28 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
           </Card>
         </motion.div>
 
-        {/* Contact */}
+        {/* Analytics */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
+        >
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+              <ShieldCheck size={20} className="text-primary" />
+              {t('privacyAnalyticsTitle')}
+            </h2>
+            <div className="space-y-3 text-muted-foreground">
+              <p>{t('privacyAnalyticsDesc')}</p>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Contact */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
         >
           <Card className="p-6 bg-muted/50">
             <p className="text-sm text-muted-foreground text-center">

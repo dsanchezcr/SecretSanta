@@ -58,8 +58,10 @@ export function AssignmentView({
   const { t, language } = useLanguage()
   const [showReassignDialog, setShowReassignDialog] = useState(false)
   const [showEditWishDialog, setShowEditWishDialog] = useState(false)
+  const [showWishChangeWarning, setShowWishChangeWarning] = useState(false)
   const [isRevealed, setIsRevealed] = useState(false)
   const [currentReceiver, setCurrentReceiver] = useState<Participant | null>(null)
+  const [currentGiver, setCurrentGiver] = useState<Participant | null>(null)
   const [currentParticipant, setCurrentParticipant] = useState<Participant>(participant)
   const [editingWish, setEditingWish] = useState('')
   const [editingEmail, setEditingEmail] = useState('')
@@ -113,6 +115,11 @@ export function AssignmentView({
     const currentAssignment = game.assignments.find(a => a.giverId === participant.id)
     const receiver = game.participants.find(p => p.id === currentAssignment?.receiverId)
     setCurrentReceiver(receiver || null)
+    
+    // Find who gives to current participant (the giver)
+    const giverAssignment = game.assignments.find(a => a.receiverId === participant.id)
+    const giver = game.participants.find(p => p.id === giverAssignment?.giverId)
+    setCurrentGiver(giver || null)
   }, [game.assignments, game.participants, participant.id])
 
   useEffect(() => {
@@ -166,7 +173,19 @@ export function AssignmentView({
   }
 
   const handleOpenEditWish = () => {
-    setEditingWish(currentParticipant.wish || '')
+    // Load wish if participant has added one, otherwise use desiredGift from organizer
+    setEditingWish(currentParticipant.wish || currentParticipant.desiredGift || '')
+    
+    // Check if giver has confirmed their assignment and there's an existing wish
+    if (currentGiver?.hasConfirmedAssignment && (currentParticipant.wish || currentParticipant.desiredGift)) {
+      setShowWishChangeWarning(true)
+    } else {
+      setShowEditWishDialog(true)
+    }
+  }
+  
+  const handleProceedWithWishChange = () => {
+    setShowWishChangeWarning(false)
     setShowEditWishDialog(true)
   }
 
@@ -556,12 +575,12 @@ export function AssignmentView({
                   className="gap-2"
                 >
                   <PencilSimple size={16} />
-                  {currentParticipant.wish ? t('editWish') : t('addYourWish')}
+                  {(currentParticipant.wish || currentParticipant.desiredGift) ? t('editWish') : t('addYourWish')}
                 </Button>
               </div>
-              {currentParticipant.wish ? (
+              {(currentParticipant.wish || currentParticipant.desiredGift) ? (
                 <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm italic">"{currentParticipant.wish}"</p>
+                  <p className="text-sm italic">"{currentParticipant.wish || currentParticipant.desiredGift}"</p>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground italic p-3 bg-muted/30 rounded-lg">
@@ -735,6 +754,31 @@ export function AssignmentView({
             <Button onClick={handleSaveWish} disabled={isSavingWish} className="gap-2">
               {isSavingWish && <CircleNotch size={16} className="animate-spin" />}
               {t('saveWish')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showWishChangeWarning} onOpenChange={setShowWishChangeWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Warning size={24} className="text-amber-500" />
+              {t('wishChangeWarningTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('wishChangeWarningDesc')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowWishChangeWarning(false)}
+            >
+              {t('cancel')}
+            </Button>
+            <Button onClick={handleProceedWithWishChange} className="gap-2">
+              {t('proceedWithChange')}
             </Button>
           </DialogFooter>
         </DialogContent>

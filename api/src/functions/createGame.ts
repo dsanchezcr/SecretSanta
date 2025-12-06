@@ -65,6 +65,7 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
     const gameId = generateId()
     const gameCode = generateGameCode()
     const organizerToken = generateId()
+    const invitationToken = generateId()
     
     const isProtected = body.isProtected !== false // Default to true
     
@@ -106,6 +107,7 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       organizerEmail: body.organizerEmail || undefined, // Optional organizer email
       // Only store organizer language preference if email service is configured
       organizerLanguage: storeLanguagePreference && body.language ? body.language : undefined,
+      invitationToken, // Token for invitation link
       createdAt: Date.now()
     }
     

@@ -700,6 +700,96 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       
       context.log(`Email updated for participant '${participant.name}' in game: ${code}`)
     }
+
+    // Handle joinInvitation action (new participants joining via invitation link)
+    if (body.action === 'joinInvitation') {
+      const invitationToken = (body as any).invitationToken
+      const participantName = (body as any).participantName?.trim()
+      const participantEmail = (body as any).participantEmail?.trim()
+      const desiredGift = (body as any).desiredGift?.trim() || ''
+      const wish = (body as any).wish?.trim() || ''
+      const language = (body as any).language
+      
+      // Validate invitation token
+      if (!invitationToken || invitationToken !== game.invitationToken) {
+        return {
+          status: 403,
+          jsonBody: { error: 'Invalid invitation token' }
+        }
+      }
+      
+      // Validate participant name
+      if (!participantName) {
+        return {
+          status: 400,
+          jsonBody: { error: 'Participant name is required' }
+        }
+      }
+      
+      // Check for duplicate participant names (case-insensitive)
+      if (game.participants.some(p => p.name.toLowerCase() === participantName.toLowerCase())) {
+        return {
+          status: 400,
+          jsonBody: { error: 'Participant name already exists' }
+        }
+      }
+      
+      // Check for duplicate emails if email is provided (case-insensitive)
+      if (participantEmail && game.participants.some(p => 
+        p.email && p.email.toLowerCase() === participantEmail.toLowerCase()
+      )) {
+        return {
+          status: 400,
+          jsonBody: { error: 'Email address already in use' }
+        }
+      }
+      
+      // Check if email service is configured to determine if we should store language preferences
+      const emailStatus = getEmailServiceStatus()
+      const storeLanguagePreference = emailStatus.configured
+      
+      // Create new participant
+      const newParticipant: Participant = {
+        id: generateId(),
+        name: participantName,
+        email: participantEmail || undefined,
+        desiredGift,
+        wish,
+        hasConfirmedAssignment: false,
+        hasPendingReassignmentRequest: false,
+        token: game.isProtected ? generateId() : undefined,
+        preferredLanguage: storeLanguagePreference && language ? language : undefined
+      }
+      
+      // Add participant to game
+      game.participants.push(newParticipant)
+      
+      // Regenerate assignments to include new participant
+      game.assignments = generateAssignments(game.participants)
+      
+      // Clear any pending reassignment requests since we're regenerating all assignments
+      game.reassignmentRequests = []
+      game.participants.forEach(p => {
+        p.hasPendingReassignmentRequest = false
+        p.hasConfirmedAssignment = false // Clear confirmations when regenerating
+      })
+      
+      context.log(`New participant '${participantName}' joined game via invitation: ${code}`)
+      
+      // Send welcome email to new participant if email is configured
+      if (newParticipant.email && emailStatus.configured) {
+        const emailLanguage = language || 'es'
+        sendParticipantInvitationEmail(game, newParticipant, emailLanguage).then(result => {
+          if (result.success) {
+            context.log(`📧 Welcome email sent to new participant ${participantName}`)
+          } else {
+            context.warn(`⚠️ Failed to send welcome email to ${participantName}: ${result.error}`)
+          }
+        }).catch(err => {
+          context.warn(`⚠️ Failed to send welcome email: ${err.message}`)
+        })
+      }
+    }
     
     const updatedGame = await updateGame(game)
     

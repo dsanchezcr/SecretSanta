@@ -91,31 +91,51 @@ export function JoinInvitationView({ gameCode, invitationToken, game, onJoinSucc
       })
       
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(error.error || 'Failed to join game')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        // Throw error with code if available
+        const error: any = new Error(errorData.error || 'Failed to join game')
+        error.code = errorData.code
+        throw error
       }
       
-      const updatedGame = await response.json() as Game
+      const result = await response.json() as { game: Game; participantId: string }
       
-      // Find the newly added participant by name (should be the last one added)
-      const newParticipant = updatedGame.participants.find(p => p.name === trimmedName)
-      if (!newParticipant) {
-        throw new Error('Failed to find participant in updated game')
+      if (!result.participantId) {
+        throw new Error('Failed to get participant ID from API response')
       }
       
       toast.success(t('joinSuccess'))
-      onJoinSuccess(updatedGame, newParticipant.id)
+      onJoinSuccess(result.game, result.participantId)
       
     } catch (error: any) {
       console.error('Error joining game:', error)
       
-      // Check for specific error messages
-      if (error.message.includes('Invalid invitation token')) {
-        toast.error(t('invalidInvitationToken'))
-      } else if (error.message.includes('name already exists')) {
-        toast.error(t('participantNameAlreadyExists'))
-      } else if (error.message.includes('Email address already in use')) {
-        toast.error(t('emailAlreadyInUse'))
+      // Prefer error codes over string matching
+      if (error && error.code) {
+        switch (error.code) {
+          case 'INVALID_INVITATION_TOKEN':
+            toast.error(t('invalidInvitationToken'))
+            break
+          case 'DUPLICATE_NAME':
+            toast.error(t('participantNameAlreadyExists'))
+            break
+          case 'DUPLICATE_EMAIL':
+            toast.error(t('emailAlreadyInUse'))
+            break
+          default:
+            toast.error(t('joinError'))
+        }
+      } else if (error && typeof error.message === 'string') {
+        // Fallback to string matching for legacy/local errors
+        if (error.message.includes('Invalid invitation token')) {
+          toast.error(t('invalidInvitationToken'))
+        } else if (error.message.includes('name already exists')) {
+          toast.error(t('participantNameAlreadyExists'))
+        } else if (error.message.includes('Email address already in use')) {
+          toast.error(t('emailAlreadyInUse'))
+        } else {
+          toast.error(t('joinError'))
+        }
       } else {
         toast.error(t('joinError'))
       }

@@ -1,6 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { getGameByCode, updateGame, getDatabaseStatus, Participant, Game, GameUpdatePayload, ReassignmentRequest } from '../shared/cosmosdb'
 import { reassignParticipant, generateAssignments, generateId } from '../shared/game-utils'
+import { JoinInvitationPayload } from '../shared/types'
 import { 
   getEmailServiceStatus,
   sendParticipantConfirmedEmail,
@@ -703,18 +704,22 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
 
     // Handle joinInvitation action (new participants joining via invitation link)
     if (body.action === 'joinInvitation') {
-      const invitationToken = (body as any).invitationToken
-      const participantName = (body as any).participantName?.trim()
-      const participantEmail = (body as any).participantEmail?.trim()
-      const desiredGift = (body as any).desiredGift?.trim() || ''
-      const wish = (body as any).wish?.trim() || ''
-      const language = (body as any).language
+      const payload = body as JoinInvitationPayload
+      const invitationToken = payload.invitationToken
+      const participantName = payload.participantName?.trim()
+      const participantEmail = payload.participantEmail?.trim()
+      const desiredGift = payload.desiredGift?.trim() || ''
+      const wish = payload.wish?.trim() || ''
+      const language = payload.language
       
       // Validate invitation token
       if (!invitationToken || invitationToken !== game.invitationToken) {
         return {
           status: 403,
-          jsonBody: { error: 'Invalid invitation token' }
+          jsonBody: { 
+            error: 'Invalid invitation token',
+            code: 'INVALID_INVITATION_TOKEN'
+          }
         }
       }
       
@@ -722,7 +727,10 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       if (!participantName) {
         return {
           status: 400,
-          jsonBody: { error: 'Participant name is required' }
+          jsonBody: { 
+            error: 'Participant name is required',
+            code: 'PARTICIPANT_NAME_REQUIRED'
+          }
         }
       }
       
@@ -730,7 +738,10 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       if (game.participants.some(p => p.name.toLowerCase() === participantName.toLowerCase())) {
         return {
           status: 400,
-          jsonBody: { error: 'Participant name already exists' }
+          jsonBody: { 
+            error: 'Participant name already exists',
+            code: 'DUPLICATE_NAME'
+          }
         }
       }
       
@@ -740,7 +751,10 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       )) {
         return {
           status: 400,
-          jsonBody: { error: 'Email address already in use' }
+          jsonBody: { 
+            error: 'Email address already in use',
+            code: 'DUPLICATE_EMAIL'
+          }
         }
       }
       
@@ -788,6 +802,16 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
         }).catch(err => {
           context.warn(`⚠️ Failed to send welcome email: ${err.message}`)
         })
+      }
+      
+      // Return updated game with the new participant's ID
+      const updatedGame = await updateGame(game)
+      return {
+        status: 200,
+        jsonBody: {
+          game: updatedGame,
+          participantId: newParticipant.id
+        }
       }
     }
     

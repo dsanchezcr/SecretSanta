@@ -1336,6 +1336,11 @@ describe('updateGame function', () => {
       expect(response.status).toBe(200)
       expect(mockUpdateGame).toHaveBeenCalled()
       
+      // Check response structure includes both game and participantId
+      expect(response.jsonBody).toHaveProperty('game')
+      expect(response.jsonBody).toHaveProperty('participantId')
+      expect(response.jsonBody.participantId).toBe('new-participant-id')
+      
       const updatedGame = mockUpdateGame.mock.calls[0][0]
       expect(updatedGame.participants).toHaveLength(4)
       expect(updatedGame.participants[3].name).toBe('David')
@@ -1360,7 +1365,8 @@ describe('updateGame function', () => {
       const response = await updateGameHandler(mockRequest, mockContext)
 
       expect(response.status).toBe(403)
-      expect(response.jsonBody).toEqual({ error: 'Invalid invitation token' })
+      expect(response.jsonBody).toHaveProperty('error')
+      expect(response.jsonBody).toHaveProperty('code', 'INVALID_INVITATION_TOKEN')
     })
 
     it('should reject empty participant name', async () => {
@@ -1377,7 +1383,8 @@ describe('updateGame function', () => {
       const response = await updateGameHandler(mockRequest, mockContext)
 
       expect(response.status).toBe(400)
-      expect(response.jsonBody).toEqual({ error: 'Participant name is required' })
+      expect(response.jsonBody).toHaveProperty('error')
+      expect(response.jsonBody).toHaveProperty('code', 'PARTICIPANT_NAME_REQUIRED')
     })
 
     it('should reject duplicate participant name', async () => {
@@ -1394,7 +1401,8 @@ describe('updateGame function', () => {
       const response = await updateGameHandler(mockRequest, mockContext)
 
       expect(response.status).toBe(400)
-      expect(response.jsonBody).toEqual({ error: 'Participant name already exists' })
+      expect(response.jsonBody).toHaveProperty('error')
+      expect(response.jsonBody).toHaveProperty('code', 'DUPLICATE_NAME')
     })
 
     it('should reject duplicate email address', async () => {
@@ -1413,7 +1421,8 @@ describe('updateGame function', () => {
       const response = await updateGameHandler(mockRequest, mockContext)
 
       expect(response.status).toBe(400)
-      expect(response.jsonBody).toEqual({ error: 'Email address already in use' })
+      expect(response.jsonBody).toHaveProperty('error')
+      expect(response.jsonBody).toHaveProperty('code', 'DUPLICATE_EMAIL')
     })
 
     it('should clear confirmation states when regenerating assignments', async () => {

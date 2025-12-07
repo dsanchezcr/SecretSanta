@@ -41,6 +41,9 @@ export function ParticipantSelectionView({
 
   // Format amount with currency
   const formatAmount = () => {
+    if (!game.amount || game.amount.trim() === '') {
+      return t('noInstructions') // Fallback for empty amount
+    }
     const curr = CURRENCIES.find(c => c.code === game.currency)
     if (curr) {
       return `${curr.flag} ${curr.symbol}${game.amount} ${curr.code}`
@@ -258,7 +261,7 @@ export function ParticipantSelectionView({
                   {t('date')}
                 </p>
                 <p className="text-base font-semibold">
-                  {formatDate(game.date, language)}{game.time && ` - ${game.time}`}
+                  {game.date ? `${formatDate(game.date, language)}${game.time ? ` - ${game.time}` : ''}` : t('noInstructions')}
                 </p>
               </div>
             </div>
@@ -269,7 +272,7 @@ export function ParticipantSelectionView({
                 <p className="text-sm font-medium text-muted-foreground">
                   {t('location')}
                 </p>
-                <p className="text-base font-semibold">{game.location}</p>
+                <p className="text-base font-semibold">{game.location || t('noInstructions')}</p>
               </div>
             </div>
 

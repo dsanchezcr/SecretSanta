@@ -34,7 +34,7 @@ if ! command -v docker-compose &> /dev/null; then
     ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
     # Verify Docker Compose installation
     if ! docker-compose --version &> /dev/null; then
-        echo "❌ Docker Compose installation failed"
+        echo "❌ Docker Compose installation failed" >&2
         exit 1
     fi
     echo "✓ Docker Compose installed ($(docker-compose --version))"
@@ -49,37 +49,37 @@ fi
 curl --fail --show-error https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /tmp/microsoft.gpg
 mv /tmp/microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
 ARCH=$(dpkg --print-architecture)
-sh -c "echo \"deb [arch=${ARCH}] https://packages.microsoft.com/debian/\$(lsb_release -rs | cut -d'.' -f 1)/prod \$(lsb_release -cs) main\" > /etc/apt/sources.list.d/dotnetdev.list"
+bash -c "echo \"deb [arch=${ARCH}] https://packages.microsoft.com/debian/\$(lsb_release -rs | cut -d'.' -f 1)/prod \$(lsb_release -cs) main\" > /etc/apt/sources.list.d/dotnetdev.list"
 # The following command requires root privileges. The dev container runs as root by default.
 apt-get update -y && apt-get install -y azure-functions-core-tools-4
 # Verify Azure Functions Core Tools installation
 if ! command -v func &> /dev/null; then
-    echo "❌ Azure Functions Core Tools installation failed"
+    echo "❌ Azure Functions Core Tools installation failed" >&2
     exit 1
 fi
 echo "✓ Azure Functions Core Tools installed ($(func --version))"
 
 # Validate required directories and files exist
 if [ ! -d "api" ]; then
-    echo "❌ api directory not found"
+    echo "❌ api directory not found" >&2
     exit 1
 fi
 
 if [ ! -f "scripts/setup-local-settings.js" ]; then
-    echo "❌ scripts/setup-local-settings.js not found"
+    echo "❌ scripts/setup-local-settings.js not found" >&2
     exit 1
 fi
 
 echo "📦 Installing npm dependencies..."
-npm install || { echo "❌ Failed to install npm dependencies"; exit 1; }
+npm install || { echo "❌ Failed to install npm dependencies" >&2; exit 1; }
 echo "✓ Dependencies installed"
 
 echo "⚙️  Setting up API..."
-(cd api && npm install) || { echo "❌ Failed to install API dependencies"; exit 1; }
+(cd api && npm install) || { echo "❌ Failed to install API dependencies" >&2; exit 1; }
 echo "✓ API dependencies installed"
 
 echo "🔧 Creating local settings..."
-(cd api && node ../scripts/setup-local-settings.js) || { echo "❌ Failed to create local settings"; exit 1; }
+(cd api && node ../scripts/setup-local-settings.js) || { echo "❌ Failed to create local settings" >&2; exit 1; }
 echo "✓ Local settings created"
 
 echo "✅ Setup complete!"

@@ -910,7 +910,7 @@ To completely remove analytics functionality, perform all of the following steps
 1. Delete `src/lib/analytics.ts`.
 2. Remove the import of `analytics` from `src/App.tsx`.
 3. Delete the `src/components/CookieConsentBanner.tsx` component.
-4. Remove all usages of `<CookieConsentBanner />` in `src/App.tsx` (e.g., line 517).
+4. Remove all usages of `<CookieConsentBanner />` in `src/App.tsx` (e.g., line 541).
 5. Remove analytics management UI from `src/components/PrivacyView.tsx`.
 6. Remove related translation keys from `src/lib/translations.ts` (such as those for analytics/cookie consent).
 

@@ -16,7 +16,12 @@ jest.mock('../shared/game-utils', () => ({
       giverId: p.id,
       receiverId: participants[(i + 1) % participants.length].id
     }))
-  )
+  ),
+  validateDateString: jest.fn().mockImplementation((dateString: string) => {
+    // Use the actual validation logic
+    const actualModule = jest.requireActual('../shared/game-utils')
+    return actualModule.validateDateString(dateString)
+  })
 }))
 
 import { createGame, getDatabaseStatus } from '../shared/cosmosdb'
@@ -336,5 +341,354 @@ describe('createGame function', () => {
       const uniqueTokens = new Set(tokens)
       expect(uniqueTokens.size).toBe(tokens.length)
     })
+  })
+
+  describe('date validation', () => {
+    it('should accept today\'s date', async () => {
+      const today = new Date()
+      const dateStr = today.toISOString().split('T')[0] // YYYY-MM-DD format
+      
+      const requestBody = {
+        name: 'Today\'s Game',
+        date: dateStr,
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      const game = response.jsonBody as Game
+      expect(game.date).toBe(dateStr)
+    })
+
+    it('should accept future dates', async () => {
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + 30)
+      const dateStr = futureDate.toISOString().split('T')[0]
+      
+      const requestBody = {
+        name: 'Future Game',
+        date: dateStr,
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      const game = response.jsonBody as Game
+      expect(game.date).toBe(dateStr)
+    })
+
+    it('should reject past dates', async () => {
+      const pastDate = new Date()
+      pastDate.setDate(pastDate.getDate() - 1)
+      const dateStr = pastDate.toISOString().split('T')[0]
+      
+      const requestBody = {
+        name: 'Past Game',
+        date: dateStr,
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Event date must be today or in the future'
+      })
+    })
+
+    it('should store dates without timezone conversion', async () => {
+      // Test that dates are stored correctly in YYYY-MM-DD format without
+      // timezone conversion issues (bug: dates shifted by one day in PST/negative UTC)
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + 30)
+      const dateStr = futureDate.toISOString().split('T')[0]
+      
+      const requestBody = {
+        name: 'Future Event',
+        date: dateStr,
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      const game = response.jsonBody as Game
+      
+      // The date should be stored exactly as input, without timezone conversion
+      expect(game.date).toBe(dateStr)
+      
+      // Verify the date wasn't shifted by +/- 1 day due to timezone issues
+      const dayBefore = new Date(futureDate)
+      dayBefore.setDate(dayBefore.getDate() - 1)
+      const dayAfter = new Date(futureDate)
+      dayAfter.setDate(dayAfter.getDate() + 1)
+      
+      expect(game.date).not.toBe(dayBefore.toISOString().split('T')[0])
+      expect(game.date).not.toBe(dayAfter.toISOString().split('T')[0])
+    })
+
+    it('should reject invalid date format', async () => {
+      const requestBody = {
+        name: 'Invalid Date Format',
+        date: '12/21/2025',  // Wrong format (should be YYYY-MM-DD)
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      })
+    })
+
+    it('should reject incomplete date string', async () => {
+      const requestBody = {
+        name: 'Incomplete Date',
+        date: '2025-12',  // Missing day
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      })
+    })
+
+    it('should reject invalid calendar dates', async () => {
+      // February 31st doesn't exist - should be rejected
+      const requestBody = {
+        name: 'Invalid Calendar Date',
+        date: '2026-02-31',  // February 31st doesn't exist
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      // Should reject the invalid calendar date
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid calendar date. The date does not exist (e.g., February 31, April 31).'
+      })
+    })
+
+    it('should accept February 29th in leap year', async () => {
+      const requestBody = {
+        name: 'Leap Year Date',
+        date: '2028-02-29',  // 2028 is a leap year (future date)
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      const game = response.jsonBody as Game
+      expect(game.date).toBe('2028-02-29')
+    })
+
+    it('should reject February 29th in non-leap year', async () => {
+      const requestBody = {
+        name: 'Non-Leap Year Date',
+        date: '2025-02-29',  // 2025 is not a leap year
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid calendar date. The date does not exist (e.g., February 31, April 31).'
+      })
+    })
+
+    it('should reject April 31st (30-day month)', async () => {
+      const requestBody = {
+        name: 'Invalid 30-day Month',
+        date: '2026-04-31',  // April only has 30 days
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid calendar date. The date does not exist (e.g., February 31, April 31).'
+      })
+    })
+
+    it('should reject date with whitespace in components', async () => {
+      const requestBody = {
+        name: 'Whitespace Date',
+        date: '2025- 12-21',  // Space in month
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      })
+    })
+
+    it('should reject date with invalid month', async () => {
+      const requestBody = {
+        name: 'Invalid Month',
+        date: '2025-13-21',  // Month 13 doesn't exist
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date values. Year must be 1900-2100, month 1-12, day 1-31'
+      })
+    })
+
+    it('should reject date with invalid day', async () => {
+      const requestBody = {
+        name: 'Invalid Day',
+        date: '2025-12-32',  // Day 32 doesn't exist
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date values. Year must be 1900-2100, month 1-12, day 1-31'
+      })
+    })
+
+    it('should reject date with year out of range', async () => {
+      const requestBody = {
+        name: 'Year Out of Range',
+        date: '2150-12-21',  // Year > 2100
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date values. Year must be 1900-2100, month 1-12, day 1-31'
+      })
+    })
+
+    it('should reject date without leading zeros', async () => {
+      const requestBody = {
+        name: 'No Leading Zeros',
+        date: '2025-1-5',  // Should be 2025-01-05
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      })
+    })
+
+    it('should reject date with extra digits in year', async () => {
+      const requestBody = {
+        name: 'Extra Year Digits',
+        date: '02025-01-01',  // 5-digit year
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({
+        error: 'Invalid date format. Expected YYYY-MM-DD'
+      })
+    })
+
   })
 })

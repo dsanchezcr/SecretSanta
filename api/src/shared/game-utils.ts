@@ -107,3 +107,69 @@ export function reassignParticipant(
     return assignment
   })
 }
+
+/**
+ * Validation result for date validation.
+ * When valid is true, year/month/day are always present.
+ * When valid is false, error message is always present.
+ */
+export type DateValidationResult =
+  | { valid: true; year: number; month: number; day: number }
+  | { valid: false; error: string }
+
+/**
+ * Validates a date string in YYYY-MM-DD format
+ * Checks format, range, and calendar validity (e.g., rejects Feb 31, April 31)
+ * This validation is shared to ensure consistency across the API
+ * 
+ * Note: Frontend has similar validation in src/lib/game-utils.ts isValidDate() and formatDate()
+ * Keep these implementations synchronized when making changes
+ * 
+ * @param dateString - Date string in YYYY-MM-DD format
+ * @returns Validation result with parsed components if valid
+ */
+export function validateDateString(dateString: string): DateValidationResult {
+  // Validate strict YYYY-MM-DD format (4-digit year, 2-digit month, 2-digit day)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return {
+      valid: false,
+      error: 'Invalid date format. Expected YYYY-MM-DD'
+    }
+  }
+  
+  // Parse date components
+  const dateParts = dateString.split('-')
+  const year = parseInt(dateParts[0], 10)
+  const month = parseInt(dateParts[1], 10)
+  const day = parseInt(dateParts[2], 10)
+  
+  // Validate reasonable ranges for date components
+  if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return {
+      valid: false,
+      error: 'Invalid date values. Year must be 1900-2100, month 1-12, day 1-31'
+    }
+  }
+  
+  // Create date in local timezone
+  const eventDate = new Date(year, month - 1, day)
+  
+  // Reject if date was normalized (e.g., Feb 31 -> Mar 3, April 31 -> May 1)
+  if (
+    eventDate.getFullYear() !== year ||
+    eventDate.getMonth() !== month - 1 ||
+    eventDate.getDate() !== day
+  ) {
+    return {
+      valid: false,
+      error: 'Invalid calendar date. The date does not exist (e.g., February 31, April 31).'
+    }
+  }
+  
+  return {
+    valid: true,
+    year,
+    month,
+    day
+  }
+}

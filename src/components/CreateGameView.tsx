@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ArrowLeft, ArrowRight, Gift, Users, X, UserPlus, Envelope, CircleNotch, ShieldCheck, Warning, Info } from '@phosphor-icons/react'
-import { generateGameCode, generateId, generateAssignments } from '@/lib/game-utils'
+import { generateGameCode, generateId, generateAssignments, isValidDate } from '@/lib/game-utils'
 import { isValidEmail } from '@/lib/utils'
 import { Game, Participant, CURRENCIES } from '@/lib/types'
 import { createGameAPI, CreateGameResponse, checkApiStatus } from '@/lib/api'
@@ -127,7 +127,7 @@ export function CreateGameView({ onGameCreated, onBack, emailConfigured = false 
     setParticipants(participants.filter((_, i) => i !== index))
   }
 
-  const canProceedStep1 = eventName.trim() && amount.trim() && date && location.trim()
+  const canProceedStep1 = eventName.trim() && amount.trim() && date && isValidDate(date) && location.trim()
   const canProceedStep2 = participants.length >= 3
 
   // Helper function to create game locally (demo mode)
@@ -323,7 +323,14 @@ export function CreateGameView({ onGameCreated, onBack, emailConfigured = false 
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
+                className={date && !isValidDate(date) ? 'border-red-500' : ''}
               />
+              {date && !isValidDate(date) && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <Warning size={14} />
+                  {t('invalidDate')}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

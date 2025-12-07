@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ArrowLeft, ShieldCheck, Database, Lock, Trash, Globe } from '@phosphor-icons/react'
 import { useLanguage } from './useLanguage'
 import { LanguageToggle } from './LanguageToggle'
 import { motion } from 'framer-motion'
+import { hasAnalyticsConsent, setAnalyticsConsent, setAnalyticsDeclined } from '@/lib/analytics'
+import { toast } from 'sonner'
 
 interface PrivacyViewProps {
   onBack: () => void
@@ -11,6 +14,23 @@ interface PrivacyViewProps {
 
 export function PrivacyView({ onBack }: PrivacyViewProps) {
   const { t } = useLanguage()
+  const [analyticsConsent, setAnalyticsConsentState] = useState(() => {
+    // Initialize from localStorage on mount (SSR-safe)
+    if (typeof window === 'undefined') return false
+    return hasAnalyticsConsent()
+  })
+
+  const handleConsentChange = (consent: boolean) => {
+    if (consent) {
+      setAnalyticsConsent(true)
+      setAnalyticsConsentState(true)
+      toast.success(t('analyticsEnabled') || 'Analytics enabled')
+    } else {
+      setAnalyticsDeclined()
+      setAnalyticsConsentState(false)
+      toast.success(t('analyticsDisabled') || 'Analytics disabled')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -128,11 +148,68 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
           </Card>
         </motion.div>
 
-        {/* Contact */}
+        {/* Analytics */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
+        >
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+              <ShieldCheck size={20} className="text-primary" />
+              {t('privacyAnalyticsTitle')}
+            </h2>
+            <div className="space-y-4 text-muted-foreground">
+              <p>{t('privacyAnalyticsDesc')}</p>
+              
+              {/* Consent Management UI */}
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {t('analyticsConsentStatus') || 'Analytics Status'}
+                    </p>
+                    <p className="text-sm">
+                      {analyticsConsent 
+                        ? (t('analyticsCurrentlyEnabled') || 'Analytics are currently enabled')
+                        : (t('analyticsCurrentlyDisabled') || 'Analytics are currently disabled')
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {!analyticsConsent && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleConsentChange(true)}
+                      className="flex-1 sm:flex-none"
+                    >
+                      {t('enableAnalytics') || 'Enable Analytics'}
+                    </Button>
+                  )}
+                  {analyticsConsent && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleConsentChange(false)}
+                      className="flex-1 sm:flex-none"
+                    >
+                      {t('disableAnalytics') || 'Disable Analytics'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Contact */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
         >
           <Card className="p-6 bg-muted/50">
             <p className="text-sm text-muted-foreground text-center">

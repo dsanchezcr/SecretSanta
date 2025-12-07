@@ -840,6 +840,82 @@ Azure tracks deployments in Activity Log:
 2. Filter by Deployments
 3. See all infrastructure changes
 
+### Third-Party Analytics
+
+**Google Analytics Integration:**
+
+This application includes optional Google Analytics for anonymous usage tracking:
+
+- **Only loads in production**: Non-production environments (PR previews, QA) do not load Google Analytics
+- **Requires user consent**: A cookie consent banner appears on first visit, requiring explicit user approval
+- **GDPR compliant**: Users can decline analytics via the cookie consent banner on first visit, or change their preference at any time via the Privacy Policy page
+- **Anonymous data only**: Collects page views and interaction patterns without identifying users
+- **Tracking ID**: Configured via `VITE_GA_TRACKING_ID` environment variable (disabled by default)
+
+> **⚠️ Security Note:**  
+> By default, Google Analytics will send the full page URL (including query parameters) to Google. If any access tokens or sensitive credentials (such as `?code=...&participant=...` or `?organizer=...`) are present in the URL, they will be leaked to Google Analytics and could be reused to join protected games or access the organizer panel.  
+> **To mitigate this risk:**  
+> - **Avoid including sensitive tokens in URLs** wherever possible.  
+> - **If tokens must be present in the URL**, configure your GA integration to strip sensitive query parameters before sending data.  
+>   For example, when calling `gtag('config', ...)`, override the `page_location` or `page_path` to exclude sensitive parameters:
+>
+>   ```js
+>   // Example: Remove sensitive query params before sending to GA
+>   const url = new URL(window.location.href);
+>   url.searchParams.delete('code');
+>   url.searchParams.delete('participant');
+>   url.searchParams.delete('organizer');
+>   gtag('config', 'G-XXXXXXX', {
+>     page_location: url.origin + url.pathname, // or url.toString() if safe
+>   });
+>   ```
+> - **Update this documentation** if you change how tokens are handled or how analytics is configured.
+
+**Configuring the tracking ID:**
+
+You can customize the Google Analytics tracking ID using environment variables:
+
+```bash
+# During build (production)
+VITE_GA_TRACKING_ID=G-YOUR-TRACKING-ID npm run build
+
+# In Azure Static Web Apps, set as an application setting:
+# Settings → Configuration → Application settings
+# Name: VITE_GA_TRACKING_ID
+# Value: G-YOUR-TRACKING-ID
+```
+
+If `VITE_GA_TRACKING_ID` is not set or is empty, analytics are completely disabled (no tracking data is sent).
+
+**Privacy implications for self-hosted deployments:**
+
+If you deploy this application for your organization:
+1. Review your local privacy regulations (GDPR, CCPA, etc.)
+2. Consider whether analytics are needed for your use case
+3. Set `VITE_GA_TRACKING_ID` to your own Google Analytics property ID (analytics are disabled if not set)
+4. Ensure your privacy policy reflects the use of Google Analytics
+5. The application stores user consent preferences in browser localStorage
+
+**Disabling analytics:**
+
+Analytics are automatically disabled in:
+- Development environment (`npm run dev`)
+- PR preview environments
+- QA environment
+- When users decline consent
+- When `VITE_GA_TRACKING_ID` is not configured (defaults to empty/disabled)
+
+To completely remove analytics functionality, perform all of the following steps:
+
+1. Delete `src/lib/analytics.ts`.
+2. Remove the import of `analytics` from `src/App.tsx`.
+3. Delete the `src/components/CookieConsentBanner.tsx` component.
+4. Remove all usages of `<CookieConsentBanner />` in `src/App.tsx` (e.g., line 541).
+5. Remove analytics management UI from `src/components/PrivacyView.tsx`.
+6. Remove related translation keys from `src/lib/translations.ts` (such as those for analytics/cookie consent).
+
+This ensures that all analytics-related code, UI, and translations are fully removed from the application.
+
 ---
 
 ## Next Steps

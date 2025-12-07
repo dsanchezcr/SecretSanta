@@ -5,6 +5,15 @@ import { test, expect } from '@playwright/test'
  * Focus on critical user flows only - not individual UI elements
  */
 
+// Global setup to handle cookie banner in all tests
+test.beforeEach(async ({ context }) => {
+  // Set analytics declined in localStorage BEFORE any page loads
+  // This prevents the cookie banner from appearing and blocking interactions
+  await context.addInitScript(() => {
+    window.localStorage.setItem('secretsanta:analytics-declined', 'true')
+  })
+})
+
 test.describe('Core User Flows', () => {
   
   test('should display home page with main actions', async ({ page }) => {

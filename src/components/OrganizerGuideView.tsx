@@ -73,6 +73,7 @@ export function OrganizerGuideView({ onBack }: OrganizerGuideViewProps) {
               <li>{t('guideStep2Item1')}</li>
               <li>{t('guideStep2Item2')}</li>
               <li>{t('guideStep2Item3')}</li>
+              <li>{t('guideStep2Item4')}</li>
             </ul>
           </div>
         </Card>

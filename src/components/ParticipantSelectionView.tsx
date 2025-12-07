@@ -42,7 +42,8 @@ export function ParticipantSelectionView({
     setSelectedId(id)
     const participant = participants.find(p => p.id === id)
     if (participant) {
-      setWishText(participant.wish || '')
+      // Load wish if participant has added one, otherwise use desiredGift from organizer
+      setWishText(participant.wish || participant.desiredGift || '')
       setEmailText(participant.email || '')
     }
   }
@@ -237,7 +238,7 @@ export function ParticipantSelectionView({
                 }`}
               >
                 <span className="font-semibold text-lg">{participant.name}</span>
-                {participant.wish && (
+                {(participant.wish || participant.desiredGift) && (
                   <span className="ml-2 text-xs text-green-600">✓ {t('hasWish')}</span>
                 )}
               </button>

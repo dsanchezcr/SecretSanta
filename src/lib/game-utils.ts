@@ -180,10 +180,16 @@ export function copyToClipboard(text: string): Promise<void> {
   
   try {
     document.execCommand('copy')
-    document.body.removeChild(textarea)
+    // Defensive check: ensure textarea is still in DOM before removing
+    if (textarea.parentNode === document.body) {
+      document.body.removeChild(textarea)
+    }
     return Promise.resolve()
   } catch (err) {
-    document.body.removeChild(textarea)
+    // Defensive check: ensure textarea is still in DOM before removing
+    if (textarea.parentNode === document.body) {
+      document.body.removeChild(textarea)
+    }
     return Promise.reject(err)
   }
 }

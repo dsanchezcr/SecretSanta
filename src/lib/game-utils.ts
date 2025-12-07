@@ -156,6 +156,18 @@ export function reassignParticipant(
 }
 
 export function formatDate(dateString: string, locale: string = 'es'): string {
+  // Handle YYYY-MM-DD format to avoid timezone issues
+  if (dateString.includes('-')) {
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    return date.toLocaleDateString(locale, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+  
+  // Fallback for other formats
   const date = new Date(dateString)
   return date.toLocaleDateString(locale, {
     year: 'numeric',

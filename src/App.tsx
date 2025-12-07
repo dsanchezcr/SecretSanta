@@ -20,6 +20,10 @@ import { useLocalStorage } from '@/hooks/use-local-storage'
 import { checkApiStatus, getGameAPI, CreateGameResponse } from '@/lib/api'
 import { initializeAnalytics } from '@/lib/analytics'
 
+// API health check configuration for initial load
+const INITIAL_CHECK_RETRIES = 2
+const INITIAL_CHECK_RETRY_DELAY = 1000 // ms
+
 type View =
   | 'home'
   | 'create-game'
@@ -35,10 +39,11 @@ type View =
 
 type BannerType = 'none' | 'api-unavailable' | 'database-unavailable'
 
-function StatusBanner({ bannerType }: { bannerType: BannerType }) {
+function StatusBanner({ bannerType, isCheckingApi }: { bannerType: BannerType; isCheckingApi: boolean }) {
   const { t } = useLanguage()
   
-  if (bannerType === 'none') return null
+  // Don't show banner while still checking API status on initial load
+  if (isCheckingApi || bannerType === 'none') return null
   
   const isApiUnavailable = bannerType === 'api-unavailable'
   
@@ -69,31 +74,52 @@ function App() {
   const [emailResults, setEmailResults] = useState<CreateGameResponse['emailResults'] | undefined>(undefined)
   const [errorType, setErrorType] = useState<ErrorType | null>(null)
   const [isLoadingGame, setIsLoadingGame] = useState(false)
+  const [isCheckingApi, setIsCheckingApi] = useState(true)
   const initialUrlHandled = useRef(false)
+  const initialCheckDone = useRef(false)
 
   // Check API status on mount
   useEffect(() => {
-    const checkStatus = async () => {
-      const status = await checkApiStatus()
-      if (!status.available) {
-        setBannerType('api-unavailable')
-        setEmailConfigured(false)
-      } else if (!status.databaseConnected) {
-        setBannerType('database-unavailable')
-        setEmailConfigured(status.emailConfigured)
-      } else {
-        setBannerType('none')
-        setEmailConfigured(status.emailConfigured)
+    const checkStatus = async (isInitialCheck = false) => {
+      if (isInitialCheck) {
+        setIsCheckingApi(true)
+      }
+      
+      try {
+        // On initial load, use retries to handle cold starts (especially after deployments)
+        const status = isInitialCheck 
+          ? await checkApiStatus(INITIAL_CHECK_RETRIES, INITIAL_CHECK_RETRY_DELAY) 
+          : await checkApiStatus()
+        
+        if (!status.available) {
+          setBannerType('api-unavailable')
+          setEmailConfigured(false)
+        } else if (!status.databaseConnected) {
+          setBannerType('database-unavailable')
+          setEmailConfigured(status.emailConfigured)
+        } else {
+          setBannerType('none')
+          setEmailConfigured(status.emailConfigured)
+        }
+      } finally {
+        if (isInitialCheck) {
+          setIsCheckingApi(false)
+        }
       }
     }
     
-    checkStatus()
+    // Initial check with retries
+    // Set flag before check to ensure retries only happen once, even in React strict mode
+    if (!initialCheckDone.current) {
+      initialCheckDone.current = true
+      checkStatus(true)
+    }
     
     // Initialize Google Analytics if user has consented
     initializeAnalytics()
     
-    // Re-check every 30 seconds
-    const interval = setInterval(checkStatus, 30000)
+    // Re-check every 30 seconds (without retries)
+    const interval = setInterval(() => checkStatus(false), 30000)
     return () => clearInterval(interval)
   }, [])
 
@@ -444,7 +470,7 @@ function App() {
   return (
     <LanguageProvider>
       <div className="min-h-screen flex flex-col">
-        <StatusBanner bannerType={bannerType} />
+        <StatusBanner bannerType={bannerType} isCheckingApi={isCheckingApi} />
         <div className="flex-1">
           {isLoadingGame && <LoadingView />}
           

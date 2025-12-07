@@ -109,6 +109,7 @@ function App() {
     }
     
     // Initial check with retries
+    // Set flag before check to ensure retries only happen once, even in React strict mode
     if (!initialCheckDone.current) {
       initialCheckDone.current = true
       checkStatus(true)

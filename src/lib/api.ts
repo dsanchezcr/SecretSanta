@@ -17,6 +17,9 @@ export interface ApiStatus {
  * Check if the API is available and what mode it's running in
  * @param retries - Number of retries to attempt (default: 0 for regular checks, use higher for initial load)
  * @param retryDelay - Initial delay between retries in ms (will increase exponentially)
+ * @returns ApiStatus object indicating availability, database connection, and email configuration
+ *          - On success: available=true, with database and email status details
+ *          - On failure after all retries: available=false, databaseConnected=false
  */
 export async function checkApiStatus(retries = 0, retryDelay = 1000): Promise<ApiStatus> {
   for (let attempt = 0; attempt <= retries; attempt++) {

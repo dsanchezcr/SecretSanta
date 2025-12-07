@@ -107,10 +107,11 @@ export async function createGameAPI(gameData: CreateGameData): Promise<CreateGam
   return response.json()
 }
 
-export async function getGameAPI(code: string, options?: { participantToken?: string; organizerToken?: string }): Promise<Game & { authenticatedParticipantId?: string; requiresToken?: boolean }> {
+export async function getGameAPI(code: string, options?: { participantToken?: string; organizerToken?: string; participantId?: string }): Promise<Game & { authenticatedParticipantId?: string; requiresToken?: boolean; giverHasConfirmed?: boolean }> {
   const params = new URLSearchParams()
   if (options?.participantToken) params.append('participantToken', options.participantToken)
   if (options?.organizerToken) params.append('organizerToken', options.organizerToken)
+  if (options?.participantId) params.append('participantId', options.participantId)
   
   const url = `${API_BASE_URL}/games/${code}${params.toString() ? `?${params.toString()}` : ''}`
   const response = await fetch(url)

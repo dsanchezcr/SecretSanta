@@ -79,7 +79,13 @@ export function AssignmentView({
     try {
       const apiStatus = await checkApiStatus()
       if (apiStatus.available && apiStatus.databaseConnected) {
-        const freshGame = await getGameAPI(game.code)
+        // For protected games, get token from sessionStorage
+        const storedToken = sessionStorage.getItem(`participant-token-${game.code}`)
+        // Pass participant token for protected games, or participant ID for non-protected games
+        const freshGame = await getGameAPI(game.code, {
+          participantToken: storedToken || undefined,
+          participantId: !game.isProtected ? participant.id : undefined
+        })
         onUpdateGame(freshGame)
       }
     } catch {
@@ -87,7 +93,7 @@ export function AssignmentView({
     } finally {
       setIsRefreshing(false)
     }
-  }, [game.code, onUpdateGame])
+  }, [game.code, game.isProtected, participant.id, onUpdateGame])
 
 
 

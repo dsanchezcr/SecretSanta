@@ -16,6 +16,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
   // Get optional query parameters for token-based access
   const participantToken = request.query.get('participantToken')
   const organizerToken = request.query.get('organizerToken')
+  const participantId = request.query.get('participantId') // For non-protected games to filter assignments
   
   // Check database connectivity first
   const dbStatus = getDatabaseStatus()
@@ -110,7 +111,38 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
       }
     }
     
-    // Otherwise return game data without sensitive tokens
+    // If participantId is provided, filter assignments for that participant (even for non-protected games)
+    if (participantId) {
+      const participant = game.participants.find(p => p.id === participantId)
+      if (participant) {
+        // Find this participant's assignment and giver assignment
+        const participantAssignment = game.assignments.find(a => a.giverId === participantId)
+        const giverAssignment = game.assignments.find(a => a.receiverId === participantId)
+        const giver = giverAssignment ? game.participants.find(p => p.id === giverAssignment.giverId) : undefined
+        
+        // Return filtered game for this participant
+        const filteredGame = {
+          ...game,
+          organizerToken: '', // Hide organizer token
+          participants: game.participants.map(p => ({
+            ...p,
+            token: undefined // Don't expose tokens
+          })),
+          assignments: participantAssignment ? [participantAssignment] : []
+        }
+        
+        return {
+          status: 200,
+          jsonBody: {
+            ...filteredGame,
+            authenticatedParticipantId: participantId,
+            giverHasConfirmed: giver?.hasConfirmedAssignment || false
+          }
+        }
+      }
+    }
+    
+    // Otherwise return game data without sensitive tokens (all assignments visible)
     const publicGame = {
       ...game,
       organizerToken: '', // Hide organizer token from public access

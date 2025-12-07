@@ -201,7 +201,7 @@ function App() {
         if (game.participants && game.participants.length > 0) {
           setGames((currentGames) => ({
             ...currentGames,
-            [game.code]: gameResponse // Store the full response including giverHasConfirmed flag
+            [game.code]: game // Store the game object (without extra response fields)
           }))
         }
         

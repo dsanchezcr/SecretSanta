@@ -218,4 +218,25 @@ describe('getGame function', () => {
       expect(response.jsonBody).toEqual({ error: 'Invalid participant token' })
     })
   })
+
+  // Non-protected game with participantId filtering
+  describe('non-protected games with participantId', () => {
+    it('should return filtered game for participant with participantId', async () => {
+      mockGetGameByCode.mockResolvedValueOnce(testGame)
+
+      const mockRequest = createMockRequest('123456', { participantId: 'p1' })
+      const response = await getGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(200)
+      const body = response.jsonBody as any
+      expect(body.authenticatedParticipantId).toBe('p1')
+      expect(body.organizerToken).toBe('') // Hidden
+      // Only p1's assignment (p1 -> p2) should be included
+      expect(body.assignments).toHaveLength(1)
+      expect(body.assignments).toContainEqual({ giverId: 'p1', receiverId: 'p2' })
+      // giverHasConfirmed flag should be included (p3 gives to p1, check their confirmation status)
+      expect(body.giverHasConfirmed).toBeDefined()
+      expect(body.giverHasConfirmed).toBe(false)
+    })
+  })
 })

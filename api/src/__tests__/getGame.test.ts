@@ -240,5 +240,15 @@ describe('getGame function', () => {
       expect(body.giverHasConfirmed).toBeDefined()
       expect(body.giverHasConfirmed).toBe(false)
     })
+
+    it('should return 404 for invalid participantId', async () => {
+      mockGetGameByCode.mockResolvedValueOnce(testGame)
+
+      const mockRequest = createMockRequest('123456', { participantId: 'invalid-id' })
+      const response = await getGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(404)
+      expect(response.jsonBody).toEqual({ error: 'Participant not found' })
+    })
   })
 })

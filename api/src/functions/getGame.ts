@@ -140,6 +140,11 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
           }
         }
       }
+      // If participantId is provided but not found, return 404
+      return {
+        status: 404,
+        jsonBody: { error: 'Participant not found' }
+      }
     }
     
     // Otherwise return game data without sensitive tokens and without assignments

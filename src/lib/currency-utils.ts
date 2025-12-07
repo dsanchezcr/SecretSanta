@@ -15,5 +15,6 @@ export function formatAmount(amount: string, currency: string, fallbackText: str
   if (curr) {
     return `${curr.flag} ${curr.symbol}${amount} ${curr.code}`
   }
-  return amount
+  // Fallback: show amount with unknown currency code
+  return currency ? `${amount} ${currency}` : amount
 }

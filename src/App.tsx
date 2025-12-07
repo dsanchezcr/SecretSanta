@@ -199,8 +199,9 @@ function App() {
         
         // Only save to local storage if we have the full game data (with participants)
         if (game.participants && game.participants.length > 0) {
-          // Store the complete game response (API returns Game type with all properties)
-          // The game object from API includes amount, date, location, etc.
+          // Store the complete game response from API
+          // Note: For non-protected games without participantId, assignments are empty array
+          // Assignments are populated when participant is selected and game is refreshed
           setGames((currentGames) => ({
             ...currentGames,
             [game.code]: game

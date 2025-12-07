@@ -142,14 +142,16 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
       }
     }
     
-    // Otherwise return game data without sensitive tokens (all assignments visible)
+    // Otherwise return game data without sensitive tokens and without assignments
+    // Do not leak assignments to anonymous users - they must select a participant first
     const publicGame = {
       ...game,
       organizerToken: '', // Hide organizer token from public access
       participants: game.participants.map(p => ({
         ...p,
         token: undefined // Don't expose tokens even in non-protected games
-      }))
+      })),
+      assignments: [] // Do not leak assignments to anonymous users
     }
     
     return {

@@ -139,10 +139,8 @@ export function AssignmentView({
     return () => clearTimeout(timer)
   }, [currentReceiver])
 
-  // Refresh data on mount
-  useEffect(() => {
-    refreshGameData()
-  }, [refreshGameData])
+  // Note: No mount-time refresh needed - game data is already loaded when entering this view
+  // refreshGameData is available for manual refresh via the refresh button only
 
   const handleReassignment = async () => {
     if (!game.allowReassignment) {

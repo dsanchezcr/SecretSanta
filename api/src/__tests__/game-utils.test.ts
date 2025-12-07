@@ -2,7 +2,8 @@ import {
   generateGameCode,
   generateId,
   generateAssignments,
-  reassignParticipant
+  reassignParticipant,
+  validateDateString
 } from '../shared/game-utils'
 import { Participant, Assignment } from '../shared/types'
 
@@ -252,6 +253,132 @@ describe('game-utils', () => {
       // With 3 participants in a simple cycle, no valid swap exists
       // because any swap would result in either self-assignment or the same receiver
       expect(newAssignments).toBeNull()
+    })
+  })
+
+  describe('validateDateString', () => {
+    it('should accept valid YYYY-MM-DD dates', () => {
+      const result = validateDateString('2025-12-21')
+      expect(result.valid).toBe(true)
+      if (result.valid) {
+        expect(result.year).toBe(2025)
+        expect(result.month).toBe(12)
+        expect(result.day).toBe(21)
+      }
+    })
+
+    it('should accept leap year February 29th', () => {
+      const result = validateDateString('2028-02-29')
+      expect(result.valid).toBe(true)
+      if (result.valid) {
+        expect(result.year).toBe(2028)
+        expect(result.month).toBe(2)
+        expect(result.day).toBe(29)
+      }
+    })
+
+    it('should reject invalid format with missing leading zeros', () => {
+      const result = validateDateString('2025-1-5')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid date format. Expected YYYY-MM-DD')
+      }
+    })
+
+    it('should reject invalid format with extra digits', () => {
+      const result = validateDateString('02025-01-01')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid date format. Expected YYYY-MM-DD')
+      }
+    })
+
+    it('should reject MM/DD/YYYY format', () => {
+      const result = validateDateString('12/21/2025')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid date format. Expected YYYY-MM-DD')
+      }
+    })
+
+    it('should reject incomplete date string', () => {
+      const result = validateDateString('2025-12')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid date format. Expected YYYY-MM-DD')
+      }
+    })
+
+    it('should reject year out of range (too high)', () => {
+      const result = validateDateString('2150-12-21')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid date values. Year must be 1900-2100, month 1-12, day 1-31')
+      }
+    })
+
+    it('should reject year out of range (too low)', () => {
+      const result = validateDateString('1850-12-21')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid date values. Year must be 1900-2100, month 1-12, day 1-31')
+      }
+    })
+
+    it('should reject invalid month', () => {
+      const result = validateDateString('2025-13-21')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid date values. Year must be 1900-2100, month 1-12, day 1-31')
+      }
+    })
+
+    it('should reject invalid day', () => {
+      const result = validateDateString('2025-12-32')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid date values. Year must be 1900-2100, month 1-12, day 1-31')
+      }
+    })
+
+    it('should reject February 31st (invalid calendar date)', () => {
+      const result = validateDateString('2026-02-31')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid calendar date. The date does not exist (e.g., February 31, April 31).')
+      }
+    })
+
+    it('should reject April 31st (30-day month)', () => {
+      const result = validateDateString('2026-04-31')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid calendar date. The date does not exist (e.g., February 31, April 31).')
+      }
+    })
+
+    it('should reject February 29th in non-leap year', () => {
+      const result = validateDateString('2025-02-29')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid calendar date. The date does not exist (e.g., February 31, April 31).')
+      }
+    })
+
+    it('should reject date with whitespace', () => {
+      const result = validateDateString('2025- 12-21')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.error).toBe('Invalid date format. Expected YYYY-MM-DD')
+      }
+    })
+
+    it('should accept dates at boundary of valid range', () => {
+      const resultMin = validateDateString('1900-01-01')
+      expect(resultMin.valid).toBe(true)
+
+      const resultMax = validateDateString('2100-12-31')
+      expect(resultMax.valid).toBe(true)
     })
   })
 })

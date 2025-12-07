@@ -53,7 +53,7 @@ import {
 import { Game, Participant, CURRENCIES } from '@/lib/types'
 import { useLanguage } from './useLanguage'
 import { LanguageToggle } from './LanguageToggle'
-import { formatDate, copyToClipboard, buildShareableUrl } from '@/lib/game-utils'
+import { formatDate, copyToClipboard, buildShareableUrl, isValidDate } from '@/lib/game-utils'
 import { isValidEmail } from '@/lib/utils'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
@@ -254,6 +254,12 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
 
   // Save game edits
   const handleSaveChanges = async () => {
+    // Validate date before saving
+    if (editDate && !isValidDate(editDate)) {
+      toast.error(t('invalidDate'))
+      return
+    }
+    
     setIsSaving(true)
     try {
       // Try API first
@@ -986,7 +992,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
                   <Button variant="ghost" size="sm" onClick={handleCancelEdit} disabled={isSaving}>
                     <X size={16} />
                   </Button>
-                  <Button size="sm" onClick={handleSaveChanges} className="gap-2" disabled={isSaving}>
+                  <Button size="sm" onClick={handleSaveChanges} className="gap-2" disabled={isSaving || (editDate && !isValidDate(editDate))}>
                     {isSaving ? <CircleNotch size={16} className="animate-spin" /> : <Check size={16} />}
                     {t('saveChanges')}
                   </Button>
@@ -1077,7 +1083,18 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
 
                 <div className="space-y-2">
                   <Label>{t('eventDate')}</Label>
-                  <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                  <Input 
+                    type="date" 
+                    value={editDate} 
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className={editDate && !isValidDate(editDate) ? 'border-red-500' : ''}
+                  />
+                  {editDate && !isValidDate(editDate) && (
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <Warning size={14} />
+                      {t('invalidDate')}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

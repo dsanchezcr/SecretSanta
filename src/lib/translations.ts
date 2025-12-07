@@ -110,6 +110,7 @@ export const translations = {
     useOrganizerPanelLink: "Use this link to access the organizer panel",
     emailAlreadyExists: "This email is already used by another participant",
     invalidEmailFormat: "Please enter a valid email address",
+    invalidDate: "Invalid date. Please enter a valid calendar date (e.g., not February 31 or April 31)",
     participantNameExists: "This participant name already exists",
     goToGame: "Go to Organizer Panel",
     
@@ -561,6 +562,7 @@ export const translations = {
     useOrganizerPanelLink: "Usa este link para acceder al panel del organizador",
     emailAlreadyExists: "Este email ya está siendo usado por otro participante",
     invalidEmailFormat: "Por favor ingresa un correo electrónico válido",
+    invalidDate: "Fecha inválida. Por favor ingresa una fecha válida del calendario (ej: no Febrero 31 o Abril 31)",
     participantNameExists: "Este nombre de participante ya existe",
     goToGame: "Ir al Panel del Organizador",
     

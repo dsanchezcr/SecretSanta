@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { createGame, Game, getDatabaseStatus } from '../shared/cosmosdb'
-import { generateGameCode, generateId, generateAssignments } from '../shared/game-utils'
+import { generateGameCode, generateId, generateAssignments, validateDateString } from '../shared/game-utils'
 import { getEmailServiceStatus, sendOrganizerEmail, sendAllParticipantEmails } from '../shared/email-service'
 import { trackError, trackEvent, ApiErrorCode, createErrorResponse, getHttpStatusForError } from '../shared/telemetry'
 import { CreateGamePayload } from '../shared/types'
@@ -45,8 +45,25 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
     if (body.date) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const eventDate = new Date(body.date)
-      eventDate.setHours(0, 0, 0, 0)
+      
+      // Validate date format and calendar validity using shared utility
+      const dateValidation = validateDateString(body.date)
+      if (!dateValidation.valid) {
+        const error = createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          dateValidation.error,
+          undefined,
+          requestId
+        )
+        return {
+          status: getHttpStatusForError(ApiErrorCode.VALIDATION_ERROR),
+          jsonBody: { error: error.message }
+        }
+      }
+      
+      // Create date in local timezone for comparison
+      const { year, month, day } = dateValidation
+      const eventDate = new Date(year, month - 1, day)
       
       if (eventDate < today) {
         const error = createErrorResponse(

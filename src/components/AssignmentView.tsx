@@ -86,10 +86,14 @@ export function AssignmentView({
           participantToken: storedToken || undefined,
           participantId: !game.isProtected ? participant.id : undefined
         })
-        onUpdateGame(freshGame)
+        // Ensure we update with the fresh game data
+        if (freshGame) {
+          onUpdateGame(freshGame)
+        }
       }
-    } catch {
-      // Silently fail - we'll use cached data
+    } catch (error) {
+      // Log error for debugging but continue with cached data
+      console.warn('Failed to refresh game data:', error)
     } finally {
       setIsRefreshing(false)
     }

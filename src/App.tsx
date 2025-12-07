@@ -199,9 +199,11 @@ function App() {
         
         // Only save to local storage if we have the full game data (with participants)
         if (game.participants && game.participants.length > 0) {
+          // Store the complete game response (API returns Game type with all properties)
+          // The game object from API includes amount, date, location, etc.
           setGames((currentGames) => ({
             ...currentGames,
-            [game.code]: game // Store the game object (without extra response fields)
+            [game.code]: game
           }))
         }
         

@@ -200,6 +200,10 @@ describe('getGame function', () => {
       const bob = body.participants.find((p: any) => p.id === 'p2')
       expect(alice.token).toBe('alice-token')
       expect(bob.token).toBeUndefined()
+      // Only Alice's assignment (p1 -> p2) and who gives to Alice (p3 -> p1) should be included
+      expect(body.assignments).toHaveLength(2)
+      expect(body.assignments).toContainEqual({ giverId: 'p1', receiverId: 'p2' })
+      expect(body.assignments).toContainEqual({ giverId: 'p3', receiverId: 'p1' })
     })
 
     it('should return 403 for invalid participant token', async () => {

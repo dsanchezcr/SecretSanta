@@ -53,8 +53,13 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
       if (participantToken) {
         const participant = game.participants.find(p => p.token === participantToken)
         if (participant) {
-          // Return game with only this participant's info visible
-          // Other participants' tokens and sensitive data are hidden
+          // Find who this participant is giving to (their assignment)
+          const participantAssignment = game.assignments.find(a => a.giverId === participant.id)
+          // Find who is giving to this participant (to check if giver has confirmed)
+          const giverAssignment = game.assignments.find(a => a.receiverId === participant.id)
+          
+          // Return game with only this participant's info and their receiver's info
+          // Hide all other assignments to prevent spoiling the game
           const sanitizedGame: Game = {
             ...game,
             participants: game.participants.map(p => ({
@@ -62,6 +67,8 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
               token: p.id === participant.id ? p.token : undefined, // Only show own token
               email: p.id === participant.id ? p.email : undefined, // Only show own email
             })),
+            // Only include this participant's assignment and who gives to them (for confirmation status)
+            assignments: [participantAssignment, giverAssignment].filter(Boolean) as typeof game.assignments,
             organizerToken: '', // Hide organizer token
             organizerEmail: undefined, // Hide organizer email
           }

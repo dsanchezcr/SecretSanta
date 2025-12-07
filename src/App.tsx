@@ -299,7 +299,7 @@ function App() {
     } else if (code) {
       setTimeout(() => handleJoinGame(code), 0)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handleJoinGame, handleOrganizerAccess]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle browser back/forward navigation
   useEffect(() => {

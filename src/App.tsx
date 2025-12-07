@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Toaster } from '@/components/ui/sonner'
 import { LanguageProvider } from '@/components/LanguageProvider'
 import { useLanguage } from '@/components/useLanguage'
@@ -14,6 +14,7 @@ import { ErrorView, type ErrorType } from '@/components/ErrorView'
 import { OrganizerGuideView } from '@/components/OrganizerGuideView'
 import { ParticipantGuideView } from '@/components/ParticipantGuideView'
 import { CookieConsentBanner } from '@/components/CookieConsentBanner'
+import { LoadingView } from '@/components/LoadingView'
 import { Game, Participant } from '@/lib/types'
 import { useLocalStorage } from '@/hooks/use-local-storage'
 import { checkApiStatus, getGameAPI, CreateGameResponse } from '@/lib/api'
@@ -67,6 +68,8 @@ function App() {
   const [emailConfigured, setEmailConfigured] = useState(false)
   const [emailResults, setEmailResults] = useState<CreateGameResponse['emailResults'] | undefined>(undefined)
   const [errorType, setErrorType] = useState<ErrorType | null>(null)
+  const [isLoadingGame, setIsLoadingGame] = useState(false)
+  const initialUrlHandled = useRef(false)
 
   // Check API status on mount
   useEffect(() => {
@@ -109,135 +112,154 @@ function App() {
   }
 
   const handleJoinGame = useCallback(async (code: string, participantToken?: string) => {
-    // Check if we have a stored participant token in sessionStorage for this game
-    const storedToken = participantToken || sessionStorage.getItem(`participant-token-${code}`)
+    setIsLoadingGame(true)
     
-    // First check local storage for complete game data (must have participants array)
-    if (games && games[code] && games[code].participants && games[code].participants.length > 0) {
-      const game = games[code]
-      
-      // If participant token is provided, verify and auto-redirect to assignment
-      if (storedToken) {
-        const participant = game.participants.find(p => p.token === storedToken)
-        if (participant) {
-          // Store token in sessionStorage for persistence across reloads
-          sessionStorage.setItem(`participant-token-${code}`, storedToken)
-          setCurrentGameCode(code)
-          setCurrentParticipant(participant)
-          setView('assignment')
-          return
-        }
-        // Token provided but doesn't match any participant - fetch from API to validate
-        // Don't immediately show error, as the local cache might be stale
-      }
-      
-      // For protected games without token, show message
-      if (game.isProtected && !storedToken) {
-        setCurrentGameCode(code)
-        setErrorType('protected-game')
-        setView('error')
-        return
-      }
-      
-      // For unprotected games (or if token didn't match local cache), go to participant selection
-      if (!game.isProtected) {
-        setCurrentGameCode(code)
-        setView('select-participant')
-        return
-      }
-      
-      // If we get here, it's a protected game with a token that didn't match local cache
-      // Fall through to fetch from API to validate the token
-    }
-    
-    // Fetch from API - either game not in local storage, or need to validate token
     try {
-      const game = await getGameAPI(code, { participantToken: storedToken || undefined })
+      // Check if we have a stored participant token in sessionStorage for this game
+      const storedToken = participantToken || sessionStorage.getItem(`participant-token-${code}`)
       
-      // Type assertion for additional API response fields
-      const gameResponse = game as Game & { requiresToken?: boolean; authenticatedParticipantId?: string }
-      
-      // Check if game requires token (protected game without valid token)
-      if (gameResponse.requiresToken) {
-        setCurrentGameCode(code)
-        setErrorType('protected-game')
-        setView('error')
-        return
-      }
-      
-      // Only save to local storage if we have the full game data (with participants)
-      if (game.participants && game.participants.length > 0) {
-        setGames((currentGames) => ({
-          ...currentGames,
-          [game.code]: game
-        }))
-      }
-      
-      // If authenticated participant ID is returned, auto-redirect to assignment
-      if (gameResponse.authenticatedParticipantId && game.participants) {
-        const participant = game.participants.find(p => p.id === gameResponse.authenticatedParticipantId)
-        if (participant) {
-          // Store token in sessionStorage for persistence across reloads
-          if (storedToken) {
-            sessionStorage.setItem(`participant-token-${game.code}`, storedToken)
+      // First check local storage for complete game data (must have participants array)
+      if (games && games[code] && games[code].participants && games[code].participants.length > 0) {
+        const game = games[code]
+        
+        // If participant token is provided, verify and auto-redirect to assignment
+        if (storedToken) {
+          const participant = game.participants.find(p => p.token === storedToken)
+          if (participant) {
+            // Store token in sessionStorage for persistence across reloads
+            sessionStorage.setItem(`participant-token-${code}`, storedToken)
+            setCurrentGameCode(code)
+            setCurrentParticipant(participant)
+            setView('assignment')
+            return
           }
-          setCurrentGameCode(game.code)
-          setCurrentParticipant(participant)
-          setView('assignment')
+          // Token provided but doesn't match any participant - fetch from API to validate
+          // Don't immediately show error, as the local cache might be stale
+        }
+        
+        // For protected games without token, show message
+        if (game.isProtected && !storedToken) {
+          setCurrentGameCode(code)
+          setErrorType('protected-game')
+          setView('error')
           return
         }
+        
+        // For unprotected games (or if token didn't match local cache), go to participant selection
+        if (!game.isProtected) {
+          setCurrentGameCode(code)
+          setView('select-participant')
+          return
+        }
+        
+        // If we get here, it's a protected game with a token that didn't match local cache
+        // Fall through to fetch from API to validate the token
       }
       
-      // Ensure game has participants before navigating to select-participant
-      if (!game.participants || game.participants.length === 0) {
-        // Game data is incomplete, show error
-        setCurrentGameCode(code)
-        setErrorType('protected-game')
-        setView('error')
+      // Fetch from API - either game not in local storage, or need to validate token
+      try {
+        const game = await getGameAPI(code, { participantToken: storedToken || undefined })
+        
+        // Type assertion for additional API response fields
+        const gameResponse = game as Game & { requiresToken?: boolean; authenticatedParticipantId?: string }
+        
+        // Check if game requires token (protected game without valid token)
+        if (gameResponse.requiresToken) {
+          setCurrentGameCode(code)
+          setErrorType('protected-game')
+          setView('error')
+          return
+        }
+        
+        // Only save to local storage if we have the full game data (with participants)
+        if (game.participants && game.participants.length > 0) {
+          setGames((currentGames) => ({
+            ...currentGames,
+            [game.code]: game
+          }))
+        }
+        
+        // If authenticated participant ID is returned, auto-redirect to assignment
+        if (gameResponse.authenticatedParticipantId && game.participants) {
+          const participant = game.participants.find(p => p.id === gameResponse.authenticatedParticipantId)
+          if (participant) {
+            // Store token in sessionStorage for persistence across reloads
+            if (storedToken) {
+              sessionStorage.setItem(`participant-token-${game.code}`, storedToken)
+            }
+            setCurrentGameCode(game.code)
+            setCurrentParticipant(participant)
+            setView('assignment')
+            return
+          }
+        }
+        
+        // Ensure game has participants before navigating to select-participant
+        if (!game.participants || game.participants.length === 0) {
+          // Game data is incomplete, show error
+          setCurrentGameCode(code)
+          setErrorType('protected-game')
+          setView('error')
+          return
+        }
+        
+        setCurrentGameCode(game.code)
+        setView('select-participant')
+      } catch {
+        setView('game-not-found')
         return
       }
-      
-      setCurrentGameCode(game.code)
-      setView('select-participant')
-    } catch {
-      setView('game-not-found')
+    } finally {
+      setIsLoadingGame(false)
     }
   }, [games, setGames])
 
   const handleOrganizerAccess = useCallback(async (gameCode: string, organizerToken: string) => {
-    // First, check local storage for the game
-    if (games && games[gameCode]) {
-      const game = games[gameCode]
-      // Validate that the token matches this specific game
-      if (game.organizerToken === organizerToken) {
-        setCurrentGameCode(gameCode)
-        setView('organizer-panel')
-        return
-      }
-      // Token doesn't match local storage - could be stale, try fetching from API
-    }
+    setIsLoadingGame(true)
     
-    // Fetch from API with organizerToken for validation
     try {
-      const game = await getGameAPI(gameCode, { organizerToken })
-      // If API returns the game with matching organizerToken, access is valid
-      if (game.organizerToken === organizerToken) {
-        setGames((currentGames) => ({
-          ...currentGames,
-          [game.code]: game
-        }))
-        setCurrentGameCode(game.code)
-        setView('organizer-panel')
-      } else {
+      // First, check local storage for the game
+      if (games && games[gameCode]) {
+        const game = games[gameCode]
+        // Validate that the token matches this specific game
+        if (game.organizerToken === organizerToken) {
+          setCurrentGameCode(gameCode)
+          setView('organizer-panel')
+          return
+        }
+        // Token doesn't match local storage - could be stale, try fetching from API
+      }
+      
+      // Fetch from API with organizerToken for validation
+      try {
+        const game = await getGameAPI(gameCode, { organizerToken })
+        // If API returns the game with matching organizerToken, access is valid
+        if (game.organizerToken === organizerToken) {
+          setGames((currentGames) => ({
+            ...currentGames,
+            [game.code]: game
+          }))
+          setCurrentGameCode(game.code)
+          setView('organizer-panel')
+        } else {
+          setView('game-not-found')
+        }
+      } catch {
         setView('game-not-found')
       }
-    } catch {
-      setView('game-not-found')
+    } finally {
+      setIsLoadingGame(false)
     }
   }, [games, setGames])
 
   // Handle URL parameters for game code, organizer access, and direct views
   useEffect(() => {
+    // Only handle URL once on mount
+    if (initialUrlHandled.current) {
+      return
+    }
+    initialUrlHandled.current = true
+    
     const params = new URLSearchParams(window.location.search)
     const pathname = window.location.pathname
     const code = params.get('code')
@@ -282,7 +304,7 @@ function App() {
     } else if (code) {
       setTimeout(() => handleJoinGame(code), 0)
     }
-  }, [handleJoinGame, handleOrganizerAccess])
+  }, [handleJoinGame, handleOrganizerAccess]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle browser back/forward navigation
   useEffect(() => {
@@ -352,7 +374,7 @@ function App() {
         setTimeout(() => handleJoinGame(code, token), 0)
       }
     }
-  }, [games, handleJoinGame])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleParticipantSelected = (participant: Participant) => {
     setCurrentParticipant(participant)
@@ -424,7 +446,9 @@ function App() {
       <div className="min-h-screen flex flex-col">
         <StatusBanner bannerType={bannerType} />
         <div className="flex-1">
-          {view === 'home' && (
+          {isLoadingGame && <LoadingView />}
+          
+          {!isLoadingGame && view === 'home' && (
             <HomeView 
               onCreateGame={handleCreateGame} 
               onJoinGame={handleJoinGame} 
@@ -446,11 +470,11 @@ function App() {
             />
           )}
 
-          {view === 'create-game' && (
+          {!isLoadingGame && view === 'create-game' && (
             <CreateGameView onGameCreated={handleGameCreated} onBack={handleBack} emailConfigured={emailConfigured} />
           )}
 
-          {view === 'game-created' && currentGame && (
+          {!isLoadingGame && view === 'game-created' && currentGame && (
             <GameCreatedView 
               game={currentGame} 
               onContinue={() => setView('organizer-panel')}
@@ -458,7 +482,7 @@ function App() {
             />
           )}
 
-          {view === 'select-participant' && currentGame && (
+          {!isLoadingGame && view === 'select-participant' && currentGame && (
             <ParticipantSelectionView
               game={currentGame}
               onParticipantSelected={handleParticipantSelected}
@@ -468,7 +492,7 @@ function App() {
             />
           )}
 
-          {view === 'assignment' && currentGame && currentParticipant && (
+          {!isLoadingGame && view === 'assignment' && currentGame && currentParticipant && (
             <AssignmentView
               game={currentGame}
               participant={currentParticipant}
@@ -478,7 +502,7 @@ function App() {
             />
           )}
 
-          {view === 'organizer-panel' && currentGame && (
+          {!isLoadingGame && view === 'organizer-panel' && currentGame && (
             <OrganizerPanelView
               game={currentGame}
               onUpdateGame={handleUpdateGame}
@@ -487,15 +511,15 @@ function App() {
             />
           )}
 
-          {view === 'privacy' && (
+          {!isLoadingGame && view === 'privacy' && (
             <PrivacyView onBack={handleBack} />
           )}
 
-          {view === 'game-not-found' && (
+          {!isLoadingGame && view === 'game-not-found' && (
             <GameNotFoundView onGoHome={handleBack} />
           )}
 
-          {view === 'error' && errorType && (
+          {!isLoadingGame && view === 'error' && errorType && (
             <ErrorView 
               errorType={errorType} 
               gameCode={currentGameCode} 
@@ -505,11 +529,11 @@ function App() {
             />
           )}
 
-          {view === 'organizer-guide' && (
+          {!isLoadingGame && view === 'organizer-guide' && (
             <OrganizerGuideView onBack={handleBack} />
           )}
 
-          {view === 'participant-guide' && (
+          {!isLoadingGame && view === 'participant-guide' && (
             <ParticipantGuideView onBack={handleBack} />
           )}
         </div>

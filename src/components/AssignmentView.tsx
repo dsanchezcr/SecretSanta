@@ -32,9 +32,10 @@ import {
   CheckCircle,
   Warning,
 } from '@phosphor-icons/react'
-import { Game, Participant, CURRENCIES } from '@/lib/types'
+import { Game, Participant } from '@/lib/types'
 import { useLanguage } from './useLanguage'
 import { formatDate } from '@/lib/game-utils'
+import { formatAmount } from '@/lib/currency-utils'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { LanguageToggle } from './LanguageToggle'
@@ -78,24 +79,27 @@ export function AssignmentView({
     try {
       const apiStatus = await checkApiStatus()
       if (apiStatus.available && apiStatus.databaseConnected) {
-        const freshGame = await getGameAPI(game.code)
-        onUpdateGame(freshGame)
+        // For protected games, get token from sessionStorage
+        const storedToken = sessionStorage.getItem(`participant-token-${game.code}`)
+        // Pass participant token for protected games, or participant ID for non-protected games
+        const freshGame = await getGameAPI(game.code, {
+          participantToken: storedToken || undefined,
+          participantId: !game.isProtected ? participant.id : undefined
+        })
+        // Ensure we update with the fresh game data
+        if (freshGame) {
+          onUpdateGame(freshGame)
+        }
       }
-    } catch {
-      // Silently fail - we'll use cached data
+    } catch (error) {
+      // Log error for debugging but continue with cached data
+      console.warn('Failed to refresh game data:', error)
     } finally {
       setIsRefreshing(false)
     }
-  }, [game.code, onUpdateGame])
+  }, [game.code, game.isProtected, participant.id, onUpdateGame])
 
-  // Format amount with currency
-  const formatAmount = () => {
-    const curr = CURRENCIES.find(c => c.code === game.currency)
-    if (curr) {
-      return `${curr.flag} ${curr.symbol}${game.amount} ${curr.code}`
-    }
-    return game.amount
-  }
+
 
   useEffect(() => {
     // Defensive check: ensure participants array exists
@@ -117,21 +121,26 @@ export function AssignmentView({
     const receiver = game.participants.find(p => p.id === currentAssignment?.receiverId)
     setCurrentReceiver(receiver || null)
     
-    // Find who gives to current participant (the giver) and check if they've confirmed
-    const giverAssignment = game.assignments.find(a => a.receiverId === participant.id)
-    const giver = game.participants.find(p => p.id === giverAssignment?.giverId)
-    setGiverHasConfirmed(giver?.hasConfirmedAssignment || false)
-  }, [game.assignments, game.participants, participant.id])
+    // Check if giver has confirmed from the game response flag (for protected games)
+    // For non-protected games or when flag is not available, fall back to checking assignments
+    const gameWithFlag = game as Game & { giverHasConfirmed?: boolean }
+    if (gameWithFlag.giverHasConfirmed !== undefined) {
+      setGiverHasConfirmed(gameWithFlag.giverHasConfirmed)
+    } else {
+      // Fallback: Find who gives to current participant (the giver) and check if they've confirmed
+      const giverAssignment = game.assignments.find(a => a.receiverId === participant.id)
+      const giver = game.participants.find(p => p.id === giverAssignment?.giverId)
+      setGiverHasConfirmed(giver?.hasConfirmedAssignment || false)
+    }
+  }, [game, participant.id])
 
   useEffect(() => {
     const timer = setTimeout(() => setIsRevealed(true), 300)
     return () => clearTimeout(timer)
   }, [currentReceiver])
 
-  // Refresh data on mount
-  useEffect(() => {
-    refreshGameData()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Note: No mount-time refresh needed - game data is already loaded when entering this view
+  // refreshGameData is available for manual refresh via the refresh button only
 
   const handleReassignment = async () => {
     if (!game.allowReassignment) {
@@ -356,7 +365,7 @@ export function AssignmentView({
     ctx.fillText(t('amount') + ':', 100, detailsY + 50)
     ctx.fillStyle = '#3D1B1A'
     ctx.font = '18px Inter'
-    ctx.fillText(formatAmount(), 250, detailsY + 50)
+    ctx.fillText(formatAmount(game.amount, game.currency, t('notSpecified')), 250, detailsY + 50)
 
     ctx.fillStyle = '#665947'
     ctx.font = 'bold 18px Inter'
@@ -605,7 +614,7 @@ export function AssignmentView({
                     <p className="text-sm font-medium text-muted-foreground">
                       {t('amount')}
                     </p>
-                    <p className="text-base font-semibold">{formatAmount()}</p>
+                    <p className="text-base font-semibold">{formatAmount(game.amount, game.currency, t('notSpecified'))}</p>
                   </div>
                 </div>
 
@@ -616,7 +625,7 @@ export function AssignmentView({
                       {t('date')}
                     </p>
                     <p className="text-base font-semibold">
-                      {formatDate(game.date, language)}{game.time && ` - ${game.time}`}
+                      {game.date ? `${formatDate(game.date, language)}${game.time ? ` - ${game.time}` : ''}` : t('notSpecified')}
                     </p>
                   </div>
                 </div>
@@ -627,7 +636,7 @@ export function AssignmentView({
                     <p className="text-sm font-medium text-muted-foreground">
                       {t('location')}
                     </p>
-                    <p className="text-base font-semibold">{game.location}</p>
+                    <p className="text-base font-semibold">{game.location || t('notSpecified')}</p>
                   </div>
                 </div>
 

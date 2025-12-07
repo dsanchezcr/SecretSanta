@@ -187,7 +187,7 @@ function App() {
         const game = await getGameAPI(code, { participantToken: storedToken || undefined })
         
         // Type assertion for additional API response fields
-        const gameResponse = game as Game & { requiresToken?: boolean; authenticatedParticipantId?: string }
+        const gameResponse = game as Game & { requiresToken?: boolean; authenticatedParticipantId?: string; giverHasConfirmed?: boolean }
         
         // Check if game requires token (protected game without valid token)
         if (gameResponse.requiresToken) {
@@ -199,6 +199,9 @@ function App() {
         
         // Only save to local storage if we have the full game data (with participants)
         if (game.participants && game.participants.length > 0) {
+          // Store the complete game response from API
+          // Note: For non-protected games without participantId, assignments are empty array
+          // Assignments are populated when participant is selected and game is refreshed
           setGames((currentGames) => ({
             ...currentGames,
             [game.code]: game

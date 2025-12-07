@@ -12,37 +12,51 @@ export interface ApiStatus {
 
 /**
  * Check if the API is available and what mode it's running in
+ * @param retries - Number of retries to attempt (default: 0 for regular checks, use higher for initial load)
+ * @param retryDelay - Initial delay between retries in ms (will increase exponentially)
  */
-export async function checkApiStatus(): Promise<ApiStatus> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/health`, {
-      method: 'GET',
-      signal: AbortSignal.timeout(3000) // 3 second timeout
-    })
-    
-    const data = await response.json()
-    
-    // API is reachable - check database status
-    // Health endpoint returns checks.database.status = 'ok' | 'error' | 'degraded' | 'not_configured'
-    const databaseConnected = data.checks?.database?.status === 'ok'
-    const databaseError = data.checks?.database?.error || null
-    
-    return {
-      available: true,
-      databaseConnected,
-      databaseError,
-      emailConfigured: data.checks?.email?.status === 'ok',
-      emailError: data.checks?.email?.error || null
+export async function checkApiStatus(retries = 0, retryDelay = 1000): Promise<ApiStatus> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      // Increase timeout for first attempt to accommodate cold starts
+      const timeout = attempt === 0 ? 8000 : 5000
+      
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(timeout)
+      })
+      
+      const data = await response.json()
+      
+      // API is reachable - check database status
+      // Health endpoint returns checks.database.status = 'ok' | 'error' | 'degraded' | 'not_configured'
+      const databaseConnected = data.checks?.database?.status === 'ok'
+      const databaseError = data.checks?.database?.error || null
+      
+      return {
+        available: true,
+        databaseConnected,
+        databaseError,
+        emailConfigured: data.checks?.email?.status === 'ok',
+        emailError: data.checks?.email?.error || null
+      }
+    } catch {
+      // If we have more retries left, wait before trying again
+      if (attempt < retries) {
+        // Exponential backoff: wait longer after each failed attempt
+        const delay = retryDelay * Math.pow(2, attempt)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
     }
-  } catch {
-    // API is not reachable at all
-    return { 
-      available: false, 
-      databaseConnected: false,
-      databaseError: null,
-      emailConfigured: false,
-      emailError: null
-    }
+  }
+  
+  // All retries failed - API is not reachable
+  return { 
+    available: false, 
+    databaseConnected: false,
+    databaseError: null,
+    emailConfigured: false,
+    emailError: null
   }
 }
 

@@ -75,8 +75,12 @@ describe('getGame function', () => {
     // For non-protected games without participantId, tokens and assignments should be stripped
     const responseBody = response.jsonBody as any
     expect(responseBody.code).toBe('123456')
+    // Privacy: Organizer email should be hidden
+    expect(responseBody.organizerEmail).toBeUndefined()
+    // Privacy: All participant tokens and emails should be hidden
     responseBody.participants.forEach((p: any) => {
       expect(p.token).toBeUndefined()
+      expect(p.email).toBeUndefined()
     })
     // Security: Assignments should NOT be exposed to anonymous users
     expect(responseBody.assignments).toEqual([])

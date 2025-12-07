@@ -154,9 +154,11 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
     const publicGame = {
       ...game,
       organizerToken: '', // Hide organizer token from public access
+      organizerEmail: undefined, // Hide organizer email
       participants: game.participants.map(p => ({
         ...p,
-        token: undefined // Don't expose tokens even in non-protected games
+        token: undefined, // Don't expose tokens even in non-protected games
+        email: undefined // Hide all emails from anonymous users
       })),
       assignments: [] // Do not leak assignments to anonymous users
     }

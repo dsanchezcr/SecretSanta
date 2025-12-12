@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -49,6 +50,7 @@ import {
   Bell,
   PaperPlaneTilt,
   Key,
+  Download,
 } from '@phosphor-icons/react'
 import { Game, Participant } from '@/lib/types'
 import { useLanguage } from './useLanguage'
@@ -147,6 +149,16 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
   const [reminderMessage, setReminderMessage] = useState('')
   const [isSendingReminder, setIsSendingReminder] = useState(false)
   const [isSendingReminderAll, setIsSendingReminderAll] = useState(false)
+  
+  // Export state
+  const [showExportDialog, setShowExportDialog] = useState(false)
+  const [exportIncludeAssignments, setExportIncludeAssignments] = useState(true)
+  const [exportIncludeGameDetails, setExportIncludeGameDetails] = useState(true)
+  const [exportIncludeWishes, setExportIncludeWishes] = useState(true)
+  const [exportIncludeInstructions, setExportIncludeInstructions] = useState(true)
+  const [exportIncludeConfirmationStatus, setExportIncludeConfirmationStatus] = useState(true)
+  const [exportIncludeEmails, setExportIncludeEmails] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
   
   // Refs for input focus management
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -823,6 +835,86 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
     }
   }
 
+  // Export participants handler
+  const handleExportParticipants = () => {
+    setIsExporting(true)
+    try {
+      // Prepare CSV headers
+      const headers: string[] = ['Name']
+      if (exportIncludeEmails) headers.push('Email')
+      if (exportIncludeAssignments) headers.push('Assigned To')
+      if (exportIncludeWishes) headers.push('Gift Wish')
+      if (exportIncludeConfirmationStatus) headers.push('Confirmed')
+      if (exportIncludeGameDetails) {
+        headers.push('Event Name', 'Amount', 'Currency', 'Date', 'Location')
+      }
+      if (exportIncludeInstructions) headers.push('Instructions')
+
+      // Prepare CSV rows
+      const rows = game.participants.map(participant => {
+        const row: string[] = [participant.name]
+        
+        if (exportIncludeEmails) {
+          row.push(participant.email || '')
+        }
+        
+        if (exportIncludeAssignments) {
+          row.push(getReceiverName(participant.id))
+        }
+        
+        if (exportIncludeWishes) {
+          row.push(participant.wish || participant.desiredGift || '')
+        }
+        
+        if (exportIncludeConfirmationStatus) {
+          row.push(participant.hasConfirmedAssignment ? 'Yes' : 'No')
+        }
+        
+        if (exportIncludeGameDetails) {
+          row.push(
+            game.name,
+            game.amount,
+            game.currency,
+            formatDate(game.date, language),
+            game.location
+          )
+        }
+        
+        if (exportIncludeInstructions) {
+          row.push(game.generalNotes || '')
+        }
+        
+        return row
+      })
+
+      // Convert to CSV format
+      const csvContent = [
+        headers.map(h => `"${h}"`).join(','),
+        ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+      ].join('\n')
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `${game.name.replace(/[^a-z0-9]/gi, '_')}_participants.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast.success(t('exportSuccess'))
+      setShowExportDialog(false)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to export'
+      toast.error(t('exportError'))
+      console.error(message)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="flex justify-between items-center p-4 border-b">
@@ -1135,22 +1227,34 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
                 <Users size={20} className="text-primary" />
                 {t('participantStatus')}
               </h2>
-              {emailConfigured && (
+              <div className="flex gap-2">
+                {emailConfigured && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setParticipantToRemind(null)
+                      setReminderMessage('')
+                      setShowReminderDialog(true)
+                    }}
+                    className="gap-2"
+                    disabled={game.participants.filter(p => p.email).length === 0}
+                  >
+                    <Bell size={16} />
+                    {t('sendReminderAll')}
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => {
-                    setParticipantToRemind(null)
-                    setReminderMessage('')
-                    setShowReminderDialog(true)
-                  }}
+                  onClick={() => setShowExportDialog(true)}
                   className="gap-2"
-                  disabled={game.participants.filter(p => p.email).length === 0}
+                  disabled={game.participants.length === 0}
                 >
-                  <Bell size={16} />
-                  {t('sendReminderAll')}
+                  <Download size={16} />
+                  {t('exportParticipants')}
                 </Button>
-              )}
+              </div>
             </div>
 
             {/* Add new participant */}
@@ -1986,6 +2090,122 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
               {isRegeneratingOrganizerToken && <CircleNotch size={16} className="animate-spin" />}
               <Envelope size={16} />
               {t('regenerateOrganizerTokenLinkConfirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Participants Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download size={24} />
+              {t('exportDialogTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('exportDialogDesc')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="export-assignments" 
+                checked={exportIncludeAssignments}
+                onCheckedChange={(checked) => setExportIncludeAssignments(checked === true)}
+              />
+              <label
+                htmlFor="export-assignments"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {t('exportIncludeAssignments')}
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="export-game-details" 
+                checked={exportIncludeGameDetails}
+                onCheckedChange={(checked) => setExportIncludeGameDetails(checked === true)}
+              />
+              <label
+                htmlFor="export-game-details"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {t('exportIncludeGameDetails')}
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="export-wishes" 
+                checked={exportIncludeWishes}
+                onCheckedChange={(checked) => setExportIncludeWishes(checked === true)}
+              />
+              <label
+                htmlFor="export-wishes"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {t('exportIncludeWishes')}
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="export-instructions" 
+                checked={exportIncludeInstructions}
+                onCheckedChange={(checked) => setExportIncludeInstructions(checked === true)}
+              />
+              <label
+                htmlFor="export-instructions"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {t('exportIncludeInstructions')}
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="export-confirmation" 
+                checked={exportIncludeConfirmationStatus}
+                onCheckedChange={(checked) => setExportIncludeConfirmationStatus(checked === true)}
+              />
+              <label
+                htmlFor="export-confirmation"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {t('exportIncludeConfirmationStatus')}
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="export-emails" 
+                checked={exportIncludeEmails}
+                onCheckedChange={(checked) => setExportIncludeEmails(checked === true)}
+              />
+              <label
+                htmlFor="export-emails"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {t('exportIncludeEmails')}
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowExportDialog(false)} 
+              disabled={isExporting}
+            >
+              {t('cancel')}
+            </Button>
+            <Button 
+              onClick={handleExportParticipants} 
+              disabled={isExporting}
+              className="gap-2"
+            >
+              {isExporting ? (
+                <CircleNotch size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+              {t('exportButton')}
             </Button>
           </DialogFooter>
         </DialogContent>

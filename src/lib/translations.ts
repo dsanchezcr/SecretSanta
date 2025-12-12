@@ -292,6 +292,22 @@ export const translations = {
     reminderToAllDesc: "Send a reminder to all participants with email",
     noEmailConfigured: "No email configured",
 
+    // Export participants translations
+    exportParticipants: "Export Participants",
+    exportParticipantsDesc: "Download participant list with selected details",
+    exportDialogTitle: "Export Participant List",
+    exportDialogDesc: "Choose which details to include in the export",
+    exportIncludeAssignments: "Include Assignments",
+    exportIncludeGameDetails: "Include Game Details",
+    exportIncludeWishes: "Include Wishes",
+    exportIncludeInstructions: "Include Instructions",
+    exportIncludeConfirmationStatus: "Include Confirmation Status",
+    exportIncludeEmails: "Include Emails",
+    exportButton: "Export as CSV",
+    exportingData: "Exporting...",
+    exportSuccess: "Participants exported!",
+    exportError: "Failed to export participants",
+
     // Privacy page translations
     privacyTitle: "Privacy Policy",
     privacySubtitle: "How we handle your data",
@@ -787,6 +803,22 @@ export const translations = {
     reminderToAllDesc: "Envía un recordatorio a todos los participantes con email",
     noEmailConfigured: "Sin email configurado",
 
+    // Export participants translations
+    exportParticipants: "Exportar Participantes",
+    exportParticipantsDesc: "Descargar lista de participantes con detalles seleccionados",
+    exportDialogTitle: "Exportar Lista de Participantes",
+    exportDialogDesc: "Elige qué detalles incluir en la exportación",
+    exportIncludeAssignments: "Incluir Asignaciones",
+    exportIncludeGameDetails: "Incluir Detalles del Juego",
+    exportIncludeWishes: "Incluir Deseos",
+    exportIncludeInstructions: "Incluir Instrucciones",
+    exportIncludeConfirmationStatus: "Incluir Estado de Confirmación",
+    exportIncludeEmails: "Incluir Emails",
+    exportButton: "Exportar como CSV",
+    exportingData: "Exportando...",
+    exportSuccess: "¡Participantes exportados!",
+    exportError: "Error al exportar participantes",
+
     // Privacy page translations
     privacyTitle: "Política de Privacidad",
     privacySubtitle: "Cómo manejamos tus datos",
@@ -1281,6 +1313,22 @@ export const translations = {
     reminderToAllDesc: "Envie um lembrete para todos os participantes com email",
     noEmailConfigured: "Sem email configurado",
 
+    // Export participants translations
+    exportParticipants: "Exportar Participantes",
+    exportParticipantsDesc: "Baixar lista de participantes com detalhes selecionados",
+    exportDialogTitle: "Exportar Lista de Participantes",
+    exportDialogDesc: "Escolha quais detalhes incluir na exportação",
+    exportIncludeAssignments: "Incluir Atribuições",
+    exportIncludeGameDetails: "Incluir Detalhes do Jogo",
+    exportIncludeWishes: "Incluir Desejos",
+    exportIncludeInstructions: "Incluir Instruções",
+    exportIncludeConfirmationStatus: "Incluir Status de Confirmação",
+    exportIncludeEmails: "Incluir Emails",
+    exportButton: "Exportar como CSV",
+    exportingData: "Exportando...",
+    exportSuccess: "Participantes exportados!",
+    exportError: "Falha ao exportar participantes",
+
     // Privacy page translations
     privacyTitle: "Política de Privacidade",
     privacySubtitle: "Como tratamos seus dados",
@@ -1645,6 +1693,22 @@ export const translations = {
     reminderEmailDesc: "Envoyer un rappel avec les détails de l'événement",
     reminderToAllDesc: "Envoyer un rappel à tous les participants avec e-mail",
     noEmailConfigured: "Aucun e-mail configuré",
+
+    // Export participants translations
+    exportParticipants: "Exporter les Participants",
+    exportParticipantsDesc: "Télécharger la liste des participants avec les détails sélectionnés",
+    exportDialogTitle: "Exporter la Liste des Participants",
+    exportDialogDesc: "Choisissez les détails à inclure dans l'exportation",
+    exportIncludeAssignments: "Inclure les Affectations",
+    exportIncludeGameDetails: "Inclure les Détails du Jeu",
+    exportIncludeWishes: "Inclure les Souhaits",
+    exportIncludeInstructions: "Inclure les Instructions",
+    exportIncludeConfirmationStatus: "Inclure le Statut de Confirmation",
+    exportIncludeEmails: "Inclure les E-mails",
+    exportButton: "Exporter en CSV",
+    exportingData: "Exportation...",
+    exportSuccess: "Participants exportés!",
+    exportError: "Échec de l'exportation des participants",
 
     // Privacy page translations
     privacyTitle: "Politique de Confidentialité",
@@ -2224,6 +2288,22 @@ export const translations = {
     reminderToAllDesc: "Invia un promemoria a tutti i partecipanti con email",
     noEmailConfigured: "Nessuna email configurata",
 
+    // Export participants translations
+    exportParticipants: "Esporta Partecipanti",
+    exportParticipantsDesc: "Scarica l'elenco dei partecipanti con i dettagli selezionati",
+    exportDialogTitle: "Esporta Elenco Partecipanti",
+    exportDialogDesc: "Scegli quali dettagli includere nell'esportazione",
+    exportIncludeAssignments: "Includi Assegnazioni",
+    exportIncludeGameDetails: "Includi Dettagli del Gioco",
+    exportIncludeWishes: "Includi Desideri",
+    exportIncludeInstructions: "Includi Istruzioni",
+    exportIncludeConfirmationStatus: "Includi Stato di Conferma",
+    exportIncludeEmails: "Includi Email",
+    exportButton: "Esporta come CSV",
+    exportingData: "Esportazione...",
+    exportSuccess: "Partecipanti esportati!",
+    exportError: "Impossibile esportare i partecipanti",
+
     // Privacy page translations
     privacyTitle: "Politica sulla Privacy",
     privacySubtitle: "Come trattiamo i tuoi dati",
@@ -2802,6 +2882,22 @@ export const translations = {
     reminderToAllDesc: "メール付きのリマインダーをすべての参加者に送信",
     noEmailConfigured: "メール設定なし",
 
+    // Export participants translations
+    exportParticipants: "参加者をエクスポート",
+    exportParticipantsDesc: "選択した詳細を含む参加者リストをダウンロード",
+    exportDialogTitle: "参加者リストをエクスポート",
+    exportDialogDesc: "エクスポートに含める詳細を選択してください",
+    exportIncludeAssignments: "割り当てを含む",
+    exportIncludeGameDetails: "ゲーム詳細を含む",
+    exportIncludeWishes: "希望を含む",
+    exportIncludeInstructions: "指示を含む",
+    exportIncludeConfirmationStatus: "確認ステータスを含む",
+    exportIncludeEmails: "メールを含む",
+    exportButton: "CSVとしてエクスポート",
+    exportingData: "エクスポート中...",
+    exportSuccess: "参加者がエクスポートされました！",
+    exportError: "参加者のエクスポートに失敗しました",
+
     // Privacy page translations
     privacyTitle: "プライバシーポリシー",
     privacySubtitle: "あなたのデータの取り扱い",
@@ -3379,6 +3475,22 @@ export const translations = {
     reminderEmailDesc: "发送包含活动详情的提醒",
     reminderToAllDesc: "向所有参与者发送包含邮箱的提醒",
     noEmailConfigured: "未配置邮箱",
+
+    // Export participants translations
+    exportParticipants: "导出参与者",
+    exportParticipantsDesc: "下载包含所选详细信息的参与者列表",
+    exportDialogTitle: "导出参与者列表",
+    exportDialogDesc: "选择要包含在导出中的详细信息",
+    exportIncludeAssignments: "包含分配",
+    exportIncludeGameDetails: "包含游戏详情",
+    exportIncludeWishes: "包含愿望",
+    exportIncludeInstructions: "包含说明",
+    exportIncludeConfirmationStatus: "包含确认状态",
+    exportIncludeEmails: "包含电子邮件",
+    exportButton: "导出为 CSV",
+    exportingData: "正在导出...",
+    exportSuccess: "参与者已导出！",
+    exportError: "导出参与者失败",
 
     // Privacy page translations
     privacyTitle: "隐私政策",
@@ -4082,6 +4194,22 @@ export const translations = {
     reminderToAllDesc: "Erinnerung an alle Teilnehmer mit E-Mail senden",
     noEmailConfigured: "Keine E-Mail konfiguriert",
 
+    // Export participants translations
+    exportParticipants: "Teilnehmer exportieren",
+    exportParticipantsDesc: "Teilnehmerliste mit ausgewählten Details herunterladen",
+    exportDialogTitle: "Teilnehmerliste exportieren",
+    exportDialogDesc: "Wählen Sie die Details aus, die in den Export einbezogen werden sollen",
+    exportIncludeAssignments: "Zuweisungen einbeziehen",
+    exportIncludeGameDetails: "Spieldetails einbeziehen",
+    exportIncludeWishes: "Wünsche einbeziehen",
+    exportIncludeInstructions: "Anweisungen einbeziehen",
+    exportIncludeConfirmationStatus: "Bestätigungsstatus einbeziehen",
+    exportIncludeEmails: "E-Mails einbeziehen",
+    exportButton: "Als CSV exportieren",
+    exportingData: "Exportieren...",
+    exportSuccess: "Teilnehmer exportiert!",
+    exportError: "Export der Teilnehmer fehlgeschlagen",
+
     privacyTitle: "Datenschutzrichtlinie",
     privacySubtitle: "Wie wir Ihre Daten behandeln",
     privacyDataCollectionTitle: "Daten, die wir sammeln",
@@ -4555,6 +4683,22 @@ export const translations = {
     reminderEmailDesc: "Herinnering met evenementdetails verzenden",
     reminderToAllDesc: "Herinnering naar alle deelnemers met e-mail verzenden",
     noEmailConfigured: "Geen e-mail geconfigureerd",
+
+    // Export participants translations
+    exportParticipants: "Deelnemers exporteren",
+    exportParticipantsDesc: "Deelnemerslijst met geselecteerde details downloaden",
+    exportDialogTitle: "Deelnemerslijst exporteren",
+    exportDialogDesc: "Kies welke details u wilt opnemen in de export",
+    exportIncludeAssignments: "Toewijzingen opnemen",
+    exportIncludeGameDetails: "Speldetails opnemen",
+    exportIncludeWishes: "Wensen opnemen",
+    exportIncludeInstructions: "Instructies opnemen",
+    exportIncludeConfirmationStatus: "Bevestigingsstatus opnemen",
+    exportIncludeEmails: "E-mails opnemen",
+    exportButton: "Exporteren als CSV",
+    exportingData: "Exporteren...",
+    exportSuccess: "Deelnemers geëxporteerd!",
+    exportError: "Exporteren van deelnemers mislukt",
 
     privacyTitle: "Privacybeleid",
     privacySubtitle: "Hoe wij uw gegevens behandelen",

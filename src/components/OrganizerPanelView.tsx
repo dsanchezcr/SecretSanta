@@ -604,21 +604,6 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
       setParticipantToForceReassign(null)
     }
   }
-      }
-      toast.success(t('allPendingApproved'))
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to approve all reassignments'
-      // Check if it's a "no valid swap" error and show translated message
-      if (message.includes('no valid swap')) {
-        toast.error(t('reassignmentFailed'))
-      } else {
-        toast.error(message)
-      }
-    } finally {
-      setIsApprovingAllReassignments(false)
-      setShowApproveAllDialog(false)
-    }
-  }
 
   // Open approve reassignment dialog with warning
   const openApproveReassignmentDialog = (participantId: string) => {
@@ -1740,7 +1725,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
                     {confirmedCount} {t('confirmedParticipantsLocked')}
                   </p>
                   <p className="text-blue-700 text-xs mt-1">
-                    {game.participants.length - confirmedCount} participants will receive new assignments.
+                    {game.participants.length - confirmedCount} {t('unconfirmedWillReceiveNew')}
                   </p>
                 </div>
               )}

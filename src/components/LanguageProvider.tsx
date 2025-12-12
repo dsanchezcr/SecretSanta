@@ -1,6 +1,6 @@
 import { useState, useEffect, ReactNode, useCallback } from 'react'
 import { Language, LANGUAGES } from '@/lib/types'
-import { translations, TranslationKey } from '@/lib/translations'
+import { translations, TranslationKey } from '@/lib/translations/'
 import { LanguageContext } from './LanguageProvider.context'
 
 export function LanguageProvider({ children }: { children: ReactNode }) {

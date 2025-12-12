@@ -65,6 +65,7 @@ import {
   approveReassignmentAPI,
   approveAllReassignmentsAPI,
   reassignAllAPI,
+  forceReassignParticipantAPI,
   cancelReassignmentRequestAPI,
   checkApiStatus,
   updateParticipantDetailsAPI,
@@ -81,6 +82,7 @@ import {
   approveReassignmentLocal,
   approveAllReassignmentsLocal,
   reassignAllLocal,
+  forceReassignParticipantLocal,
   cancelReassignmentRequestLocal,
   regenerateParticipantTokenLocal
 } from '@/lib/local-game-operations'

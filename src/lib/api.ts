@@ -483,6 +483,31 @@ export async function reassignAllAPI(
   return response.json()
 }
 
+export async function forceReassignParticipantAPI(
+  code: string,
+  organizerToken: string,
+  participantId: string
+): Promise<Game> {
+  const response = await fetch(`${API_BASE_URL}/games/${code}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      action: 'forceReassignParticipant',
+      organizerToken,
+      participantId
+    })
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to force reassign participant')
+  }
+
+  return response.json()
+}
+
 export async function cancelReassignmentRequestAPI(
   code: string,
   organizerToken: string,

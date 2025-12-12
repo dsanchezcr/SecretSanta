@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { getGameByCode, updateGame, getDatabaseStatus, Participant, Game, GameUpdatePayload, ReassignmentRequest } from '../shared/cosmosdb'
-import { reassignParticipant, generateAssignments, generateId } from '../shared/game-utils'
+import { reassignParticipant, generateAssignments, generateAssignmentsWithLocks, generateId } from '../shared/game-utils'
 import { JoinInvitationPayload } from '../shared/types'
 import { 
   getEmailServiceStatus,
@@ -51,7 +51,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
     }
 
     // Handle organizer actions (require token validation)
-    if (body.action === 'updateGameDetails' || body.action === 'addParticipant' || body.action === 'removeParticipant' || body.action === 'updateParticipantDetails' || body.action === 'approveReassignment' || body.action === 'approveAllReassignments' || body.action === 'reassignAll' || body.action === 'cancelReassignmentRequest' || body.action === 'regenerateToken' || body.action === 'regenerateOrganizerToken') {
+    if (body.action === 'updateGameDetails' || body.action === 'addParticipant' || body.action === 'removeParticipant' || body.action === 'updateParticipantDetails' || body.action === 'approveReassignment' || body.action === 'approveAllReassignments' || body.action === 'reassignAll' || body.action === 'cancelReassignmentRequest' || body.action === 'regenerateToken' || body.action === 'regenerateOrganizerToken' || body.action === 'forceReassignParticipant') {
       const organizerToken = (body as any).organizerToken
       
       if (!organizerToken || organizerToken !== game.organizerToken) {
@@ -390,31 +390,28 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
         }
         
         // Track participants who had confirmed before reassignment (for email notification)
-        const confirmedParticipants = game.participants.filter(p => p.hasConfirmedAssignment && p.email)
+        // Only participants who LOSE their confirmed status get notified
+        const confirmedBeforeReassignment = game.participants.filter(p => p.hasConfirmedAssignment && p.email)
         
-        // Regenerate all assignments
-        game.assignments = generateAssignments(game.participants)
+        // Generate new assignments while preserving confirmed participants' assignments
+        game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments)
         
-        // Clear all pending reassignment requests and reset confirmation status
+        // Clear pending reassignment requests for ALL participants
         game.reassignmentRequests = []
+        
+        // Clear pending flags and confirmation status ONLY for unconfirmed participants
         game.participants.forEach(p => {
           p.hasPendingReassignmentRequest = false
-          p.hasConfirmedAssignment = false
+          // Keep hasConfirmedAssignment as is - confirmed participants remain confirmed
         })
         
-        // Send email notifications to participants who had confirmed their assignments
-        const emailStatus = getEmailServiceStatus()
-        if (confirmedParticipants.length > 0 && emailStatus.configured) {
-          const language = (body as any).language || 'es'
-          // Don't await - send in background to not block response
-          sendFullReassignmentEmails(game, confirmedParticipants, language).then(result => {
-            context.log(`📧 Full reassignment emails: ${result.sent} sent, ${result.failed} failed`)
-          }).catch(err => {
-            context.warn(`⚠️ Failed to send full reassignment emails: ${err.message}`)
-          })
-        }
+        // Note: We don't send emails here since confirmed participants' assignments are preserved
+        // They keep their confirmed status and assignments
         
-        context.log(`All assignments regenerated for game: ${code}. ${confirmedParticipants.length} confirmed participants will be notified.`)
+        const lockedCount = confirmedBeforeReassignment.length
+        const reassignedCount = game.participants.length - lockedCount
+        
+        context.log(`Reassign all completed for game: ${code}. ${lockedCount} confirmed participants kept their assignments, ${reassignedCount} participants received new assignments.`)
       }
 
       if (body.action === 'cancelReassignmentRequest') {
@@ -459,6 +456,59 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
         }
         
         context.log(`Reassignment request cancelled for participant '${participant.name}' in game: ${code}`)
+      }
+
+      if (body.action === 'forceReassignParticipant') {
+        const participantId = (body as any).participantId
+        
+        if (!participantId) {
+          return {
+            status: 400,
+            jsonBody: { error: 'Participant ID is required' }
+          }
+        }
+
+        const participant = game.participants.find(p => p.id === participantId)
+        if (!participant) {
+          return {
+            status: 404,
+            jsonBody: { error: 'Participant not found' }
+          }
+        }
+
+        // Track if this participant had confirmed their assignment (for notification)
+        const wasConfirmed = participant.hasConfirmedAssignment
+
+        // Perform the reassignment (swap with another giver)
+        const newAssignments = reassignParticipant(participantId, game.assignments, game.participants)
+        
+        if (newAssignments === null) {
+          // No valid swap possible
+          return {
+            status: 400,
+            jsonBody: { error: 'Cannot reassign: no valid swap available. Try regenerating all assignments.' }
+          }
+        }
+        
+        game.assignments = newAssignments
+        
+        // Clear the confirmation status since assignment changed
+        participant.hasConfirmedAssignment = false
+        
+        // Send notification email to participant if they had confirmed
+        const emailStatus = getEmailServiceStatus()
+        if (wasConfirmed && participant.email && emailStatus.configured) {
+          const language = (body as any).language || 'es'
+          // Send email notification about the forced reassignment
+          // We can reuse the full reassignment email function for this single participant
+          sendFullReassignmentEmails(game, [participant], language).then(result => {
+            context.log(`📧 Force reassignment notification: ${result.sent} sent, ${result.failed} failed`)
+          }).catch(err => {
+            context.warn(`⚠️ Failed to send force reassignment notification: ${err.message}`)
+          })
+        }
+        
+        context.log(`Force reassignment completed for participant '${participant.name}' (was confirmed: ${wasConfirmed}) in game: ${code}.`)
       }
 
       if (body.action === 'regenerateToken') {

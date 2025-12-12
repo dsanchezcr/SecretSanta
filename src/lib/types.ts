@@ -7,6 +7,7 @@ export interface Participant {
   hasConfirmedAssignment: boolean // Participant has confirmed they received their assignment
   hasPendingReassignmentRequest: boolean
   token?: string // Unique token for protected games
+  preferredLanguage?: Language // Preferred language for email notifications (only stored when email service is configured)
 }
 
 export interface Assignment {

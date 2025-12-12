@@ -30,6 +30,88 @@ export function generateAssignments(participants: Participant[]): Assignment[] {
 }
 
 /**
+ * Generate new assignments while preserving confirmed participants' assignments.
+ * Confirmed participants have "locked" assignments that won't change.
+ * 
+ * @param participants - List of all participants
+ * @param currentAssignments - Current assignments (some may be locked)
+ * @returns New assignments with locked assignments preserved
+ */
+export function generateAssignmentsWithLocks(
+  participants: Participant[],
+  currentAssignments: Assignment[]
+): Assignment[] {
+  if (participants.length < 3) {
+    throw new Error('Need at least 3 participants')
+  }
+
+  // Identify locked assignments (from confirmed participants)
+  const lockedAssignments = currentAssignments.filter(assignment => {
+    const giver = participants.find(p => p.id === assignment.giverId)
+    return giver?.hasConfirmedAssignment === true
+  })
+
+  // If all participants are confirmed, return current assignments unchanged
+  if (lockedAssignments.length === participants.length) {
+    return [...currentAssignments]
+  }
+
+  // If no locked assignments, generate fresh assignments
+  if (lockedAssignments.length === 0) {
+    return generateAssignments(participants)
+  }
+
+  // Build maps for quick lookup
+  const lockedGivers = new Set(lockedAssignments.map(a => a.giverId))
+  const lockedReceivers = new Set(lockedAssignments.map(a => a.receiverId))
+  
+  // Participants who need new assignments
+  const unlockedParticipants = participants.filter(p => !lockedGivers.has(p.id))
+  
+  // Receivers available for unlocked participants (excluding those locked as receivers)
+  const availableReceivers = participants
+    .filter(p => !lockedReceivers.has(p.id))
+    .map(p => p.id)
+
+  // Validate we have enough available receivers for unlocked participants
+  if (availableReceivers.length < unlockedParticipants.length) {
+    // Edge case: not enough available receivers - fall back to full regeneration
+    return generateAssignments(participants)
+  }
+
+  // Shuffle unlocked participants and available receivers
+  const shuffledUnlocked = [...unlockedParticipants].sort(() => Math.random() - 0.5)
+  const shuffledReceivers = [...availableReceivers].sort(() => Math.random() - 0.5)
+
+  // Create new assignments for unlocked participants
+  const newAssignments: Assignment[] = [...lockedAssignments]
+  
+  for (let i = 0; i < shuffledUnlocked.length; i++) {
+    const giver = shuffledUnlocked[i]
+    const receiver = shuffledReceivers[i]
+    
+    // Ensure giver doesn't give to themselves
+    if (giver.id === receiver) {
+      // Swap with next receiver if possible
+      const nextIdx = (i + 1) % shuffledReceivers.length
+      if (shuffledUnlocked[nextIdx]?.id !== shuffledReceivers[nextIdx]) {
+        // Swap receivers
+        const temp = shuffledReceivers[i]
+        shuffledReceivers[i] = shuffledReceivers[nextIdx]
+        shuffledReceivers[nextIdx] = temp
+      }
+    }
+    
+    newAssignments.push({
+      giverId: giver.id,
+      receiverId: shuffledReceivers[i]
+    })
+  }
+
+  return newAssignments
+}
+
+/**
  * Reassign a participant to a different receiver by swapping with another giver.
  * This maintains the constraint that each participant receives exactly one gift.
  * 

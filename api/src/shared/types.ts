@@ -57,6 +57,7 @@ export type OrganizerAction =
   | 'reassignAll'
   | 'cancelReassignmentRequest'
   | 'regenerateOrganizerToken'
+  | 'forceReassignParticipant'
 
 export interface UpdateGameDetailsPayload {
   action: 'updateGameDetails'
@@ -128,6 +129,12 @@ export interface RegenerateOrganizerTokenPayload {
   organizerToken: string
 }
 
+export interface ForceReassignParticipantPayload {
+  action: 'forceReassignParticipant'
+  organizerToken: string
+  participantId: string
+}
+
 // Participant action types
 export interface RequestReassignmentPayload {
   action: 'requestReassignment'
@@ -197,6 +204,7 @@ export type GameUpdatePayload =
   | CancelReassignmentRequestPayload
   | RegenerateTokenPayload
   | RegenerateOrganizerTokenPayload
+  | ForceReassignParticipantPayload
   | RequestReassignmentPayload
   | UpdateWishPayload
   | UpdateParticipantEmailPayload

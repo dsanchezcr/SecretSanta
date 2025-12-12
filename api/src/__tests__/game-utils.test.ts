@@ -2,6 +2,7 @@ import {
   generateGameCode,
   generateId,
   generateAssignments,
+  generateAssignmentsWithLocks,
   reassignParticipant,
   validateDateString
 } from '../shared/game-utils'
@@ -138,6 +139,127 @@ describe('game-utils', () => {
       const receiverIds = new Set(assignments.map(a => a.receiverId))
       expect(giverIds.size).toBe(50)
       expect(receiverIds.size).toBe(50)
+    })
+  })
+
+  describe('generateAssignmentsWithLocks', () => {
+    const createTestParticipants = (confirmed: boolean[] = []): Participant[] => {
+      return confirmed.map((isConfirmed, index) => ({
+        id: `p${index + 1}`,
+        name: `Participant ${index + 1}`,
+        desiredGift: '',
+        wish: '',
+        hasPendingReassignmentRequest: false,
+        hasConfirmedAssignment: isConfirmed
+      }))
+    }
+
+    it('should preserve assignments for confirmed participants', () => {
+      const participants = createTestParticipants([true, false, false, false])
+      const currentAssignments: Assignment[] = [
+        { giverId: 'p1', receiverId: 'p2' },
+        { giverId: 'p2', receiverId: 'p3' },
+        { giverId: 'p3', receiverId: 'p4' },
+        { giverId: 'p4', receiverId: 'p1' }
+      ]
+
+      const newAssignments = generateAssignmentsWithLocks(participants, currentAssignments)
+      
+      // First participant is confirmed, their assignment should be locked
+      const p1Assignment = newAssignments.find(a => a.giverId === 'p1')
+      expect(p1Assignment?.receiverId).toBe('p2')
+      
+      // All participants should still be giving
+      expect(newAssignments.length).toBe(4)
+      const giverIds = new Set(newAssignments.map(a => a.giverId))
+      expect(giverIds.size).toBe(4)
+    })
+
+    it('should regenerate all when no participants are confirmed', () => {
+      const participants = createTestParticipants([false, false, false, false])
+      const currentAssignments: Assignment[] = [
+        { giverId: 'p1', receiverId: 'p2' },
+        { giverId: 'p2', receiverId: 'p3' },
+        { giverId: 'p3', receiverId: 'p4' },
+        { giverId: 'p4', receiverId: 'p1' }
+      ]
+
+      const newAssignments = generateAssignmentsWithLocks(participants, currentAssignments)
+      
+      // Should generate new assignments
+      expect(newAssignments.length).toBe(4)
+      const giverIds = new Set(newAssignments.map(a => a.giverId))
+      const receiverIds = new Set(newAssignments.map(a => a.receiverId))
+      expect(giverIds.size).toBe(4)
+      expect(receiverIds.size).toBe(4)
+    })
+
+    it('should return current assignments when all participants are confirmed', () => {
+      const participants = createTestParticipants([true, true, true, true])
+      const currentAssignments: Assignment[] = [
+        { giverId: 'p1', receiverId: 'p2' },
+        { giverId: 'p2', receiverId: 'p3' },
+        { giverId: 'p3', receiverId: 'p4' },
+        { giverId: 'p4', receiverId: 'p1' }
+      ]
+
+      const newAssignments = generateAssignmentsWithLocks(participants, currentAssignments)
+      
+      // All assignments should be preserved
+      expect(newAssignments).toEqual(currentAssignments)
+    })
+
+    it('should handle mix of confirmed and unconfirmed participants', () => {
+      const participants = createTestParticipants([true, false, true, false, false])
+      const currentAssignments: Assignment[] = [
+        { giverId: 'p1', receiverId: 'p2' },
+        { giverId: 'p2', receiverId: 'p3' },
+        { giverId: 'p3', receiverId: 'p4' },
+        { giverId: 'p4', receiverId: 'p5' },
+        { giverId: 'p5', receiverId: 'p1' }
+      ]
+
+      const newAssignments = generateAssignmentsWithLocks(participants, currentAssignments)
+      
+      // Confirmed participants (p1, p3) should keep their assignments
+      const p1Assignment = newAssignments.find(a => a.giverId === 'p1')
+      const p3Assignment = newAssignments.find(a => a.giverId === 'p3')
+      expect(p1Assignment?.receiverId).toBe('p2')
+      expect(p3Assignment?.receiverId).toBe('p4')
+      
+      // All participants should have assignments
+      expect(newAssignments.length).toBe(5)
+      const giverIds = new Set(newAssignments.map(a => a.giverId))
+      expect(giverIds.size).toBe(5)
+    })
+
+    it('should not allow self-assignment in new assignments', () => {
+      const participants = createTestParticipants([true, false, false, false])
+      const currentAssignments: Assignment[] = [
+        { giverId: 'p1', receiverId: 'p2' },
+        { giverId: 'p2', receiverId: 'p3' },
+        { giverId: 'p3', receiverId: 'p4' },
+        { giverId: 'p4', receiverId: 'p1' }
+      ]
+
+      // Run multiple times to catch randomness issues
+      for (let i = 0; i < 20; i++) {
+        const newAssignments = generateAssignmentsWithLocks(participants, currentAssignments)
+        newAssignments.forEach(a => {
+          expect(a.giverId).not.toBe(a.receiverId)
+        })
+      }
+    })
+
+    it('should throw error with less than 3 participants', () => {
+      const participants = createTestParticipants([false, false])
+      const currentAssignments: Assignment[] = [
+        { giverId: 'p1', receiverId: 'p2' },
+        { giverId: 'p2', receiverId: 'p1' }
+      ]
+
+      expect(() => generateAssignmentsWithLocks(participants, currentAssignments))
+        .toThrow('Need at least 3 participants')
     })
   })
 

@@ -14,6 +14,8 @@ export const translations = {
     finish: "Finish",
     cancel: "Cancel",
     confirm: "Confirm",
+    yes: "Yes",
+    no: "No",
     
     step1: "Event Details",
     step2: "Participants",
@@ -525,6 +527,8 @@ export const translations = {
     finish: "Finalizar",
     cancel: "Cancelar",
     confirm: "Confirmar",
+    yes: "Sí",
+    no: "No",
     
     step1: "Detalles del Evento",
     step2: "Participantes",
@@ -1036,6 +1040,8 @@ export const translations = {
     finish: "Finalizar",
     cancel: "Cancelar",
     confirm: "Confirmar",
+    yes: "Sim",
+    no: "Não",
     
     step1: "Detalhes do Evento",
     step2: "Participantes",
@@ -3923,6 +3929,8 @@ export const translations = {
     finish: "Fertig",
     cancel: "Abbrechen",
     confirm: "Bestätigen",
+    yes: "Ja",
+    no: "Nein",
     
     step1: "Veranstaltungsdetails",
     step2: "Teilnehmer",
@@ -4413,6 +4421,8 @@ export const translations = {
     finish: "Gereed",
     cancel: "Annuleren",
     confirm: "Bevestigen",
+    yes: "Ja",
+    no: "Nee",
     
     step1: "Evenementdetails",
     step2: "Deelnemers",

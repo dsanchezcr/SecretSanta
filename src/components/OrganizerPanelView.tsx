@@ -867,7 +867,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
         }
         
         if (exportIncludeConfirmationStatus) {
-          row.push(participant.hasConfirmedAssignment ? 'Yes' : 'No')
+          row.push(participant.hasConfirmedAssignment ? t('yes') : t('no'))
         }
         
         if (exportIncludeGameDetails) {
@@ -898,7 +898,9 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
       link.setAttribute('href', url)
-      link.setAttribute('download', `${game.name.replace(/[^a-z0-9]/gi, '_')}_participants.csv`)
+      // Sanitize filename: remove unsafe characters while preserving Unicode letters and numbers
+      const sanitizedName = game.name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim() || 'participants'
+      link.setAttribute('download', `${sanitizedName}_participants.csv`)
       link.style.visibility = 'hidden'
       document.body.appendChild(link)
       link.click()
@@ -907,9 +909,10 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
       toast.success(t('exportSuccess'))
       setShowExportDialog(false)
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to export'
       toast.error(t('exportError'))
-      console.error(message)
+      if (error instanceof Error) {
+        console.error('Export error:', error.message)
+      }
     } finally {
       setIsExporting(false)
     }

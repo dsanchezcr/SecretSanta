@@ -174,6 +174,18 @@ export const it = {
     exportingData: "Esportazione...",
     exportSuccess: "Partecipanti esportati!",
     exportError: "Impossibile esportare i partecipanti",
+    exportNoFieldsSelected: "Seleziona almeno un campo da esportare",
+    exportHeaderName: "Nome",
+    exportHeaderEmail: "Email",
+    exportHeaderAssignedTo: "Assegnato a",
+    exportHeaderGiftWish: "Desiderio di Regalo",
+    exportHeaderConfirmed: "Confermato",
+    exportHeaderEventName: "Nome dell'Evento",
+    exportHeaderAmount: "Importo",
+    exportHeaderCurrency: "Valuta",
+    exportHeaderDate: "Data",
+    exportHeaderLocation: "Luogo",
+    exportHeaderInstructions: "Istruzioni",
 
     // Privacy page translations
     privacyTitle: "Politica sulla Privacy",

@@ -174,6 +174,18 @@ export const ja = {
     exportingData: "エクスポート中...",
     exportSuccess: "参加者がエクスポートされました！",
     exportError: "参加者のエクスポートに失敗しました",
+    exportNoFieldsSelected: "エクスポートするフィールドを少なくとも1つ選択してください",
+    exportHeaderName: "名前",
+    exportHeaderEmail: "メール",
+    exportHeaderAssignedTo: "割り当て先",
+    exportHeaderGiftWish: "ギフトの希望",
+    exportHeaderConfirmed: "確認済み",
+    exportHeaderEventName: "イベント名",
+    exportHeaderAmount: "金額",
+    exportHeaderCurrency: "通貨",
+    exportHeaderDate: "日付",
+    exportHeaderLocation: "場所",
+    exportHeaderInstructions: "指示",
 
     // Privacy page translations
     privacyTitle: "プライバシーポリシー",

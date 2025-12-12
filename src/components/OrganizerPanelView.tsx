@@ -181,6 +181,10 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
   const pendingRequestsCount = game.reassignmentRequests?.length || 0
   const totalParticipants = game.participants.length
 
+  // Check if at least one export option is selected (besides Name which is always included)
+  const hasExportOptionsSelected = exportIncludeAssignments || exportIncludeGameDetails || 
+    exportIncludeWishes || exportIncludeInstructions || exportIncludeConfirmationStatus || exportIncludeEmails
+
   // Generate participant link with language for consistent experience
   const getParticipantLink = (participant: Participant) => {
     if (game.isProtected && participant.token) {
@@ -840,15 +844,21 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
     setIsExporting(true)
     try {
       // Prepare CSV headers
-      const headers: string[] = ['Name']
-      if (exportIncludeEmails) headers.push('Email')
-      if (exportIncludeAssignments) headers.push('Assigned To')
-      if (exportIncludeWishes) headers.push('Gift Wish')
-      if (exportIncludeConfirmationStatus) headers.push('Confirmed')
+      const headers: string[] = [t('exportHeaderName')]
+      if (exportIncludeEmails) headers.push(t('exportHeaderEmail'))
+      if (exportIncludeAssignments) headers.push(t('exportHeaderAssignedTo'))
+      if (exportIncludeWishes) headers.push(t('exportHeaderGiftWish'))
+      if (exportIncludeConfirmationStatus) headers.push(t('exportHeaderConfirmed'))
       if (exportIncludeGameDetails) {
-        headers.push('Event Name', 'Amount', 'Currency', 'Date', 'Location')
+        headers.push(
+          t('exportHeaderEventName'),
+          t('exportHeaderAmount'),
+          t('exportHeaderCurrency'),
+          t('exportHeaderDate'),
+          t('exportHeaderLocation')
+        )
       }
-      if (exportIncludeInstructions) headers.push('Instructions')
+      if (exportIncludeInstructions) headers.push(t('exportHeaderInstructions'))
 
       // Prepare CSV rows
       const rows = game.participants.map(participant => {
@@ -2196,6 +2206,11 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
               </label>
             </div>
           </div>
+          {!hasExportOptionsSelected && (
+            <p className="text-sm text-amber-600 dark:text-amber-500">
+              ⚠️ {t('exportNoFieldsSelected')}
+            </p>
+          )}
           <DialogFooter>
             <Button 
               variant="outline" 
@@ -2206,7 +2221,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
             </Button>
             <Button 
               onClick={handleExportParticipants} 
-              disabled={isExporting}
+              disabled={isExporting || !hasExportOptionsSelected}
               className="gap-2"
             >
               {isExporting ? (

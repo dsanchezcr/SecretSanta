@@ -174,6 +174,18 @@ export const fr = {
     exportingData: "Exportation...",
     exportSuccess: "Participants exportés!",
     exportError: "Échec de l'exportation des participants",
+    exportNoFieldsSelected: "Veuillez sélectionner au moins un champ à exporter",
+    exportHeaderName: "Nom",
+    exportHeaderEmail: "E-mail",
+    exportHeaderAssignedTo: "Attribué à",
+    exportHeaderGiftWish: "Souhait de Cadeau",
+    exportHeaderConfirmed: "Confirmé",
+    exportHeaderEventName: "Nom de l'Événement",
+    exportHeaderAmount: "Montant",
+    exportHeaderCurrency: "Devise",
+    exportHeaderDate: "Date",
+    exportHeaderLocation: "Lieu",
+    exportHeaderInstructions: "Instructions",
 
     // Privacy page translations
     privacyTitle: "Politique de Confidentialité",

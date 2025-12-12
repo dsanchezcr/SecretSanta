@@ -174,6 +174,18 @@ export const zh = {
     exportingData: "正在导出...",
     exportSuccess: "参与者已导出！",
     exportError: "导出参与者失败",
+    exportNoFieldsSelected: "请至少选择一个字段进行导出",
+    exportHeaderName: "姓名",
+    exportHeaderEmail: "电子邮件",
+    exportHeaderAssignedTo: "分配给",
+    exportHeaderGiftWish: "礼物愿望",
+    exportHeaderConfirmed: "已确认",
+    exportHeaderEventName: "活动名称",
+    exportHeaderAmount: "金额",
+    exportHeaderCurrency: "货币",
+    exportHeaderDate: "日期",
+    exportHeaderLocation: "地点",
+    exportHeaderInstructions: "说明",
 
     // Privacy page translations
     privacyTitle: "隐私政策",

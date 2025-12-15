@@ -12,17 +12,19 @@ jest.mock('../shared/cosmosdb', () => ({
 jest.mock('../shared/game-utils', () => ({
   reassignParticipant: jest.fn(),
   generateAssignments: jest.fn(),
+  generateAssignmentsWithLocks: jest.fn(),
   generateId: jest.fn().mockReturnValue('new-participant-id')
 }))
 
 import { getGameByCode, updateGame, getDatabaseStatus } from '../shared/cosmosdb'
-import { reassignParticipant, generateAssignments, generateId } from '../shared/game-utils'
+import { reassignParticipant, generateAssignments, generateAssignmentsWithLocks, generateId } from '../shared/game-utils'
 
 const mockGetGameByCode = getGameByCode as jest.Mock
 const mockUpdateGame = updateGame as jest.Mock
 const mockGetDatabaseStatus = getDatabaseStatus as jest.Mock
 const mockReassignParticipant = reassignParticipant as jest.Mock
 const mockGenerateAssignments = generateAssignments as jest.Mock
+const mockGenerateAssignmentsWithLocks = generateAssignmentsWithLocks as jest.Mock
 const mockGenerateId = generateId as jest.Mock
 
 describe('updateGame function', () => {
@@ -678,7 +680,7 @@ describe('updateGame function', () => {
         { participantId: 'p1', participantName: 'Alice', requestedAt: Date.now() }
       ]
       mockGetGameByCode.mockResolvedValueOnce(testGame)
-      mockGenerateAssignments.mockReturnValueOnce([
+      mockGenerateAssignmentsWithLocks.mockReturnValueOnce([
         { giverId: 'p1', receiverId: 'p3' },
         { giverId: 'p2', receiverId: 'p1' },
         { giverId: 'p3', receiverId: 'p2' }
@@ -695,7 +697,7 @@ describe('updateGame function', () => {
       const updatedGame = response.jsonBody as Game
       expect(updatedGame.reassignmentRequests).toHaveLength(0)
       expect(updatedGame.participants.every(p => !p.hasPendingReassignmentRequest)).toBe(true)
-      expect(mockGenerateAssignments).toHaveBeenCalled()
+      expect(mockGenerateAssignmentsWithLocks).toHaveBeenCalled()
     })
 
     it('should return 403 with invalid token', async () => {
@@ -787,6 +789,87 @@ describe('updateGame function', () => {
 
       expect(response.status).toBe(404)
       expect(response.jsonBody).toEqual({ error: 'Participant not found' })
+    })
+  })
+
+  describe('forceReassignParticipant action (organizer)', () => {
+    it('should force reassign confirmed participant with valid token', async () => {
+      const testGame = createTestGame()
+      testGame.participants[0].hasConfirmedAssignment = true
+      mockGetGameByCode.mockResolvedValueOnce(testGame)
+      mockReassignParticipant.mockReturnValueOnce([
+        { giverId: 'p1', receiverId: 'p3' },
+        { giverId: 'p2', receiverId: 'p1' },
+        { giverId: 'p3', receiverId: 'p2' }
+      ])
+
+      const mockRequest = createMockRequest('123456', {
+        action: 'forceReassignParticipant',
+        organizerToken: 'token-123',
+        participantId: 'p1'
+      })
+      
+      const response = await updateGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(200)
+      const updatedGame = response.jsonBody as Game
+      const participant = updatedGame.participants.find(p => p.id === 'p1')
+      expect(participant?.hasConfirmedAssignment).toBe(false)
+      expect(mockReassignParticipant).toHaveBeenCalledWith(
+        'p1',
+        expect.any(Array),
+        expect.any(Array)
+      )
+    })
+
+    it('should return 403 with invalid token', async () => {
+      const testGame = createTestGame()
+      mockGetGameByCode.mockResolvedValueOnce(testGame)
+
+      const mockRequest = createMockRequest('123456', {
+        action: 'forceReassignParticipant',
+        organizerToken: 'wrong-token',
+        participantId: 'p1'
+      })
+      
+      const response = await updateGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(403)
+      expect(response.jsonBody).toEqual({ error: 'Invalid organizer token' })
+    })
+
+    it('should return 404 when participant not found', async () => {
+      const testGame = createTestGame()
+      mockGetGameByCode.mockResolvedValueOnce(testGame)
+
+      const mockRequest = createMockRequest('123456', {
+        action: 'forceReassignParticipant',
+        organizerToken: 'token-123',
+        participantId: 'nonexistent'
+      })
+      
+      const response = await updateGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(404)
+      expect(response.jsonBody).toEqual({ error: 'Participant not found' })
+    })
+
+    it('should return 400 when no valid swap available', async () => {
+      const testGame = createTestGame()
+      testGame.participants[0].hasConfirmedAssignment = true
+      mockGetGameByCode.mockResolvedValueOnce(testGame)
+      mockReassignParticipant.mockReturnValueOnce(null)
+
+      const mockRequest = createMockRequest('123456', {
+        action: 'forceReassignParticipant',
+        organizerToken: 'token-123',
+        participantId: 'p1'
+      })
+      
+      const response = await updateGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toEqual({ error: 'Cannot reassign: no valid swap available. Try regenerating all assignments.' })
     })
   })
 

@@ -239,6 +239,45 @@ export function cancelReassignmentRequestLocal(game: Game, participantId: string
 }
 
 /**
+ * Force reassignment of a specific participant (local)
+ * Used by organizer to manually reassign a confirmed participant
+ */
+export function forceReassignParticipantLocal(game: Game, participantId: string): Game {
+  const participant = game.participants.find(p => p.id === participantId)
+  if (!participant) throw new Error('Participant not found')
+
+  // Find current assignment for this participant
+  const currentAssignment = game.assignments.find(a => a.giverId === participantId)
+  if (!currentAssignment) throw new Error('Assignment not found')
+
+  // Find a valid swap partner
+  const swapPartner = findValidSwapPartner(game, participantId)
+  if (!swapPartner) {
+    throw new Error('No valid swap available')
+  }
+
+  // Perform the swap
+  const newAssignments = performSwap(game.assignments, participantId, swapPartner.id)
+
+  // Update participant state - clear confirmation since assignment changed
+  const updatedParticipants = game.participants.map(p => {
+    if (p.id === participantId) {
+      return { ...p, hasConfirmedAssignment: false }
+    }
+    if (p.id === swapPartner.id) {
+      return { ...p, hasConfirmedAssignment: false }
+    }
+    return p
+  })
+
+  return {
+    ...game,
+    participants: updatedParticipants,
+    assignments: newAssignments
+  }
+}
+
+/**
  * Approve all pending reassignments (local)
  */
 export function approveAllReassignmentsLocal(game: Game): Game {
@@ -259,15 +298,101 @@ export function approveAllReassignmentsLocal(game: Game): Game {
 
 /**
  * Reassign all participants (local)
+ * This preserves confirmed participants' assignments
  */
 export function reassignAllLocal(game: Game): Game {
-  const newAssignments = generateAssignments(game.participants)
+  // Separate confirmed and unconfirmed participants
+  const confirmedParticipants = game.participants.filter(p => p.hasConfirmedAssignment)
+  const unconfirmedParticipants = game.participants.filter(p => !p.hasConfirmedAssignment)
 
-  // Clear all confirmation status and pending requests
+  // If all confirmed or all unconfirmed, regenerate all
+  if (confirmedParticipants.length === 0 || confirmedParticipants.length === game.participants.length) {
+    const newAssignments = generateAssignments(game.participants)
+    const updatedParticipants = game.participants.map(p => ({
+      ...p,
+      hasPendingReassignmentRequest: false,
+      hasConfirmedAssignment: confirmedParticipants.length === game.participants.length ? p.hasConfirmedAssignment : false
+    }))
+    return {
+      ...game,
+      participants: updatedParticipants,
+      assignments: newAssignments,
+      reassignmentRequests: []
+    }
+  }
+
+  // Get locked assignments from confirmed participants
+  const lockedAssignments = game.assignments.filter(a => 
+    confirmedParticipants.some(p => p.id === a.giverId)
+  )
+
+  const lockedReceivers = new Set(lockedAssignments.map(a => a.receiverId))
+
+  // Get available receivers for unconfirmed participants
+  const availableReceivers = game.participants
+    .filter(p => !lockedReceivers.has(p.id))
+    .map(p => p.id)
+
+  // Shuffle unconfirmed participants and available receivers
+  const shuffledUnconfirmed = [...unconfirmedParticipants].sort(() => Math.random() - 0.5)
+  const shuffledReceivers = [...availableReceivers].sort(() => Math.random() - 0.5)
+
+  // Create new assignments, avoiding self-assignment
+  const newAssignments: Assignment[] = [...lockedAssignments]
+
+  // Try to assign receivers to givers, avoiding self-assignment
+  let assignmentAttempts = 0
+  const maxAttempts = 100
+  
+  while (assignmentAttempts < maxAttempts) {
+    const tempAssignments: Assignment[] = []
+    let hasError = false
+    
+    for (let i = 0; i < shuffledUnconfirmed.length; i++) {
+      const giver = shuffledUnconfirmed[i]
+      const receiver = shuffledReceivers[i]
+      
+      // Check for self-assignment
+      if (giver.id === receiver) {
+        hasError = true
+        break
+      }
+      
+      tempAssignments.push({
+        giverId: giver.id,
+        receiverId: receiver
+      })
+    }
+    
+    if (!hasError) {
+      newAssignments.push(...tempAssignments)
+      break
+    }
+    
+    // Shuffle receivers again and retry
+    shuffledReceivers.sort(() => Math.random() - 0.5)
+    assignmentAttempts++
+  }
+  
+  // If we couldn't avoid self-assignment after many attempts, fall back to full regeneration
+  if (assignmentAttempts >= maxAttempts) {
+    return {
+      ...game,
+      participants: game.participants.map(p => ({
+        ...p,
+        hasPendingReassignmentRequest: false,
+        hasConfirmedAssignment: false
+      })),
+      assignments: generateAssignments(game.participants),
+      reassignmentRequests: []
+    }
+  }
+
+  // Update participants: clear pending requests, keep confirmation status
   const updatedParticipants = game.participants.map(p => ({
     ...p,
-    hasPendingReassignmentRequest: false,
-    hasConfirmedAssignment: false
+    hasPendingReassignmentRequest: false
+    // hasConfirmedAssignment stays as is
   }))
 
   return {

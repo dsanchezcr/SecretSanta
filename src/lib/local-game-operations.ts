@@ -326,7 +326,6 @@ export function reassignAllLocal(game: Game): Game {
     confirmedParticipants.some(p => p.id === a.giverId)
   )
 
-  const lockedGivers = new Set(lockedAssignments.map(a => a.giverId))
   const lockedReceivers = new Set(lockedAssignments.map(a => a.receiverId))
 
   // Get available receivers for unconfirmed participants

@@ -292,6 +292,101 @@ test.describe('Core User Flows', () => {
     const protectOption = page.getByText(/proteger|protect|protéger|proteggere/i)
     await expect(protectOption).toBeVisible()
   })
+
+  test('should export participants with customizable options', async ({ page }) => {
+    await page.goto('/')
+    
+    // Create a game first
+    await page.getByRole('button', { name: /crear nuevo juego|create new game/i }).click()
+    
+    // Fill event details with dynamic future date
+    const futureDate = new Date()
+    futureDate.setDate(futureDate.getDate() + 30) // 30 days from now
+    const dateString = futureDate.toISOString().split('T')[0] // Format: YYYY-MM-DD
+    
+    await page.getByLabel(/nombre del evento|event name/i).fill('Export Test Game')
+    await page.getByLabel(/monto del regalo|gift amount/i).fill('50')
+    await page.getByLabel(/fecha del evento|event date/i).fill(dateString)
+    await page.getByLabel(/lugar del evento|event location/i).fill('Test Office')
+    await page.getByRole('button', { name: /siguiente|next/i }).click()
+    
+    // Add participants
+    const participantInput = page.getByPlaceholder(/maría garcía|mary smith/i)
+    const addButton = page.getByRole('button', { name: /agregar participante|add participant/i })
+    
+    await participantInput.fill('Alice')
+    await addButton.click()
+    await participantInput.fill('Bob')
+    await addButton.click()
+    await participantInput.fill('Charlie')
+    await addButton.click()
+    
+    await page.getByRole('button', { name: /siguiente|next/i }).click()
+    await page.getByRole('button', { name: /finalizar|finish/i }).click()
+    
+    // Navigate to organizer panel
+    await page.getByRole('button', { name: /ir al|go to/i }).click()
+    
+    // Wait for organizer panel to load
+    await expect(page.getByText(/panel del organizador|organizer panel/i)).toBeVisible()
+    
+    // Click export button
+    const exportButton = page.getByRole('button', { name: /exportar participantes|export participants/i })
+    await expect(exportButton).toBeVisible()
+    await exportButton.click()
+    
+    // Verify export dialog appears
+    await expect(page.getByText(/exportar lista de participantes|export participant list/i)).toBeVisible()
+    
+    // Verify all checkboxes are present and checked by default using their IDs
+    const assignmentsCheckbox = page.locator('#export-assignments')
+    const gameDetailsCheckbox = page.locator('#export-game-details')
+    const wishesCheckbox = page.locator('#export-wishes')
+    const instructionsCheckbox = page.locator('#export-instructions')
+    const confirmationCheckbox = page.locator('#export-confirmation')
+    const emailsCheckbox = page.locator('#export-emails')
+    
+    await expect(assignmentsCheckbox).toBeChecked()
+    await expect(gameDetailsCheckbox).toBeChecked()
+    await expect(wishesCheckbox).toBeChecked()
+    await expect(instructionsCheckbox).toBeChecked()
+    await expect(confirmationCheckbox).toBeChecked()
+    await expect(emailsCheckbox).toBeChecked()
+    
+    // Test unchecking all options shows warning and disables export
+    await assignmentsCheckbox.click()
+    await gameDetailsCheckbox.click()
+    await wishesCheckbox.click()
+    await instructionsCheckbox.click()
+    await confirmationCheckbox.click()
+    await emailsCheckbox.click()
+    
+    // Verify warning message appears
+    await expect(page.getByText(/selecciona al menos un campo|please select at least one field/i)).toBeVisible()
+    
+    // Verify export button is disabled
+    const exportCsvButton = page.getByRole('button', { name: /exportar como csv|export as csv/i })
+    await expect(exportCsvButton).toBeDisabled()
+    
+    // Re-check one option to enable export
+    await assignmentsCheckbox.click()
+    await expect(exportCsvButton).toBeEnabled()
+    
+    // Set up download listener
+    const downloadPromise = page.waitForEvent('download')
+    
+    // Click export
+    await exportCsvButton.click()
+    
+    // Verify download occurred
+    const download = await downloadPromise
+    
+    // Verify filename pattern matches expected format
+    expect(download.suggestedFilename()).toMatch(/Export Test Game_participants\.csv/)
+    
+    // Verify dialog closes after export
+    await expect(page.getByText(/exportar lista de participantes|export participant list/i)).not.toBeVisible()
+  })
 })
 
 test.describe('Error Handling and Token Entry', () => {

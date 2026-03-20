@@ -62,6 +62,10 @@ param repositoryBranch string = 'main'
 @description('Deployment ID for globally unique naming (e.g., user identifier from GitHub Actions)')
 param deploymentId string = ''
 
+@description('Secret token used to authenticate calls to the cleanup HTTP endpoint')
+@secure()
+param cleanupSecret string = ''
+
 // ============================================================================
 // Variables
 // ============================================================================
@@ -279,6 +283,8 @@ resource staticWebAppSettings 'Microsoft.Web/staticSites/config@2024-11-01' = {
       APPINSIGHTS_INSTRUMENTATIONKEY: appInsights.properties.InstrumentationKey
       // Environment info
       ENVIRONMENT: environment
+      // Cleanup endpoint secret (used by GitHub Actions cron to authenticate)
+      CLEANUP_SECRET: cleanupSecret
       // Build info
       BUILD_VERSION: '${envSuffix}-${uniqueSuffix}'
       BUILD_DATE: deploymentTime

@@ -444,7 +444,7 @@ jobs:
           az deployment group validate \
             --resource-group ${{ steps.rg.outputs.name }} \
             --template-file ./infra/main.bicep \
-            --parameters ./infra/parameters.qa.json deploymentId=qa-stable
+            --parameters ./infra/parameters.qa.json deploymentId=qa-stable cleanupSecret=${{ secrets.CLEANUP_SECRET }}
           echo "✅ Template validation passed"
 
       - name: Deploy QA Infrastructure
@@ -454,7 +454,7 @@ jobs:
           scope: resourcegroup
           resourceGroupName: ${{ steps.rg.outputs.name }}
           template: ./infra/main.bicep
-          parameters: ./infra/parameters.qa.json deploymentId=qa-stable
+          parameters: ./infra/parameters.qa.json deploymentId=qa-stable cleanupSecret=${{ secrets.CLEANUP_SECRET }}
           deploymentMode: Incremental
           failOnStdErr: true
 
@@ -668,7 +668,7 @@ jobs:
           az deployment group validate \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --template-file ./infra/main.bicep \
-            --parameters ./infra/parameters.prod.json deploymentId=prod-stable
+            --parameters ./infra/parameters.prod.json deploymentId=prod-stable cleanupSecret=${{ secrets.CLEANUP_SECRET }}
           echo "✅ Template validation passed"
 
       - name: Deploy Production Infrastructure
@@ -678,7 +678,7 @@ jobs:
           scope: resourcegroup
           resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
           template: ./infra/main.bicep
-          parameters: ./infra/parameters.prod.json deploymentId=prod-stable
+          parameters: ./infra/parameters.prod.json deploymentId=prod-stable cleanupSecret=${{ secrets.CLEANUP_SECRET }}
           deploymentMode: Incremental
           failOnStdErr: true
 

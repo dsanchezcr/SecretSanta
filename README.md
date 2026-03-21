@@ -210,6 +210,7 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed setup instru
 | `ENVIRONMENT` | Environment name (pr/qa/prod) | ✅ |
 | `BUILD_VERSION` | Build version identifier | ✅ |
 | `BUILD_DATE` | Deployment timestamp | ✅ |
+| `CLEANUP_SECRET` | Secret for cleanup endpoint authentication | ✅ |
 
 *Only in QA/production with email enabled
 
@@ -218,6 +219,7 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed setup instru
 | Secret | Description |
 |--------|-------------|
 | `AZURE_CREDENTIALS` | Complete JSON from `az ad sp create-for-rbac` command (includes appId, tenant, subscriptionId, password) |
+| `CLEANUP_SECRET` | Shared secret for cleanup HTTP endpoint. Generate a strong random value (e.g., `openssl rand -base64 32`). Used by GitHub Actions scheduled cleanup job running daily at 2:00 AM UTC. |
 
 ### No Variables Needed
 
@@ -265,7 +267,7 @@ Each environment includes Application Insights for:
 
 ## 🗑️ Data Retention
 
-- **Auto-Deletion**: Games are automatically deleted 3 days after their event date
+- **Auto-Deletion**: Games are automatically deleted 3 days after their event date via a GitHub Actions scheduled workflow that calls the `/api/games/cleanup` HTTP endpoint daily at 2:00 AM UTC. Authentication is via the `CLEANUP_SECRET` header.
 - **Manual Deletion**: Organizers can delete games at any time from the Organizer Panel
 - **Privacy**: See the in-app Privacy page for full data handling details
 - **No External Sharing**: Data is never shared with third parties

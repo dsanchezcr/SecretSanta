@@ -389,6 +389,15 @@ curl -X POST https://yourapp.azurestaticapps.net/api/games/cleanup \
 }
 ```
 
+**Response (500 Internal Server Error):**
+```json
+{
+  "error": "Server configuration error"
+}
+```
+
+> **Note:** A `500` is also returned for unexpected internal errors with `"error": "Internal server error"`. Check Application Insights logs for details.
+
 **Response (503 Service Unavailable):**
 ```json
 {

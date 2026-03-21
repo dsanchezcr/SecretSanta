@@ -68,8 +68,8 @@ In your GitHub repo, go to **Settings** → **Secrets and variables** → **Acti
 
 Once both `AZURE_CREDENTIALS` and `CLEANUP_SECRET` are in GitHub:
 
-1. Push a commit to a branch → GitHub Actions will validate and deploy
-2. The deployment workflow automatically passes `CLEANUP_SECRET` to Bicep
+1. Open or update a pull request targeting `main` (or merge your changes to `main`) → GitHub Actions will validate and deploy
+2. The deployment workflow (triggered by PRs to `main` or pushes to `main`) automatically passes `CLEANUP_SECRET` to Bicep
 3. Bicep configures it as an app setting in the Static Web App
 4. The cleanup endpoint uses this setting to validate the `x-cleanup-secret` header from the scheduled workflow
 
@@ -84,7 +84,7 @@ Go to **Settings** → **Environments** and create:
 - Set **Deployment branches** to `main` only
 - **Required reviewers:** Add team members for approval gate
 
-### 4. Configure Protected Branches
+### 5. Configure Protected Branches
 
 In **Settings** → **Branches**:
 

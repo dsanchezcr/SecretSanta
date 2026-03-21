@@ -68,10 +68,12 @@ In your GitHub repo, go to **Settings** → **Secrets and variables** → **Acti
 
 Once both `AZURE_CREDENTIALS` and `CLEANUP_SECRET` are in GitHub:
 
-1. Open or update a pull request targeting `main` (or merge your changes to `main`) → GitHub Actions will validate and deploy
-2. The deployment workflow (triggered by PRs to `main` or pushes to `main`) automatically passes `CLEANUP_SECRET` to Bicep
-3. Bicep configures it as an app setting in the Static Web App
+1. Merge your changes to `main` → the CI/CD workflow triggers QA and Production deployments
+2. The deployment workflow passes `CLEANUP_SECRET` to Bicep **only for QA and Production** (push to `main`) — PR infrastructure deployments do **not** receive this setting
+3. Bicep configures it as an app setting in the Static Web App for QA and Production environments
 4. The cleanup endpoint uses this setting to validate the `x-cleanup-secret` header from the scheduled workflow
+
+> **Note:** PR preview environments will not have `CLEANUP_SECRET` configured and cannot run the cleanup endpoint. This is intentional — the scheduled cleanup workflow only targets QA and Production.
 
 ### 4. Set Up Environments (Optional but Recommended)
 

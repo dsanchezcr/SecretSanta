@@ -1,0 +1,160 @@
+# ============================================================================
+# Secret Santa - Cleanup Expired Games
+# ============================================================================
+# Azure Static Web Apps Managed Functions only support HTTP triggers, not
+# timer/schedule triggers. This workflow calls the cleanup HTTP endpoint on a
+# daily schedule, replacing the former timer trigger.
+#
+# The endpoint validates the X-Cleanup-Secret header against the CLEANUP_SECRET
+# app setting to prevent unauthorized invocations.
+#
+# Required GitHub Secret:
+#   CLEANUP_SECRET  - shared secret stored in Azure app settings and here
+#   AZURE_CREDENTIALS - service principal for Azure CLI login
+# ============================================================================
+
+name: Cleanup Expired Games
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2:00 AM UTC
+  workflow_dispatch:       # Allow manual trigger
+
+permissions:
+  contents: read
+
+env:
+  AZURE_QA_RESOURCE_GROUP: 'secretsanta-qa'
+  AZURE_RESOURCE_GROUP: 'secretsanta'
+
+jobs:
+  # ==========================================================================
+  # CLEANUP QA ENVIRONMENT
+  # ==========================================================================
+  cleanup-qa:
+    name: Cleanup QA
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get QA App URL
+        id: app-url
+        run: |
+          SWA_NAME=$(az staticwebapp list --resource-group "${{ env.AZURE_QA_RESOURCE_GROUP }}" --query "[0].name" -o tsv 2>/dev/null || echo "")
+          if [ -z "$SWA_NAME" ]; then
+            echo "⚠️ No Static Web App found in QA resource group. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            HOSTNAME=$(az staticwebapp show --name "$SWA_NAME" --resource-group "${{ env.AZURE_QA_RESOURCE_GROUP }}" --query "properties.defaultHostname" -o tsv)
+            echo "url=https://$HOSTNAME" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger Cleanup (QA)
+        if: steps.app-url.outputs.skip != 'true'
+        run: |
+          ENDPOINT="${{ steps.app-url.outputs.url }}/api/games/cleanup"
+          echo "🧹 Calling cleanup endpoint: $ENDPOINT"
+
+          RESPONSE_FILE=/tmp/cleanup-response.json
+
+          HTTP_CODE=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
+            -X POST \
+            -H "x-cleanup-secret: ${{ secrets.CLEANUP_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "$ENDPOINT") || {
+            CURL_EXIT_CODE=$?
+            echo "❌ curl failed with exit code $CURL_EXIT_CODE (no HTTP response available)."
+            if [ -f "$RESPONSE_FILE" ]; then
+              echo "Partial response body:"
+              cat "$RESPONSE_FILE"
+            fi
+            exit "$CURL_EXIT_CODE"
+          }
+
+          if [ -f "$RESPONSE_FILE" ]; then
+            BODY=$(cat "$RESPONSE_FILE")
+          else
+            BODY=""
+          fi
+
+          echo "Response body: $BODY"
+          echo "HTTP status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Cleanup failed with HTTP status $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "✅ QA cleanup completed successfully"
+          echo "$BODY" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # CLEANUP PRODUCTION ENVIRONMENT
+  # ==========================================================================
+  cleanup-production:
+    name: Cleanup Production
+    runs-on: ubuntu-latest
+    # Run independently of QA so a QA failure does not skip production cleanup
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get Production App URL
+        id: app-url
+        run: |
+          SWA_NAME=$(az staticwebapp list --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --query "[0].name" -o tsv 2>/dev/null || echo "")
+          if [ -z "$SWA_NAME" ]; then
+            echo "⚠️ No Static Web App found in production resource group. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            HOSTNAME=$(az staticwebapp show --name "$SWA_NAME" --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --query "properties.defaultHostname" -o tsv)
+            echo "url=https://$HOSTNAME" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger Cleanup (Production)
+        if: steps.app-url.outputs.skip != 'true'
+        run: |
+          ENDPOINT="${{ steps.app-url.outputs.url }}/api/games/cleanup"
+          echo "🧹 Calling cleanup endpoint: $ENDPOINT"
+
+          RESPONSE_FILE=/tmp/cleanup-response.json
+
+          HTTP_CODE=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
+            -X POST \
+            -H "x-cleanup-secret: ${{ secrets.CLEANUP_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "$ENDPOINT") || {
+            CURL_EXIT_CODE=$?
+            echo "❌ curl failed with exit code $CURL_EXIT_CODE (no HTTP response available)."
+            if [ -f "$RESPONSE_FILE" ]; then
+              echo "Partial response body:"
+              cat "$RESPONSE_FILE"
+            fi
+            exit "$CURL_EXIT_CODE"
+          }
+
+          if [ -f "$RESPONSE_FILE" ]; then
+            BODY=$(cat "$RESPONSE_FILE")
+          else
+            BODY=""
+          fi
+
+          echo "Response body: $BODY"
+          echo "HTTP status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Cleanup failed with HTTP status $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "✅ Production cleanup completed successfully"
+          echo "$BODY" >> $GITHUB_STEP_SUMMARY

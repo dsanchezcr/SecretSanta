@@ -63,11 +63,14 @@ describe('createGame function', () => {
   } as unknown as HttpRequest)
 
   it('should create a game successfully with valid data', async () => {
+    const futureDate = new Date()
+    futureDate.setFullYear(futureDate.getFullYear() + 1)
+    const futureDateStr = futureDate.toISOString().split('T')[0]
     const requestBody = {
-      name: 'Christmas 2025',
+      name: 'Christmas Party',
       amount: '20',
       currency: 'USD',
-      date: '2025-12-25',
+      date: futureDateStr,
       location: 'Office',
       allowReassignment: true,
       generalNotes: 'Bring wrapped gifts',
@@ -86,7 +89,7 @@ describe('createGame function', () => {
     
     const game = response.jsonBody as Game
     expect(game.code).toBe('123456')
-    expect(game.name).toBe('Christmas 2025')
+    expect(game.name).toBe('Christmas Party')
     expect(game.participants).toHaveLength(3)
     expect(game.assignments).toHaveLength(3)
   })

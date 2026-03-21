@@ -60,13 +60,28 @@ jobs:
           ENDPOINT="${{ steps.app-url.outputs.url }}/api/games/cleanup"
           echo "🧹 Calling cleanup endpoint: $ENDPOINT"
 
-          HTTP_CODE=$(curl -s -o /tmp/cleanup-response.json -w "%{http_code}" \
+          RESPONSE_FILE=/tmp/cleanup-response.json
+
+          HTTP_CODE=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
             -X POST \
             -H "x-cleanup-secret: ${{ secrets.CLEANUP_SECRET }}" \
             -H "Content-Type: application/json" \
-            "$ENDPOINT")
+            "$ENDPOINT") || {
+            CURL_EXIT_CODE=$?
+            echo "❌ curl failed with exit code $CURL_EXIT_CODE (no HTTP response available)."
+            if [ -f "$RESPONSE_FILE" ]; then
+              echo "Partial response body:"
+              cat "$RESPONSE_FILE"
+            fi
+            exit "$CURL_EXIT_CODE"
+          }
 
-          BODY=$(cat /tmp/cleanup-response.json)
+          if [ -f "$RESPONSE_FILE" ]; then
+            BODY=$(cat "$RESPONSE_FILE")
+          else
+            BODY=""
+          fi
+
           echo "Response body: $BODY"
           echo "HTTP status: $HTTP_CODE"
 
@@ -111,13 +126,28 @@ jobs:
           ENDPOINT="${{ steps.app-url.outputs.url }}/api/games/cleanup"
           echo "🧹 Calling cleanup endpoint: $ENDPOINT"
 
-          HTTP_CODE=$(curl -s -o /tmp/cleanup-response.json -w "%{http_code}" \
+          RESPONSE_FILE=/tmp/cleanup-response.json
+
+          HTTP_CODE=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
             -X POST \
             -H "x-cleanup-secret: ${{ secrets.CLEANUP_SECRET }}" \
             -H "Content-Type: application/json" \
-            "$ENDPOINT")
+            "$ENDPOINT") || {
+            CURL_EXIT_CODE=$?
+            echo "❌ curl failed with exit code $CURL_EXIT_CODE (no HTTP response available)."
+            if [ -f "$RESPONSE_FILE" ]; then
+              echo "Partial response body:"
+              cat "$RESPONSE_FILE"
+            fi
+            exit "$CURL_EXIT_CODE"
+          }
 
-          BODY=$(cat /tmp/cleanup-response.json)
+          if [ -f "$RESPONSE_FILE" ]; then
+            BODY=$(cat "$RESPONSE_FILE")
+          else
+            BODY=""
+          fi
+
           echo "Response body: $BODY"
           echo "HTTP status: $HTTP_CODE"
 

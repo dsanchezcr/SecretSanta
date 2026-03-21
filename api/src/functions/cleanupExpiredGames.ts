@@ -1,4 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
+import { timingSafeEqual } from 'crypto'
 import { getDatabaseStatus, getContainer } from '../shared/cosmosdb'
 import { trackError, trackEvent } from '../shared/telemetry'
 import { Game } from '../shared/types'
@@ -27,7 +28,7 @@ export async function performCleanup(context: InvocationContext): Promise<{ dele
   cutoffDate.setHours(23, 59, 59, 999) // End of that day
   const cutoffDateString = cutoffDate.toISOString().split('T')[0]
 
-  context.log(`📅 Looking for games with event date before ${cutoffDateString}`)
+  context.log(`📅 Looking for games with event date on or before ${cutoffDateString}`)
 
   // Query for games whose event date is 3+ days in the past
   const querySpec = {
@@ -106,9 +107,20 @@ export async function cleanupExpiredGamesHandler(request: HttpRequest, context: 
     return { status: 500, jsonBody: { error: 'Server configuration error' } }
   }
 
+  // Use timing-safe comparison to prevent timing attacks on the shared secret
   // Headers.get() is case-insensitive per the Fetch API specification
   const providedSecret = request.headers.get('x-cleanup-secret')
-  if (!providedSecret || providedSecret !== cleanupSecret) {
+  let secretsMatch = false
+  if (providedSecret) {
+    try {
+      const a = Buffer.from(providedSecret)
+      const b = Buffer.from(cleanupSecret)
+      secretsMatch = a.length === b.length && timingSafeEqual(a, b)
+    } catch {
+      secretsMatch = false
+    }
+  }
+  if (!secretsMatch) {
     context.warn('⚠️ Unauthorized cleanup attempt - invalid or missing secret')
     return { status: 401, jsonBody: { error: 'Unauthorized' } }
   }

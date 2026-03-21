@@ -210,32 +210,37 @@ describe('cleanupExpiredGames HTTP function', () => {
     })
 
     it('should use correct cutoff date query (3 days ago)', async () => {
+      // Freeze time so the cutoff date calculation is deterministic
+      jest.useFakeTimers()
+      const fixedNow = new Date('2025-11-10T00:00:00Z')
+      jest.setSystemTime(fixedNow)
+
       mockQuery.mockReturnValue({
         fetchAll: jest.fn().mockResolvedValue({ resources: [] })
       })
 
-      await performCleanup(mockContext)
+      try {
+        await performCleanup(mockContext)
 
-      // Verify the query was called with a date parameter
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          query: 'SELECT * FROM c WHERE c.date <= @cutoffDate',
-          parameters: expect.arrayContaining([
-            expect.objectContaining({ name: '@cutoffDate' })
-          ])
-        })
-      )
+        // Verify the query was called with a date parameter
+        expect(mockQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            query: 'SELECT * FROM c WHERE c.date <= @cutoffDate',
+            parameters: expect.arrayContaining([
+              expect.objectContaining({ name: '@cutoffDate' })
+            ])
+          })
+        )
 
-      // Verify the cutoff date is approximately 3 days ago
-      const callArgs = mockQuery.mock.calls[0][0]
-      const cutoffDateString = callArgs.parameters[0].value
-      const cutoffDate = new Date(cutoffDateString)
-      const expectedDate = new Date()
-      expectedDate.setDate(expectedDate.getDate() - 3)
-
-      // Allow for 1 day tolerance in case of timezone differences
-      const diffInDays = Math.abs((cutoffDate.getTime() - expectedDate.getTime()) / (1000 * 60 * 60 * 24))
-      expect(diffInDays).toBeLessThan(1)
+        // Verify the cutoff date is exactly 3 days before the fixed "now"
+        const callArgs = mockQuery.mock.calls[0][0]
+        const cutoffDateString = callArgs.parameters[0].value
+        const expectedDate = new Date(fixedNow)
+        expectedDate.setDate(expectedDate.getDate() - 3)
+        expect(cutoffDateString).toBe(expectedDate.toISOString().split('T')[0])
+      } finally {
+        jest.useRealTimers()
+      }
     })
 
     it('should log game details when deleting', async () => {

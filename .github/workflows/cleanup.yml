@@ -49,9 +49,14 @@ jobs:
             echo "⚠️ No Static Web App found in QA resource group. Skipping."
             echo "skip=true" >> $GITHUB_OUTPUT
           else
-            HOSTNAME=$(az staticwebapp show --name "$SWA_NAME" --resource-group "${{ env.AZURE_QA_RESOURCE_GROUP }}" --query "properties.defaultHostname" -o tsv)
-            echo "url=https://$HOSTNAME" >> $GITHUB_OUTPUT
-            echo "skip=false" >> $GITHUB_OUTPUT
+            HOSTNAME=$(az staticwebapp show --name "$SWA_NAME" --resource-group "${{ env.AZURE_QA_RESOURCE_GROUP }}" --query "defaultHostname" -o tsv 2>/dev/null || echo "")
+            if [ -z "$HOSTNAME" ]; then
+              echo "⚠️ Static Web App '$SWA_NAME' did not return a default hostname. Skipping."
+              echo "skip=true" >> $GITHUB_OUTPUT
+            else
+              echo "url=https://$HOSTNAME" >> $GITHUB_OUTPUT
+              echo "skip=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Trigger Cleanup (QA)
@@ -115,9 +120,14 @@ jobs:
             echo "⚠️ No Static Web App found in production resource group. Skipping."
             echo "skip=true" >> $GITHUB_OUTPUT
           else
-            HOSTNAME=$(az staticwebapp show --name "$SWA_NAME" --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --query "properties.defaultHostname" -o tsv)
-            echo "url=https://$HOSTNAME" >> $GITHUB_OUTPUT
-            echo "skip=false" >> $GITHUB_OUTPUT
+            HOSTNAME=$(az staticwebapp show --name "$SWA_NAME" --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --query "defaultHostname" -o tsv 2>/dev/null || echo "")
+            if [ -z "$HOSTNAME" ]; then
+              echo "⚠️ Static Web App '$SWA_NAME' did not return a default hostname. Skipping."
+              echo "skip=true" >> $GITHUB_OUTPUT
+            else
+              echo "url=https://$HOSTNAME" >> $GITHUB_OUTPUT
+              echo "skip=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Trigger Cleanup (Production)

@@ -9,8 +9,11 @@
 # app setting to prevent unauthorized invocations.
 #
 # Required GitHub Secret:
-#   CLEANUP_SECRET  - shared secret stored in Azure app settings and here
-#   AZURE_CREDENTIALS - service principal for Azure CLI login
+#   CLEANUP_SECRET    - shared secret stored in Azure app settings and here
+#   AZURE_CREDENTIALS - service principal for Azure CLI login (QA only)
+#
+# Workflow env variable:
+#   AZURE_PROD_APP_URL - production custom domain (update if using a different environment)
 # ============================================================================
 
 name: Cleanup Expired Games
@@ -26,6 +29,10 @@ permissions:
 env:
   AZURE_QA_RESOURCE_GROUP: 'secretsanta-qa'
   AZURE_RESOURCE_GROUP: 'secretsanta'
+  # Production custom domain — update this if you deploy to a different environment.
+  # The default azurestaticapps.net hostname redirects here, so using it directly
+  # avoids the extra redirect hop and removes the Azure CLI dependency at cleanup time.
+  AZURE_PROD_APP_URL: 'https://secretsanta.dsanchezcr.com'
 
 jobs:
   # ==========================================================================
@@ -67,7 +74,7 @@ jobs:
 
           RESPONSE_FILE=/tmp/cleanup-response.json
 
-          HTTP_CODE=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
+          HTTP_CODE=$(curl -sS -L -o "$RESPONSE_FILE" -w "%{http_code}" \
             -X POST \
             -H "x-cleanup-secret: ${{ secrets.CLEANUP_SECRET }}" \
             -H "Content-Type: application/json" \
@@ -105,30 +112,14 @@ jobs:
     name: Cleanup Production
     runs-on: ubuntu-latest
     # Run independently of QA so a QA failure does not skip production cleanup
+    # No Azure login needed - the production URL is taken from AZURE_PROD_APP_URL env variable.
 
     steps:
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Get Production App URL
         id: app-url
         run: |
-          SWA_NAME=$(az staticwebapp list --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --query "[0].name" -o tsv 2>/dev/null || echo "")
-          if [ -z "$SWA_NAME" ]; then
-            echo "⚠️ No Static Web App found in production resource group. Skipping."
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            HOSTNAME=$(az staticwebapp show --name "$SWA_NAME" --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --query "defaultHostname" -o tsv 2>/dev/null || echo "")
-            if [ -z "$HOSTNAME" ]; then
-              echo "⚠️ Static Web App '$SWA_NAME' did not return a default hostname. Skipping."
-              echo "skip=true" >> $GITHUB_OUTPUT
-            else
-              echo "url=https://$HOSTNAME" >> $GITHUB_OUTPUT
-              echo "skip=false" >> $GITHUB_OUTPUT
-            fi
-          fi
+          echo "url=${{ env.AZURE_PROD_APP_URL }}" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
 
       - name: Trigger Cleanup (Production)
         if: steps.app-url.outputs.skip != 'true'
@@ -138,7 +129,7 @@ jobs:
 
           RESPONSE_FILE=/tmp/cleanup-response.json
 
-          HTTP_CODE=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
+          HTTP_CODE=$(curl -sS -L -o "$RESPONSE_FILE" -w "%{http_code}" \
             -X POST \
             -H "x-cleanup-secret: ${{ secrets.CLEANUP_SECRET }}" \
             -H "Content-Type: application/json" \

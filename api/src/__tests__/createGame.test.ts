@@ -66,7 +66,6 @@ describe('createGame function', () => {
     const futureDate = new Date()
     futureDate.setFullYear(futureDate.getFullYear() + 1)
     const futureDateStr = futureDate.toISOString().split('T')[0]
-
     const requestBody = {
       name: 'Christmas Party',
       amount: '20',

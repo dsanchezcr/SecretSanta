@@ -267,7 +267,7 @@ Each environment includes Application Insights for:
 
 ## 🗑️ Data Retention
 
-- **Auto-Deletion**: Games are automatically deleted 3 days after their event date via a GitHub Actions scheduled workflow that calls the `/api/games/cleanup` HTTP endpoint daily at 2:00 AM UTC. Authentication is via the `CLEANUP_SECRET` header.
+- **Auto-Deletion**: Games are automatically deleted 3 days after their event date via a GitHub Actions scheduled workflow that calls the `/api/games/cleanup` HTTP endpoint daily at 2:00 AM UTC. Authentication is via the `x-cleanup-secret` request header, whose value must match the `CLEANUP_SECRET` app setting.
 - **Manual Deletion**: Organizers can delete games at any time from the Organizer Panel
 - **Privacy**: See the in-app Privacy page for full data handling details
 - **No External Sharing**: Data is never shared with third parties

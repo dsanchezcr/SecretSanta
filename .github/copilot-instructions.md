@@ -66,11 +66,12 @@ secretsanta/
   - `PATCH /api/games/{code}` - Update game
   - `DELETE /api/games/{code}` - Delete game (requires organizerToken)
   - `POST /api/email/send` - Send emails
+  - `POST /api/games/cleanup` - Cleanup HTTP endpoint (triggered by GitHub Actions cron, requires `x-cleanup-secret` header)
   - `GET /api/health` - Full health check
   - `GET /api/health/live` - Liveness probe
   - `GET /api/health/ready` - Readiness probe
-- **Timer Triggers**:
-  - `cleanupExpiredGames` - Runs daily at 2:00 AM UTC, deletes games 3+ days past event date
+- **Scheduled Cleanup**:
+  - Azure Managed Functions do not support timer triggers. Instead, a GitHub Actions workflow calls the `/api/games/cleanup` HTTP endpoint daily at 2:00 AM UTC, which deletes games 3+ days past event date.
 
 ### Adding Translations
 ```typescript

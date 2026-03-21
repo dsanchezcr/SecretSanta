@@ -353,19 +353,54 @@ Permanently deletes a game and all its data. **This action is irreversible.**
 - `404` - Game not found
 - `503` - Database unavailable
 
-## Background Functions
+## Cleanup Endpoint
 
-### Cleanup Expired Games (Timer Trigger)
+### POST `/api/games/cleanup`
+
+Scheduled HTTP endpoint that deletes games where the event date was 3 or more days ago. Replaces the unsupported timer trigger.
+
+**Schedule:** Daily at 2:00 AM UTC (via GitHub Actions cron job)
+
+**Authentication:**
+- Required header: `x-cleanup-secret`
+- Value: Must match the `CLEANUP_SECRET` app setting
+- Uses timing-safe comparison to prevent timing attacks
+
+**Request Example:**
+```bash
+curl -X POST https://yourapp.azurestaticapps.net/api/games/cleanup \
+  -H "x-cleanup-secret: your-cleanup-secret" \
+  -H "Content-Type: application/json"
 ```
-Schedule: 0 0 2 * * * (Daily at 2:00 AM UTC)
+
+**Response (200 OK):**
+```json
+{
+  "deletedCount": 5,
+  "failedCount": 0,
+  "totalFound": 5
+}
 ```
-Automatically deletes games where the event date was 3 or more days ago. This is a background function that runs on a schedule and does not have an HTTP endpoint.
+
+**Response (401 Unauthorized):**
+```json
+{
+  "error": "Unauthorized"
+}
+```
+
+**Response (503 Service Unavailable):**
+```json
+{
+  "error": "Database not available"
+}
+```
 
 **Behavior:**
 - Queries all games with `date <= (today - 3 days)`
 - Deletes each expired game from the database
-- Logs deletion results to Application Insights
-- Sends telemetry events: `CleanupStarted`, `GameAutoDeleted`, `CleanupCompleted`
+- Returns counts of successfully deleted games and failures
+- Logs results to Application Insights
 
 **Data Retention Policy:**
 - Games are automatically deleted 3 days after their event date

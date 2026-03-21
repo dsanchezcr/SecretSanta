@@ -43,19 +43,37 @@ az ad sp create-for-rbac \
 }
 ```
 
-### 2. Add GitHub Secret
+### 2. Add GitHub Secrets
 
-In your GitHub repo:
+In your GitHub repo, go to **Settings** → **Secrets and variables** → **Actions**:
 
-1. Go to **Settings** → **Secrets and variables** → **Actions**
-2. Click **New repository secret**
-3. Name: `AZURE_CREDENTIALS`
-4. Value: Paste the **entire JSON output** from the service principal creation above
-5. Click **Add secret**
+**Secret 1: AZURE_CREDENTIALS** (Already created above)
+- Value: Paste the entire JSON output from the service principal creation
 
-**That's it!** One secret, no variables needed.
+**Secret 2: CLEANUP_SECRET** (New)
+- This authenticates the scheduled cleanup cron job to call the cleanup HTTP endpoint
+- Generate a strong random secret:
+  ```bash
+  # macOS/Linux
+  openssl rand -base64 32
+  
+  # Windows PowerShell
+  [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }) -as [byte[]])
+  ```
+- Save the same value for both GitHub secret and Azure app settings (see step 3 below)
 
-### 3. Set Up Environments (Optional but Recommended)
+**That's it!** Two secrets, no variables needed.
+
+### 3. Deploy to Auto-Configure Secrets in Azure
+
+Once both `AZURE_CREDENTIALS` and `CLEANUP_SECRET` are in GitHub:
+
+1. Push a commit to a branch → GitHub Actions will validate and deploy
+2. The deployment workflow automatically passes `CLEANUP_SECRET` to Bicep
+3. Bicep configures it as an app setting in the Static Web App
+4. The cleanup endpoint uses this setting to validate the `x-cleanup-secret` header from the scheduled workflow
+
+### 4. Set Up Environments (Optional but Recommended)
 
 Go to **Settings** → **Environments** and create:
 

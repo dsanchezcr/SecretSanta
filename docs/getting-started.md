@@ -132,6 +132,7 @@ The `local.settings.json` file automatically includes:
 - **COSMOS_CONTAINER_NAME**: `games`
 - **APP_BASE_URL**: `http://localhost:5173`
 - **ENVIRONMENT**: `local`
+- **CLEANUP_SECRET**: (optional) Add this to test the cleanup endpoint locally. Use any string (e.g., `dev-secret-123`). The `/api/games/cleanup` endpoint validates requests via the `x-cleanup-secret` header (see [API Reference](./api-reference.md) for details).
 
 ### Security Note
 

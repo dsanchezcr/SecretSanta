@@ -168,11 +168,14 @@ export async function getGameByCode(code: string): Promise<Game | null> {
   return resources.length > 0 ? resources[0] : null
 }
 
-export async function getGameById(id: string): Promise<Game | null> {
+export async function getGameById(id: string, includeArchived = false): Promise<Game | null> {
   try {
     const cont = await getContainer()
     const { resource } = await cont.item(id, id).read<Game>()
-    if (!resource || resource.isArchived) {
+    if (!resource) {
+      return null
+    }
+    if (!includeArchived && resource.isArchived) {
       return null
     }
     return resource
@@ -206,6 +209,9 @@ export async function archiveGame(id: string): Promise<void> {
   const { resource: game } = await cont.item(id, id).read<Game>()
   if (!game) {
     throw new Error(`Game ${id} not found`)
+  }
+  if (game.isArchived) {
+    throw new Error(`Game ${id} is already archived`)
   }
   game.isArchived = true
   game.archivedAt = Date.now()

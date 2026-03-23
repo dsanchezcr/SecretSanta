@@ -681,16 +681,16 @@ export async function sendReminderToAllAPI(
 
 // Archive game API function (soft delete)
 
-export interface DeleteGameResponse {
+export interface ArchiveGameResponse {
   success: boolean
   message: string
   archivedCode: string
 }
 
-export async function deleteGameAPI(
+export async function archiveGameAPI(
   code: string,
   organizerToken: string
-): Promise<DeleteGameResponse> {
+): Promise<ArchiveGameResponse> {
   const response = await fetch(`${API_BASE_URL}/games/${code}?organizerToken=${encodeURIComponent(organizerToken)}`, {
     method: 'DELETE',
     headers: {

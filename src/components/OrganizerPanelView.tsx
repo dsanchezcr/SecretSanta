@@ -74,7 +74,7 @@ import {
   getGameAPI,
   sendReminderEmailAPI,
   sendReminderToAllAPI,
-  deleteGameAPI,
+  archiveGameAPI,
   regenerateParticipantTokenAPI,
   regenerateOrganizerTokenAPI
 } from '@/lib/api'
@@ -817,7 +817,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
       const apiStatus = await checkApiStatus()
       if (apiStatus.available && apiStatus.databaseConnected) {
         try {
-          await deleteGameAPI(game.code, game.organizerToken)
+          await archiveGameAPI(game.code, game.organizerToken)
         } catch {
           // API call failed - still delete locally
           console.warn('API delete failed, deleting locally only')

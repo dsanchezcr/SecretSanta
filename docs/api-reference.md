@@ -351,6 +351,7 @@ Archives a game and all its data (soft delete). The game is no longer accessible
 - `401` - Missing organizer token
 - `403` - Invalid organizer token
 - `404` - Game not found
+- `409` - Game is already archived
 - `503` - Database unavailable
 
 ## Cleanup Endpoint

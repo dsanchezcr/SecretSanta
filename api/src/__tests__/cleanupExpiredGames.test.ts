@@ -33,6 +33,7 @@ describe('cleanupExpiredGames HTTP function', () => {
   let mockContainer: any
   let mockQuery: jest.Mock
   let mockDelete: jest.Mock
+  let mockReplace: jest.Mock
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -45,8 +46,9 @@ describe('cleanupExpiredGames HTTP function', () => {
       warn: jest.fn()
     } as unknown as InvocationContext
 
-    // Set up mock replace function (for soft delete / archive)
+    // Separate mocks for hard delete vs soft delete (replace)
     mockDelete = jest.fn().mockResolvedValue({})
+    mockReplace = jest.fn().mockResolvedValue({})
 
     // Set up mock container
     mockQuery = jest.fn()
@@ -56,7 +58,7 @@ describe('cleanupExpiredGames HTTP function', () => {
       },
       item: jest.fn().mockReturnValue({
         delete: mockDelete,
-        replace: mockDelete
+        replace: mockReplace
       })
     }
 
@@ -179,7 +181,8 @@ describe('cleanupExpiredGames HTTP function', () => {
       expect(mockContainer.item).toHaveBeenCalledTimes(2)
       expect(mockContainer.item).toHaveBeenCalledWith('game-1', 'game-1')
       expect(mockContainer.item).toHaveBeenCalledWith('game-2', 'game-2')
-      expect(mockDelete).toHaveBeenCalledTimes(2)
+      expect(mockReplace).toHaveBeenCalledTimes(2)
+      expect(mockDelete).not.toHaveBeenCalled()
       expect(result).toEqual({ archivedCount: 2, failedCount: 0, totalFound: 2 })
       expect(mockContext.log).toHaveBeenCalledWith(expect.stringContaining('Cleanup complete: 2 archived, 0 failed'))
     })
@@ -195,7 +198,7 @@ describe('cleanupExpiredGames HTTP function', () => {
       })
 
       // First archive succeeds, second fails
-      mockDelete
+      mockReplace
         .mockResolvedValueOnce({})
         .mockRejectedValueOnce(new Error('Archive failed'))
 

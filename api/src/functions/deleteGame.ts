@@ -40,8 +40,8 @@ export async function deleteGameHandler(request: HttpRequest, context: Invocatio
       }
     }
     
-    // Find the game
-    const game = await getGameByCode(gameCode)
+    // Find the game (include archived to give 409 when already archived, not 404)
+    const game = await getGameByCode(gameCode, true)
     
     if (!game) {
       const error = createErrorResponse(
@@ -67,6 +67,20 @@ export async function deleteGameHandler(request: HttpRequest, context: Invocatio
       trackEvent(context, 'UnauthorizedArchiveAttempt', { requestId, gameCode })
       return {
         status: getHttpStatusForError(ApiErrorCode.FORBIDDEN),
+        jsonBody: { error: error.message }
+      }
+    }
+
+    // Reject if game is already archived
+    if (game.isArchived) {
+      const error = createErrorResponse(
+        ApiErrorCode.CONFLICT,
+        'Game is already archived',
+        undefined,
+        requestId
+      )
+      return {
+        status: getHttpStatusForError(ApiErrorCode.CONFLICT),
         jsonBody: { error: error.message }
       }
     }

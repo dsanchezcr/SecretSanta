@@ -172,13 +172,18 @@ export async function getContainer(): Promise<Container> {
   return container
 }
 
-export async function getGameByCode(code: string): Promise<Game | null> {
+export async function getGameByCode(code: string, includeArchived = false): Promise<Game | null> {
   const cont = await getContainer()
-  const querySpec = {
-    query: 'SELECT * FROM c WHERE c.code = @code AND (NOT IS_DEFINED(c.isArchived) OR c.isArchived = false)',
-    parameters: [{ name: '@code', value: code }]
-  }
-  
+  const querySpec = includeArchived
+    ? {
+        query: 'SELECT * FROM c WHERE c.code = @code',
+        parameters: [{ name: '@code', value: code }]
+      }
+    : {
+        query: 'SELECT * FROM c WHERE c.code = @code AND (NOT IS_DEFINED(c.isArchived) OR c.isArchived = false)',
+        parameters: [{ name: '@code', value: code }]
+      }
+
   const { resources } = await cont.items.query<Game>(querySpec).fetchAll()
   return resources.length > 0 ? resources[0] : null
 }
@@ -214,7 +219,7 @@ export async function updateGame(game: Game): Promise<Game> {
   return resource!
 }
 
-export async function deleteGame(id: string): Promise<void> {
+export async function hardDeleteGame(id: string): Promise<void> {
   const cont = await getContainer()
   await cont.item(id, id).delete()
 }

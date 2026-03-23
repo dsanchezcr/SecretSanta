@@ -307,14 +307,14 @@ describe('cosmosdb operations', () => {
     })
   })
 
-  describe('deleteGame', () => {
-    it('should delete game successfully', async () => {
+  describe('hardDeleteGame', () => {
+    it('should hard-delete game successfully', async () => {
       mockDelete.mockResolvedValueOnce({})
       
       cosmosModule = await import('../shared/cosmosdb')
       await cosmosModule.initializeStorage()
       
-      await expect(cosmosModule.deleteGame('game-1')).resolves.not.toThrow()
+      await expect(cosmosModule.hardDeleteGame('game-1')).resolves.not.toThrow()
       expect(mockDelete).toHaveBeenCalled()
     })
   })

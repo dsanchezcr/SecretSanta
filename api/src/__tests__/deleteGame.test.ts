@@ -179,14 +179,14 @@ describe('deleteGame function', () => {
     expect(result.jsonBody).toHaveProperty('error', 'Game not found')
   })
 
-  it('should return 409 when archiveGame throws GameAlreadyArchivedError', async () => {
-    mockGetGameByCode.mockResolvedValue(mockGame)
-    mockArchiveGame.mockRejectedValue(new cosmosdb.GameAlreadyArchivedError('game-id-123'))
+  it('should return 409 when game is already archived', async () => {
+    mockGetGameByCode.mockResolvedValue({ ...mockGame, isArchived: true })
 
     const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
     const result = await deleteGameHandler(request, mockContext)
 
     expect(result.status).toBe(409)
     expect(result.jsonBody).toHaveProperty('error', 'Game is already archived')
+    expect(mockArchiveGame).not.toHaveBeenCalled()
   })
 })

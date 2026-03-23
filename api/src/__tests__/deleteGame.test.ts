@@ -40,7 +40,7 @@ const mockGetDatabaseStatus = jest.mocked(cosmosdb.getDatabaseStatus)
 const mockGetGameByCode = jest.mocked(cosmosdb.getGameByCode)
 const mockArchiveGame = jest.mocked(cosmosdb.archiveGame)
 
-describe('deleteGame function', () => {
+describe('archiveGame function', () => {
   let mockContext: InvocationContext
 
   beforeEach(() => {

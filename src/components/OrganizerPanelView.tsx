@@ -827,7 +827,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
       // Archive the game in the backend so it is no longer accessible to participants
       await archiveGameAPI(game.code, game.organizerToken)
 
-      toast.success(t('gameDeleted'))
+      toast.success('Game archived successfully')
       setShowArchiveGameDialog(false)
       
       // Clear from local storage and navigate back

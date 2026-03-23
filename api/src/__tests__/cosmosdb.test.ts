@@ -6,6 +6,7 @@ const mockReplace = jest.fn()
 const mockDelete = jest.fn()
 const mockRead = jest.fn()
 const mockQuery = jest.fn()
+const mockItemsQuery = jest.fn()
 const mockCreateIfNotExists = jest.fn()
 
 jest.mock('@azure/cosmos', () => ({
@@ -33,13 +34,12 @@ describe('cosmosdb', () => {
     process.env = { ...originalEnv }
     
     // Reset mocks
+    mockItemsQuery.mockReturnValue({ fetchAll: mockQuery })
     mockCreateIfNotExists.mockResolvedValue({ 
       container: {
         items: {
           create: mockCreate,
-          query: jest.fn().mockReturnValue({
-            fetchAll: mockQuery
-          })
+          query: mockItemsQuery
         },
         item: jest.fn().mockReturnValue({
           read: mockRead,
@@ -226,22 +226,58 @@ describe('cosmosdb operations', () => {
       const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() }
       mockQuery.mockResolvedValueOnce({ resources: [] }) // archived game filtered out by query
 
+      // Use a fresh per-test spy wired directly into the container so the
+      // query string passed to items.query() can be asserted
+      const capturedQuerySpec: any[] = []
+      const itemsQuerySpy = jest.fn((spec: any) => {
+        capturedQuerySpec.push(spec)
+        return { fetchAll: mockQuery }
+      })
+      mockCreateIfNotExists.mockResolvedValueOnce({
+        container: {
+          items: { create: mockCreate, query: itemsQuerySpy },
+          item: jest.fn().mockReturnValue({ read: mockRead, replace: mockReplace, delete: mockDelete })
+        }
+      })
+
       cosmosModule = await import('../shared/cosmosdb')
       await cosmosModule.initializeStorage()
 
       const result = await cosmosModule.getGameByCode(archivedGame.code)
       expect(result).toBeNull()
+      // Verify that the archive-exclusion predicate is present in the query
+      expect(capturedQuerySpec.length).toBeGreaterThan(0)
+      expect(capturedQuerySpec[0]).toEqual(
+        expect.objectContaining({ query: expect.stringContaining('isArchived') })
+      )
     })
 
     it('should return archived games when includeArchived is true', async () => {
       const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() }
       mockQuery.mockResolvedValueOnce({ resources: [archivedGame] })
 
+      // Use a fresh per-test spy wired directly into the container so the
+      // query string passed to items.query() can be asserted
+      const capturedQuerySpec: any[] = []
+      const itemsQuerySpy = jest.fn((spec: any) => {
+        capturedQuerySpec.push(spec)
+        return { fetchAll: mockQuery }
+      })
+      mockCreateIfNotExists.mockResolvedValueOnce({
+        container: {
+          items: { create: mockCreate, query: itemsQuerySpy },
+          item: jest.fn().mockReturnValue({ read: mockRead, replace: mockReplace, delete: mockDelete })
+        }
+      })
+
       cosmosModule = await import('../shared/cosmosdb')
       await cosmosModule.initializeStorage()
 
       const result = await cosmosModule.getGameByCode(archivedGame.code, true)
       expect(result).toEqual(archivedGame)
+      // Verify that the archive-exclusion predicate is NOT present when includeArchived=true
+      expect(capturedQuerySpec.length).toBeGreaterThan(0)
+      expect(capturedQuerySpec[0].query).not.toContain('isArchived')
     })
   })
 

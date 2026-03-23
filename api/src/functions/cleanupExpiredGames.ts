@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { timingSafeEqual } from 'crypto'
-import { getDatabaseStatus, getContainer } from '../shared/cosmosdb'
+import { getDatabaseStatus, getContainer, applyArchiveMetadata } from '../shared/cosmosdb'
 import { trackError, trackEvent } from '../shared/telemetry'
 import { Game } from '../shared/types'
 
@@ -56,9 +56,8 @@ export async function performCleanup(context: InvocationContext): Promise<{ arch
 
   for (const game of expiredGames) {
     try {
-      game.isArchived = true
-      game.archivedAt = Date.now()
-      await container.item(game.id, game.id).replace<Game>(game)
+      const archivedGame = applyArchiveMetadata(game)
+      await container.item(archivedGame.id, archivedGame.id).replace<Game>(archivedGame)
       archivedCount++
       context.log(`✅ Archived game: ${game.code} (event date: ${game.date})`)
     } catch (error: any) {

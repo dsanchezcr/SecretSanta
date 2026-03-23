@@ -95,7 +95,7 @@ describe('deleteGame function', () => {
 
     expect(result.status).toBe(401)
     expect(result.jsonBody).toEqual({
-      error: 'Organizer token is required to delete a game'
+      error: 'Organizer token is required to archive a game'
     })
   })
 

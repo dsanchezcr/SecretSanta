@@ -69,9 +69,9 @@ export interface Game {
   organizerEmail?: string // Optional email for organizer notifications
   organizerLanguage?: Language // Preferred language for organizer email notifications (only stored when email service is configured)
   invitationToken?: string // Token for invitation link to allow new participants to join
-  createdAt: number
+  createdAt: number // Unix timestamp in milliseconds since epoch when the game was created (Date.now())
   isArchived?: boolean // When true, the game has been soft-deleted/archived
-  archivedAt?: number // Timestamp when the game was archived
+  archivedAt?: number // Unix timestamp in milliseconds since epoch when the game was archived (Date.now())
 }
 
 export type Language = 'en' | 'es' | 'pt' | 'fr' | 'it' | 'ja' | 'zh' | 'de' | 'nl'

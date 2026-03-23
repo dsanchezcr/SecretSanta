@@ -3,8 +3,12 @@ import * as cosmosdb from '../shared/cosmosdb'
 import { HttpRequest, InvocationContext } from '@azure/functions'
 import { Game } from '../shared/types'
 
-// Mock the cosmosdb module
-jest.mock('../shared/cosmosdb')
+// Mock the cosmosdb module, but keep applyArchiveMetadata as the real implementation
+jest.mock('../shared/cosmosdb', () => ({
+  ...jest.requireActual('../shared/cosmosdb'),
+  getDatabaseStatus: jest.fn(),
+  getContainer: jest.fn()
+}))
 
 // Mock the telemetry module
 jest.mock('../shared/telemetry', () => ({

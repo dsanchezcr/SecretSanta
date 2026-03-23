@@ -30,7 +30,7 @@ export async function deleteGameHandler(request: HttpRequest, context: Invocatio
     if (!organizerToken) {
       const error = createErrorResponse(
         ApiErrorCode.UNAUTHORIZED,
-        'Organizer token is required to delete a game',
+        'Organizer token is required to archive a game',
         undefined,
         requestId
       )
@@ -64,7 +64,7 @@ export async function deleteGameHandler(request: HttpRequest, context: Invocatio
         undefined,
         requestId
       )
-      trackEvent(context, 'UnauthorizedDeleteAttempt', { requestId, gameCode })
+      trackEvent(context, 'UnauthorizedArchiveAttempt', { requestId, gameCode })
       return {
         status: getHttpStatusForError(ApiErrorCode.FORBIDDEN),
         jsonBody: { error: error.message }

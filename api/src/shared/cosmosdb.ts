@@ -12,6 +12,21 @@ if (typeof globalThis.crypto === 'undefined') {
   (globalThis as any).crypto = webcrypto
 }
 
+// Typed errors for archive operations
+export class GameNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Game ${id} not found`)
+    this.name = 'GameNotFoundError'
+  }
+}
+
+export class GameAlreadyArchivedError extends Error {
+  constructor(id: string) {
+    super(`Game ${id} is already archived`)
+    this.name = 'GameAlreadyArchivedError'
+  }
+}
+
 let cosmosClient: CosmosClient | null = null
 let database: Database | null = null
 let container: Container | null = null
@@ -204,18 +219,42 @@ export async function deleteGame(id: string): Promise<void> {
   await cont.item(id, id).delete()
 }
 
+/**
+ * Applies archive metadata to a game object. Use this helper to keep archive
+ * field assignment consistent across manual and scheduled archiving paths.
+ */
+export function applyArchiveMetadata(game: Game): Game {
+  return {
+    ...game,
+    isArchived: true,
+    archivedAt: Date.now()
+  }
+}
+
 export async function archiveGame(id: string): Promise<void> {
   const cont = await getContainer()
-  const { resource: game } = await cont.item(id, id).read<Game>()
+  let game: Game | undefined
+
+  try {
+    const { resource } = await cont.item(id, id).read<Game>()
+    game = resource
+  } catch (error: any) {
+    if (error && error.code === 404) {
+      throw new GameNotFoundError(id)
+    }
+    throw error
+  }
+
   if (!game) {
-    throw new Error(`Game ${id} not found`)
+    throw new GameNotFoundError(id)
   }
+
   if (game.isArchived) {
-    throw new Error(`Game ${id} is already archived`)
+    throw new GameAlreadyArchivedError(id)
   }
-  game.isArchived = true
-  game.archivedAt = Date.now()
-  await cont.item(id, id).replace<Game>(game)
+
+  const archivedGame = applyArchiveMetadata(game)
+  await cont.item(id, id).replace<Game>(archivedGame)
 }
 
 // Re-export types

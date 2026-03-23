@@ -118,7 +118,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
   // Email configuration state
   const [emailConfigured, setEmailConfigured] = useState(false)
   
-  // Delete game state
+  // Archive game state
   const [showArchiveGameDialog, setShowArchiveGameDialog] = useState(false)
   const [isArchivingGame, setIsArchivingGame] = useState(false)
   
@@ -2359,7 +2359,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
         </DialogContent>
       </Dialog>
 
-      {/* Delete Game Dialog */}
+      {/* Archive Game Dialog */}
       <Dialog open={showArchiveGameDialog} onOpenChange={setShowArchiveGameDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>

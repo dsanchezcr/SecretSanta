@@ -133,7 +133,7 @@ export async function archiveGameHandler(request: HttpRequest, context: Invocati
   }
 }
 
-app.http('deleteGame', {
+app.http('archiveGame', {
   methods: ['DELETE'],
   authLevel: 'anonymous',
   route: 'games/{code}',

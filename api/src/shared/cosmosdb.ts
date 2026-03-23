@@ -160,7 +160,7 @@ export async function getContainer(): Promise<Container> {
 export async function getGameByCode(code: string): Promise<Game | null> {
   const cont = await getContainer()
   const querySpec = {
-    query: 'SELECT * FROM c WHERE c.code = @code',
+    query: 'SELECT * FROM c WHERE c.code = @code AND (NOT IS_DEFINED(c.isArchived) OR c.isArchived = false)',
     parameters: [{ name: '@code', value: code }]
   }
   
@@ -172,7 +172,10 @@ export async function getGameById(id: string): Promise<Game | null> {
   try {
     const cont = await getContainer()
     const { resource } = await cont.item(id, id).read<Game>()
-    return resource || null
+    if (!resource || resource.isArchived) {
+      return null
+    }
+    return resource
   } catch (error: any) {
     if (error.code === 404) {
       return null
@@ -196,6 +199,17 @@ export async function updateGame(game: Game): Promise<Game> {
 export async function deleteGame(id: string): Promise<void> {
   const cont = await getContainer()
   await cont.item(id, id).delete()
+}
+
+export async function archiveGame(id: string): Promise<void> {
+  const cont = await getContainer()
+  const { resource: game } = await cont.item(id, id).read<Game>()
+  if (!game) {
+    throw new Error(`Game ${id} not found`)
+  }
+  game.isArchived = true
+  game.archivedAt = Date.now()
+  await cont.item(id, id).replace<Game>(game)
 }
 
 // Re-export types

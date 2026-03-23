@@ -44,6 +44,8 @@ export interface Game {
   organizerLanguage?: Language // Preferred language for organizer email notifications (only stored when email service is configured)
   invitationToken?: string // Token for invitation link to allow new participants to join
   createdAt: number
+  isArchived?: boolean // When true, the game has been soft-deleted/archived
+  archivedAt?: number // Timestamp when the game was archived
 }
 
 // Organizer action types

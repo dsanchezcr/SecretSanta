@@ -31,7 +31,7 @@ jest.mock('../shared/telemetry', () => ({
 
 const mockGetDatabaseStatus = jest.mocked(cosmosdb.getDatabaseStatus)
 const mockGetGameByCode = jest.mocked(cosmosdb.getGameByCode)
-const mockDeleteGame = jest.mocked(cosmosdb.deleteGame)
+const mockArchiveGame = jest.mocked(cosmosdb.archiveGame)
 
 describe('deleteGame function', () => {
   let mockContext: InvocationContext
@@ -123,9 +123,9 @@ describe('deleteGame function', () => {
     })
   })
 
-  it('should delete game successfully with valid token', async () => {
+  it('should archive game successfully with valid token', async () => {
     mockGetGameByCode.mockResolvedValue(mockGame)
-    mockDeleteGame.mockResolvedValue()
+    mockArchiveGame.mockResolvedValue()
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
     const result = await deleteGameHandler(request, mockContext)
@@ -133,21 +133,21 @@ describe('deleteGame function', () => {
     expect(result.status).toBe(200)
     expect(result.jsonBody).toEqual({
       success: true,
-      message: 'Game deleted successfully',
-      deletedCode: '123456'
+      message: 'Game archived successfully',
+      archivedCode: '123456'
     })
-    expect(mockDeleteGame).toHaveBeenCalledWith('game-id-123')
+    expect(mockArchiveGame).toHaveBeenCalledWith('game-id-123')
   })
 
   it('should accept organizer token from header', async () => {
     mockGetGameByCode.mockResolvedValue(mockGame)
-    mockDeleteGame.mockResolvedValue()
+    mockArchiveGame.mockResolvedValue()
     
     const request = createMockRequest({ code: '123456' }, '', { 'x-organizer-token': 'valid-organizer-token' })
     const result = await deleteGameHandler(request, mockContext)
 
     expect(result.status).toBe(200)
-    expect(mockDeleteGame).toHaveBeenCalledWith('game-id-123')
+    expect(mockArchiveGame).toHaveBeenCalledWith('game-id-123')
   })
 
   it('should return 500 on database error', async () => {
@@ -157,7 +157,7 @@ describe('deleteGame function', () => {
     const result = await deleteGameHandler(request, mockContext)
 
     expect(result.status).toBe(500)
-    expect(result.jsonBody).toHaveProperty('error', 'Failed to delete game')
+    expect(result.jsonBody).toHaveProperty('error', 'Failed to archive game')
     expect(mockContext.error).toHaveBeenCalled()
   })
 })

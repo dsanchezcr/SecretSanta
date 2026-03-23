@@ -41,7 +41,7 @@ describe('cleanupExpiredGames HTTP function', () => {
       warn: jest.fn()
     } as unknown as InvocationContext
 
-    // Set up mock delete function
+    // Set up mock replace function (for soft delete / archive)
     mockDelete = jest.fn().mockResolvedValue({})
 
     // Set up mock container
@@ -51,7 +51,8 @@ describe('cleanupExpiredGames HTTP function', () => {
         query: mockQuery
       },
       item: jest.fn().mockReturnValue({
-        delete: mockDelete
+        delete: mockDelete,
+        replace: mockDelete
       })
     }
 
@@ -154,12 +155,12 @@ describe('cleanupExpiredGames HTTP function', () => {
 
       const result = await performCleanup(mockContext)
 
-      expect(result).toEqual({ deletedCount: 0, failedCount: 0, totalFound: 0 })
+      expect(result).toEqual({ archivedCount: 0, failedCount: 0, totalFound: 0 })
       expect(mockContext.log).toHaveBeenCalledWith('✅ No expired games found')
       expect(mockContainer.item).not.toHaveBeenCalled()
     })
 
-    it('should delete expired games and return correct counts', async () => {
+    it('should archive expired games and return correct counts', async () => {
       const expiredGames = [
         createMockGame('game-1', '111111', '2025-11-01'),
         createMockGame('game-2', '222222', '2025-11-15')
@@ -175,8 +176,8 @@ describe('cleanupExpiredGames HTTP function', () => {
       expect(mockContainer.item).toHaveBeenCalledWith('game-1', 'game-1')
       expect(mockContainer.item).toHaveBeenCalledWith('game-2', 'game-2')
       expect(mockDelete).toHaveBeenCalledTimes(2)
-      expect(result).toEqual({ deletedCount: 2, failedCount: 0, totalFound: 2 })
-      expect(mockContext.log).toHaveBeenCalledWith(expect.stringContaining('Cleanup complete: 2 deleted, 0 failed'))
+      expect(result).toEqual({ archivedCount: 2, failedCount: 0, totalFound: 2 })
+      expect(mockContext.log).toHaveBeenCalledWith(expect.stringContaining('Cleanup complete: 2 archived, 0 failed'))
     })
 
     it('should handle partial failures gracefully', async () => {
@@ -189,16 +190,16 @@ describe('cleanupExpiredGames HTTP function', () => {
         fetchAll: jest.fn().mockResolvedValue({ resources: expiredGames })
       })
 
-      // First delete succeeds, second fails
+      // First archive succeeds, second fails
       mockDelete
         .mockResolvedValueOnce({})
-        .mockRejectedValueOnce(new Error('Delete failed'))
+        .mockRejectedValueOnce(new Error('Archive failed'))
 
       const result = await performCleanup(mockContext)
 
-      expect(result).toEqual({ deletedCount: 1, failedCount: 1, totalFound: 2 })
-      expect(mockContext.log).toHaveBeenCalledWith(expect.stringContaining('Cleanup complete: 1 deleted, 1 failed'))
-      expect(mockContext.error).toHaveBeenCalledWith(expect.stringContaining('Failed to delete game 222222'))
+      expect(result).toEqual({ archivedCount: 1, failedCount: 1, totalFound: 2 })
+      expect(mockContext.log).toHaveBeenCalledWith(expect.stringContaining('Cleanup complete: 1 archived, 1 failed'))
+      expect(mockContext.error).toHaveBeenCalledWith(expect.stringContaining('Failed to archive game 222222'))
     })
 
     it('should throw when a query error occurs', async () => {
@@ -225,7 +226,7 @@ describe('cleanupExpiredGames HTTP function', () => {
         // Verify the query was called with a date parameter
         expect(mockQuery).toHaveBeenCalledWith(
           expect.objectContaining({
-            query: 'SELECT * FROM c WHERE c.date <= @cutoffDate',
+            query: expect.stringContaining('c.date <= @cutoffDate'),
             parameters: expect.arrayContaining([
               expect.objectContaining({ name: '@cutoffDate' })
             ])
@@ -243,7 +244,7 @@ describe('cleanupExpiredGames HTTP function', () => {
       }
     })
 
-    it('should log game details when deleting', async () => {
+    it('should log game details when archiving', async () => {
       const expiredGames = [
         createMockGame('game-1', '123456', '2025-11-01')
       ]
@@ -254,7 +255,7 @@ describe('cleanupExpiredGames HTTP function', () => {
 
       await performCleanup(mockContext)
 
-      expect(mockContext.log).toHaveBeenCalledWith(expect.stringContaining('Deleted game: 123456'))
+      expect(mockContext.log).toHaveBeenCalledWith(expect.stringContaining('Archived game: 123456'))
       expect(mockContext.log).toHaveBeenCalledWith(expect.stringContaining('event date: 2025-11-01'))
     })
   })

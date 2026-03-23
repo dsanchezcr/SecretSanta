@@ -1,5 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
-import { getGameByCode, deleteGame, getDatabaseStatus } from '../shared/cosmosdb'
+import { getGameByCode, archiveGame, getDatabaseStatus } from '../shared/cosmosdb'
 import { trackError, trackEvent, ApiErrorCode, createErrorResponse, getHttpStatusForError } from '../shared/telemetry'
 
 export async function deleteGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -7,7 +7,7 @@ export async function deleteGameHandler(request: HttpRequest, context: Invocatio
   const gameCode = request.params.code
   const organizerToken = request.query.get('organizerToken') || request.headers.get('x-organizer-token')
   
-  context.log(`Delete game request for code: ${gameCode} [requestId: ${requestId}]`)
+  context.log(`Archive game request for code: ${gameCode} [requestId: ${requestId}]`)
   
   // Check database connectivity first
   const dbStatus = getDatabaseStatus()
@@ -71,33 +71,33 @@ export async function deleteGameHandler(request: HttpRequest, context: Invocatio
       }
     }
     
-    // Delete the game
-    await deleteGame(game.id)
+    // Archive the game (soft delete)
+    await archiveGame(game.id)
     
-    trackEvent(context, 'GameDeleted', { 
+    trackEvent(context, 'GameArchived', { 
       requestId, 
       gameCode,
       participantCount: String(game.participants.length),
       eventDate: game.date
     })
     
-    context.log(`✅ Game ${gameCode} deleted by organizer [requestId: ${requestId}]`)
+    context.log(`✅ Game ${gameCode} archived by organizer [requestId: ${requestId}]`)
     
     return {
       status: 200,
       jsonBody: { 
         success: true, 
-        message: 'Game deleted successfully',
-        deletedCode: gameCode
+        message: 'Game archived successfully',
+        archivedCode: gameCode
       }
     }
     
   } catch (error: any) {
-    context.error('Error deleting game:', error)
+    context.error('Error archiving game:', error)
     trackError(context, error, { requestId, gameCode })
     return {
       status: 500,
-      jsonBody: { error: 'Failed to delete game', details: error.message }
+      jsonBody: { error: 'Failed to archive game', details: error.message }
     }
   }
 }

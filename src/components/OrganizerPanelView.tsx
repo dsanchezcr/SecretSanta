@@ -815,9 +815,13 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
     setIsArchivingGame(true)
     try {
       const apiStatus = await checkApiStatus()
-      if (!apiStatus.available || !apiStatus.databaseConnected) {
+      if (!apiStatus.available) {
         // Archive API is not available; do not pretend the game was archived
         throw new Error(t('apiUnavailable'))
+      }
+      if (!apiStatus.databaseConnected) {
+        // API is reachable but the database is not connected; cannot safely archive
+        throw new Error(t('databaseUnavailableWarning'))
       }
 
       // Archive the game in the backend so it is no longer accessible to participants

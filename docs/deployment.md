@@ -192,23 +192,26 @@ Each environment has its own Application Insights instance. Access via:
 
 ### Automatic Cleanup
 
-A timer-triggered Azure Function runs daily at **2:00 AM UTC** to clean up expired games:
+A GitHub Actions workflow calls the `/api/games/cleanup` HTTP endpoint daily at **2:00 AM UTC** to archive expired games:
 
-- **Retention Policy**: Games are automatically deleted 3 days after their event date
+- **Retention Policy**: Games are automatically archived 3 days after their event date
 - **Function**: `cleanupExpiredGames` in `api/src/functions/cleanupExpiredGames.ts`
-- **Schedule**: CRON expression `0 0 2 * * *`
+- **Schedule**: Cron `0 2 * * *` (GitHub Actions syntax) — see `.github/workflows/cleanup.yml`
+- **Behavior**: Expired games are soft-deleted (archived) rather than permanently deleted, preserving data for potential recovery
 
-### Manual Deletion
+### Manual Archiving
 
-Organizers can delete their games at any time:
+Organizers can archive their games at any time:
 
 ```
 DELETE /api/games/{code}?organizerToken={token}
 ```
+
+The game is soft-deleted (archived) — it becomes inaccessible to participants but is preserved in Cosmos DB for recovery if needed.
 
 ### Privacy Considerations
 
 - No data is shared with third parties
 - All game data is stored in Azure Cosmos DB (serverless)
 - Users can view the Privacy page in the application for full details
-- Game deletion is irreversible
+- Archived games are excluded from all active queries and are not accessible to participants

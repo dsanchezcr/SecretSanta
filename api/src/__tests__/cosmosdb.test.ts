@@ -221,6 +221,28 @@ describe('cosmosdb operations', () => {
       
       await expect(cosmosModule.getGameByCode('123456')).rejects.toThrow('Database not available')
     })
+
+    it('should exclude archived games by default', async () => {
+      const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() }
+      mockQuery.mockResolvedValueOnce({ resources: [] }) // archived game filtered out by query
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      const result = await cosmosModule.getGameByCode(archivedGame.code)
+      expect(result).toBeNull()
+    })
+
+    it('should return archived games when includeArchived is true', async () => {
+      const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() }
+      mockQuery.mockResolvedValueOnce({ resources: [archivedGame] })
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      const result = await cosmosModule.getGameByCode(archivedGame.code, true)
+      expect(result).toEqual(archivedGame)
+    })
   })
 
   describe('getGameById', () => {
@@ -266,6 +288,28 @@ describe('cosmosdb operations', () => {
       await cosmosModule.initializeStorage()
       
       await expect(cosmosModule.getGameById('game-1')).rejects.toThrow('Server error')
+    })
+
+    it('should exclude archived games by default', async () => {
+      const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() }
+      mockRead.mockResolvedValueOnce({ resource: archivedGame })
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      const result = await cosmosModule.getGameById(archivedGame.id)
+      expect(result).toBeNull()
+    })
+
+    it('should return archived games when includeArchived is true', async () => {
+      const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() }
+      mockRead.mockResolvedValueOnce({ resource: archivedGame })
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      const result = await cosmosModule.getGameById(archivedGame.id, true)
+      expect(result).toEqual(archivedGame)
     })
   })
 

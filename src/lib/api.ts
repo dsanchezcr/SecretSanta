@@ -679,18 +679,18 @@ export async function sendReminderToAllAPI(
   return response.json()
 }
 
-// Delete game API function
+// Archive game API function (soft delete)
 
-export interface DeleteGameResponse {
+export interface ArchiveGameResponse {
   success: boolean
   message: string
-  deletedCode: string
+  archivedCode: string
 }
 
-export async function deleteGameAPI(
+export async function archiveGameAPI(
   code: string,
   organizerToken: string
-): Promise<DeleteGameResponse> {
+): Promise<ArchiveGameResponse> {
   const response = await fetch(`${API_BASE_URL}/games/${code}?organizerToken=${encodeURIComponent(organizerToken)}`, {
     method: 'DELETE',
     headers: {
@@ -700,7 +700,7 @@ export async function deleteGameAPI(
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to delete game')
+    throw new Error(error.error || 'Failed to archive game')
   }
 
   return response.json()

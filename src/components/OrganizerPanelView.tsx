@@ -74,7 +74,7 @@ import {
   getGameAPI,
   sendReminderEmailAPI,
   sendReminderToAllAPI,
-  deleteGameAPI,
+  archiveGameAPI,
   regenerateParticipantTokenAPI,
   regenerateOrganizerTokenAPI
 } from '@/lib/api'
@@ -118,9 +118,9 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
   // Email configuration state
   const [emailConfigured, setEmailConfigured] = useState(false)
   
-  // Delete game state
-  const [showDeleteGameDialog, setShowDeleteGameDialog] = useState(false)
-  const [isDeletingGame, setIsDeletingGame] = useState(false)
+  // Archive game state
+  const [showArchiveGameDialog, setShowArchiveGameDialog] = useState(false)
+  const [isArchivingGame, setIsArchivingGame] = useState(false)
   
   // Regenerate organizer token state
   const [showRegenerateOrganizerTokenDialog, setShowRegenerateOrganizerTokenDialog] = useState(false)
@@ -810,23 +810,25 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
     }
   }
 
-  // Delete game handler
-  const handleDeleteGame = async () => {
-    setIsDeletingGame(true)
+  // Archive game handler
+  const handleArchiveGame = async () => {
+    setIsArchivingGame(true)
     try {
       const apiStatus = await checkApiStatus()
-      if (apiStatus.available && apiStatus.databaseConnected) {
-        try {
-          await deleteGameAPI(game.code, game.organizerToken)
-        } catch {
-          // API call failed - still delete locally
-          console.warn('API delete failed, deleting locally only')
-        }
+      if (!apiStatus.available) {
+        // Archive API is not available; do not pretend the game was archived
+        throw new Error(t('apiUnavailable'))
       }
-      // Note: We always complete the delete locally even if API fails
-      // This allows offline deletion of games
-      toast.success(t('gameDeleted'))
-      setShowDeleteGameDialog(false)
+      if (!apiStatus.databaseConnected) {
+        // API is reachable but the database is not connected; cannot safely archive
+        throw new Error(t('databaseUnavailableWarning'))
+      }
+
+      // Archive the game in the backend so it is no longer accessible to participants
+      await archiveGameAPI(game.code, game.organizerToken)
+
+      toast.success('Game archived successfully')
+      setShowArchiveGameDialog(false)
       
       // Clear from local storage and navigate back
       if (onGameDeleted) {
@@ -835,10 +837,10 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
         onBack()
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to delete game'
+      const message = error instanceof Error ? error.message : 'Failed to archive game'
       toast.error(message)
     } finally {
-      setIsDeletingGame(false)
+      setIsArchivingGame(false)
     }
   }
 
@@ -1781,7 +1783,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
             </p>
             <Button 
               variant="destructive" 
-              onClick={() => setShowDeleteGameDialog(true)}
+              onClick={() => setShowArchiveGameDialog(true)}
               className="gap-2"
             >
               <Trash size={16} />
@@ -2361,8 +2363,8 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
         </DialogContent>
       </Dialog>
 
-      {/* Delete Game Dialog */}
-      <Dialog open={showDeleteGameDialog} onOpenChange={setShowDeleteGameDialog}>
+      {/* Archive Game Dialog */}
+      <Dialog open={showArchiveGameDialog} onOpenChange={setShowArchiveGameDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
@@ -2385,18 +2387,18 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
           <DialogFooter>
             <Button 
               variant="outline" 
-              onClick={() => setShowDeleteGameDialog(false)} 
-              disabled={isDeletingGame}
+              onClick={() => setShowArchiveGameDialog(false)} 
+              disabled={isArchivingGame}
             >
               {t('cancel')}
             </Button>
             <Button 
               variant="destructive"
-              onClick={handleDeleteGame} 
-              disabled={isDeletingGame}
+              onClick={handleArchiveGame} 
+              disabled={isArchivingGame}
               className="gap-2"
             >
-              {isDeletingGame && <CircleNotch size={16} className="animate-spin" />}
+              {isArchivingGame && <CircleNotch size={16} className="animate-spin" />}
               <Trash size={16} />
               {t('deleteGameConfirm')}
             </Button>

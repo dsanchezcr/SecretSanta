@@ -334,7 +334,7 @@ Sends notification emails.
 ```
 DELETE /api/games/{code}?organizerToken={token}
 ```
-Permanently deletes a game and all its data. **This action is irreversible.**
+Archives a game and all its data (soft delete). The game is no longer accessible to participants but data is preserved for recovery by administrators.
 
 **Authentication:** Requires organizer token (query param or `x-organizer-token` header).
 
@@ -342,8 +342,8 @@ Permanently deletes a game and all its data. **This action is irreversible.**
 ```json
 {
   "success": true,
-  "message": "Game deleted successfully",
-  "deletedCode": "123456"
+  "message": "Game archived successfully",
+  "archivedCode": "123456"
 }
 ```
 
@@ -351,13 +351,14 @@ Permanently deletes a game and all its data. **This action is irreversible.**
 - `401` - Missing organizer token
 - `403` - Invalid organizer token
 - `404` - Game not found
+- `409` - Game is already archived
 - `503` - Database unavailable
 
 ## Cleanup Endpoint
 
 ### POST `/api/games/cleanup`
 
-Scheduled HTTP endpoint that deletes games where the event date was 3 or more days ago. Replaces the unsupported timer trigger.
+Scheduled HTTP endpoint that archives games where the event date was 3 or more days ago. Replaces the unsupported timer trigger. Games are soft-deleted (archived) rather than permanently removed, preserving data for potential recovery.
 
 **Schedule:** Daily at 2:00 AM UTC (via GitHub Actions cron job)
 
@@ -376,7 +377,7 @@ curl -X POST https://yourapp.azurestaticapps.net/api/games/cleanup \
 **Response (200 OK):**
 ```json
 {
-  "deletedCount": 5,
+  "archivedCount": 5,
   "failedCount": 0,
   "totalFound": 5
 }
@@ -406,15 +407,15 @@ curl -X POST https://yourapp.azurestaticapps.net/api/games/cleanup \
 ```
 
 **Behavior:**
-- Queries all games with `date <= (today - 3 days)`
-- Deletes each expired game from the database
-- Returns counts of successfully deleted games and failures
+- Queries all active (non-archived) games with `date <= (today - 3 days)`
+- Archives each expired game by setting `isArchived = true` and `archivedAt` timestamp
+- Returns counts of successfully archived games and failures
 - Logs results to Application Insights
 
 **Data Retention Policy:**
-- Games are automatically deleted 3 days after their event date
-- This ensures data privacy and storage optimization
-- Organizers can manually delete games at any time before auto-deletion
+- Games are automatically archived 3 days after their event date
+- Archived games are no longer accessible to participants but data is preserved
+- Organizers can archive games at any time via the DELETE endpoint
 
 ## Error Responses
 

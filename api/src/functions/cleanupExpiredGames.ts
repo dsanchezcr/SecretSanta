@@ -1,14 +1,14 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { timingSafeEqual } from 'crypto'
-import { getDatabaseStatus, getContainer } from '../shared/cosmosdb'
+import { getDatabaseStatus, getContainer, applyArchiveMetadata } from '../shared/cosmosdb'
 import { trackError, trackEvent } from '../shared/telemetry'
 import { Game } from '../shared/types'
 
 /**
- * Core cleanup logic: deletes games whose event date is 3+ days in the past.
+ * Core cleanup logic: archives games whose event date is 3+ days in the past.
  * Exported separately so it can be unit-tested without HTTP context.
  */
-export async function performCleanup(context: InvocationContext): Promise<{ deletedCount: number; failedCount: number; totalFound: number } | null> {
+export async function performCleanup(context: InvocationContext): Promise<{ archivedCount: number; failedCount: number; totalFound: number } | null> {
   const requestId = context.invocationId
 
   // Check database connectivity first
@@ -30,9 +30,9 @@ export async function performCleanup(context: InvocationContext): Promise<{ dele
 
   context.log(`📅 Looking for games with event date on or before ${cutoffDateString}`)
 
-  // Query for games whose event date is 3+ days in the past
+  // Query for games whose event date is 3+ days in the past and have not been archived yet
   const querySpec = {
-    query: 'SELECT * FROM c WHERE c.date <= @cutoffDate',
+    query: 'SELECT * FROM c WHERE c.date <= @cutoffDate AND (NOT IS_DEFINED(c.isArchived) OR c.isArchived = false)',
     parameters: [{ name: '@cutoffDate', value: cutoffDateString }]
   }
 
@@ -42,26 +42,27 @@ export async function performCleanup(context: InvocationContext): Promise<{ dele
     context.log('✅ No expired games found')
     trackEvent(context, 'CleanupExpiredGames', {
       requestId,
-      deletedCount: '0',
+      archivedCount: '0',
       message: 'No expired games found'
     })
-    return { deletedCount: 0, failedCount: 0, totalFound: 0 }
+    return { archivedCount: 0, failedCount: 0, totalFound: 0 }
   }
 
-  context.log(`🗑️ Found ${expiredGames.length} expired game(s) to delete`)
+  context.log(`🗄️ Found ${expiredGames.length} expired game(s) to archive`)
 
-  let deletedCount = 0
+  let archivedCount = 0
   let failedCount = 0
   const errors: string[] = []
 
   for (const game of expiredGames) {
     try {
-      await container.item(game.id, game.id).delete()
-      deletedCount++
-      context.log(`✅ Deleted game: ${game.code} (event date: ${game.date})`)
+      const archivedGame = applyArchiveMetadata(game)
+      await container.item(archivedGame.id, archivedGame.id).replace<Game>(archivedGame)
+      archivedCount++
+      context.log(`✅ Archived game: ${game.code} (event date: ${game.date})`)
     } catch (error: any) {
       failedCount++
-      const errorMessage = `Failed to delete game ${game.code}: ${error.message}`
+      const errorMessage = `Failed to archive game ${game.code}: ${error.message}`
       errors.push(errorMessage)
       context.error(errorMessage)
     }
@@ -69,22 +70,22 @@ export async function performCleanup(context: InvocationContext): Promise<{ dele
 
   trackEvent(context, 'CleanupExpiredGames', {
     requestId,
-    deletedCount: String(deletedCount),
+    archivedCount: String(archivedCount),
     failedCount: String(failedCount),
     totalFound: String(expiredGames.length)
   })
 
-  context.log(`🧹 Cleanup complete: ${deletedCount} deleted, ${failedCount} failed`)
+  context.log(`🧹 Cleanup complete: ${archivedCount} archived, ${failedCount} failed`)
 
   if (errors.length > 0) {
     trackError(context, new Error(`Partial cleanup failure: ${errors.join('; ')}`), {
       requestId,
-      deletedCount: String(deletedCount),
+      archivedCount: String(archivedCount),
       failedCount: String(failedCount)
     })
   }
 
-  return { deletedCount, failedCount, totalFound: expiredGames.length }
+  return { archivedCount, failedCount, totalFound: expiredGames.length }
 }
 
 /**

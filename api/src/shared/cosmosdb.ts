@@ -12,6 +12,21 @@ if (typeof globalThis.crypto === 'undefined') {
   (globalThis as any).crypto = webcrypto
 }
 
+// Typed errors for archive operations
+export class GameNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Game ${id} not found`)
+    this.name = 'GameNotFoundError'
+  }
+}
+
+export class GameAlreadyArchivedError extends Error {
+  constructor(id: string) {
+    super(`Game ${id} is already archived`)
+    this.name = 'GameAlreadyArchivedError'
+  }
+}
+
 let cosmosClient: CosmosClient | null = null
 let database: Database | null = null
 let container: Container | null = null
@@ -157,22 +172,33 @@ export async function getContainer(): Promise<Container> {
   return container
 }
 
-export async function getGameByCode(code: string): Promise<Game | null> {
+export async function getGameByCode(code: string, includeArchived = false): Promise<Game | null> {
   const cont = await getContainer()
-  const querySpec = {
-    query: 'SELECT * FROM c WHERE c.code = @code',
-    parameters: [{ name: '@code', value: code }]
-  }
-  
+  const querySpec = includeArchived
+    ? {
+        query: 'SELECT * FROM c WHERE c.code = @code',
+        parameters: [{ name: '@code', value: code }]
+      }
+    : {
+        query: 'SELECT * FROM c WHERE c.code = @code AND (NOT IS_DEFINED(c.isArchived) OR c.isArchived = false)',
+        parameters: [{ name: '@code', value: code }]
+      }
+
   const { resources } = await cont.items.query<Game>(querySpec).fetchAll()
   return resources.length > 0 ? resources[0] : null
 }
 
-export async function getGameById(id: string): Promise<Game | null> {
+export async function getGameById(id: string, includeArchived = false): Promise<Game | null> {
   try {
     const cont = await getContainer()
     const { resource } = await cont.item(id, id).read<Game>()
-    return resource || null
+    if (!resource) {
+      return null
+    }
+    if (!includeArchived && resource.isArchived) {
+      return null
+    }
+    return resource
   } catch (error: any) {
     if (error.code === 404) {
       return null
@@ -193,9 +219,47 @@ export async function updateGame(game: Game): Promise<Game> {
   return resource!
 }
 
-export async function deleteGame(id: string): Promise<void> {
+export async function hardDeleteGame(id: string): Promise<void> {
   const cont = await getContainer()
   await cont.item(id, id).delete()
+}
+
+/**
+ * Applies archive metadata to a game object. Use this helper to keep archive
+ * field assignment consistent across manual and scheduled archiving paths.
+ */
+export function applyArchiveMetadata(game: Game): Game {
+  return {
+    ...game,
+    isArchived: true,
+    archivedAt: Date.now()
+  }
+}
+
+export async function archiveGame(id: string): Promise<void> {
+  const cont = await getContainer()
+  let game: Game | undefined
+
+  try {
+    const { resource } = await cont.item(id, id).read<Game>()
+    game = resource
+  } catch (error: any) {
+    if (error && error.code === 404) {
+      throw new GameNotFoundError(id)
+    }
+    throw error
+  }
+
+  if (!game) {
+    throw new GameNotFoundError(id)
+  }
+
+  if (game.isArchived) {
+    throw new GameAlreadyArchivedError(id)
+  }
+
+  const archivedGame = applyArchiveMetadata(game)
+  await cont.item(id, id).replace<Game>(archivedGame)
 }
 
 // Re-export types

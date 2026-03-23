@@ -6,6 +6,7 @@ const mockReplace = jest.fn()
 const mockDelete = jest.fn()
 const mockRead = jest.fn()
 const mockQuery = jest.fn()
+const mockItemsQuery = jest.fn()
 const mockCreateIfNotExists = jest.fn()
 
 jest.mock('@azure/cosmos', () => ({
@@ -33,13 +34,12 @@ describe('cosmosdb', () => {
     process.env = { ...originalEnv }
     
     // Reset mocks
+    mockItemsQuery.mockReturnValue({ fetchAll: mockQuery })
     mockCreateIfNotExists.mockResolvedValue({ 
       container: {
         items: {
           create: mockCreate,
-          query: jest.fn().mockReturnValue({
-            fetchAll: mockQuery
-          })
+          query: mockItemsQuery
         },
         item: jest.fn().mockReturnValue({
           read: mockRead,
@@ -221,6 +221,64 @@ describe('cosmosdb operations', () => {
       
       await expect(cosmosModule.getGameByCode('123456')).rejects.toThrow('Database not available')
     })
+
+    it('should exclude archived games by default', async () => {
+      const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() }
+      mockQuery.mockResolvedValueOnce({ resources: [] }) // archived game filtered out by query
+
+      // Use a fresh per-test spy wired directly into the container so the
+      // query string passed to items.query() can be asserted
+      const capturedQuerySpec: any[] = []
+      const itemsQuerySpy = jest.fn((spec: any) => {
+        capturedQuerySpec.push(spec)
+        return { fetchAll: mockQuery }
+      })
+      mockCreateIfNotExists.mockResolvedValueOnce({
+        container: {
+          items: { create: mockCreate, query: itemsQuerySpy },
+          item: jest.fn().mockReturnValue({ read: mockRead, replace: mockReplace, delete: mockDelete })
+        }
+      })
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      const result = await cosmosModule.getGameByCode(archivedGame.code)
+      expect(result).toBeNull()
+      // Verify that the archive-exclusion predicate is present in the query
+      expect(capturedQuerySpec.length).toBeGreaterThan(0)
+      expect(capturedQuerySpec[0]).toEqual(
+        expect.objectContaining({ query: expect.stringContaining('isArchived') })
+      )
+    })
+
+    it('should return archived games when includeArchived is true', async () => {
+      const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() }
+      mockQuery.mockResolvedValueOnce({ resources: [archivedGame] })
+
+      // Use a fresh per-test spy wired directly into the container so the
+      // query string passed to items.query() can be asserted
+      const capturedQuerySpec: any[] = []
+      const itemsQuerySpy = jest.fn((spec: any) => {
+        capturedQuerySpec.push(spec)
+        return { fetchAll: mockQuery }
+      })
+      mockCreateIfNotExists.mockResolvedValueOnce({
+        container: {
+          items: { create: mockCreate, query: itemsQuerySpy },
+          item: jest.fn().mockReturnValue({ read: mockRead, replace: mockReplace, delete: mockDelete })
+        }
+      })
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      const result = await cosmosModule.getGameByCode(archivedGame.code, true)
+      expect(result).toEqual(archivedGame)
+      // Verify that the archive-exclusion predicate is NOT present when includeArchived=true
+      expect(capturedQuerySpec.length).toBeGreaterThan(0)
+      expect(capturedQuerySpec[0].query).not.toContain('isArchived')
+    })
   })
 
   describe('getGameById', () => {
@@ -267,6 +325,28 @@ describe('cosmosdb operations', () => {
       
       await expect(cosmosModule.getGameById('game-1')).rejects.toThrow('Server error')
     })
+
+    it('should exclude archived games by default', async () => {
+      const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() }
+      mockRead.mockResolvedValueOnce({ resource: archivedGame })
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      const result = await cosmosModule.getGameById(archivedGame.id)
+      expect(result).toBeNull()
+    })
+
+    it('should return archived games when includeArchived is true', async () => {
+      const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() }
+      mockRead.mockResolvedValueOnce({ resource: archivedGame })
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      const result = await cosmosModule.getGameById(archivedGame.id, true)
+      expect(result).toEqual(archivedGame)
+    })
   })
 
   describe('createGame', () => {
@@ -307,15 +387,89 @@ describe('cosmosdb operations', () => {
     })
   })
 
-  describe('deleteGame', () => {
-    it('should delete game successfully', async () => {
+  describe('hardDeleteGame', () => {
+    it('should hard-delete game successfully', async () => {
       mockDelete.mockResolvedValueOnce({})
       
       cosmosModule = await import('../shared/cosmosdb')
       await cosmosModule.initializeStorage()
       
-      await expect(cosmosModule.deleteGame('game-1')).resolves.not.toThrow()
+      await expect(cosmosModule.hardDeleteGame('game-1')).resolves.not.toThrow()
       expect(mockDelete).toHaveBeenCalled()
+    })
+  })
+
+  describe('applyArchiveMetadata', () => {
+    it('should set isArchived and archivedAt on a copy of the game', async () => {
+      cosmosModule = await import('../shared/cosmosdb')
+      const testGame = createTestGame()
+      const before = Date.now()
+      const result = cosmosModule.applyArchiveMetadata(testGame)
+      const after = Date.now()
+
+      expect(result.isArchived).toBe(true)
+      expect(result.archivedAt).toBeGreaterThanOrEqual(before)
+      expect(result.archivedAt).toBeLessThanOrEqual(after)
+      // original must not be mutated
+      expect(testGame.isArchived).toBeUndefined()
+      expect(testGame.archivedAt).toBeUndefined()
+    })
+  })
+
+  describe('archiveGame', () => {
+    it('should archive an active game successfully', async () => {
+      const testGame = createTestGame()
+      mockRead.mockResolvedValueOnce({ resource: testGame })
+      mockReplace.mockResolvedValueOnce({ resource: { ...testGame, isArchived: true } })
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      await expect(cosmosModule.archiveGame('game-1')).resolves.not.toThrow()
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.objectContaining({ isArchived: true, archivedAt: expect.any(Number) })
+      )
+    })
+
+    it('should throw GameNotFoundError when Cosmos returns 404', async () => {
+      const notFoundError: any = new Error('Not found')
+      notFoundError.code = 404
+      mockRead.mockRejectedValueOnce(notFoundError)
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      await expect(cosmosModule.archiveGame('missing-id')).rejects.toThrow(cosmosModule.GameNotFoundError)
+    })
+
+    it('should throw GameNotFoundError when read returns no resource', async () => {
+      mockRead.mockResolvedValueOnce({ resource: undefined })
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      await expect(cosmosModule.archiveGame('missing-id')).rejects.toThrow(cosmosModule.GameNotFoundError)
+    })
+
+    it('should throw GameAlreadyArchivedError when game is already archived', async () => {
+      const archivedGame = { ...createTestGame(), isArchived: true, archivedAt: Date.now() - 1000 }
+      mockRead.mockResolvedValueOnce({ resource: archivedGame })
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      await expect(cosmosModule.archiveGame('game-1')).rejects.toThrow(cosmosModule.GameAlreadyArchivedError)
+    })
+
+    it('should rethrow non-404 Cosmos errors', async () => {
+      const serverError: any = new Error('Internal server error')
+      serverError.code = 500
+      mockRead.mockRejectedValueOnce(serverError)
+
+      cosmosModule = await import('../shared/cosmosdb')
+      await cosmosModule.initializeStorage()
+
+      await expect(cosmosModule.archiveGame('game-1')).rejects.toThrow('Internal server error')
     })
   })
 

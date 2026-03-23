@@ -1,11 +1,16 @@
-import { deleteGameHandler } from '../functions/deleteGame'
+import { archiveGameHandler } from '../functions/archiveGame'
 import * as cosmosdb from '../shared/cosmosdb'
 import * as telemetry from '../shared/telemetry'
 import { HttpRequest, InvocationContext } from '@azure/functions'
 import { Game } from '../shared/types'
 
-// Mock the cosmosdb module
-jest.mock('../shared/cosmosdb')
+// Mock the cosmosdb module, but keep the typed error classes as real implementations
+jest.mock('../shared/cosmosdb', () => ({
+  ...jest.requireActual('../shared/cosmosdb'),
+  getDatabaseStatus: jest.fn(),
+  getGameByCode: jest.fn(),
+  archiveGame: jest.fn()
+}))
 
 // Mock the telemetry module
 jest.mock('../shared/telemetry', () => ({
@@ -15,6 +20,7 @@ jest.mock('../shared/telemetry', () => ({
     UNAUTHORIZED: 'UNAUTHORIZED',
     FORBIDDEN: 'FORBIDDEN',
     NOT_FOUND: 'NOT_FOUND',
+    CONFLICT: 'CONFLICT',
     SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE'
   },
   createErrorResponse: jest.fn((code, message) => ({ code, message })),
@@ -23,6 +29,7 @@ jest.mock('../shared/telemetry', () => ({
       case 'UNAUTHORIZED': return 401
       case 'FORBIDDEN': return 403
       case 'NOT_FOUND': return 404
+      case 'CONFLICT': return 409
       case 'SERVICE_UNAVAILABLE': return 503
       default: return 500
     }
@@ -31,9 +38,9 @@ jest.mock('../shared/telemetry', () => ({
 
 const mockGetDatabaseStatus = jest.mocked(cosmosdb.getDatabaseStatus)
 const mockGetGameByCode = jest.mocked(cosmosdb.getGameByCode)
-const mockDeleteGame = jest.mocked(cosmosdb.deleteGame)
+const mockArchiveGame = jest.mocked(cosmosdb.archiveGame)
 
-describe('deleteGame function', () => {
+describe('archiveGame function', () => {
   let mockContext: InvocationContext
 
   beforeEach(() => {
@@ -83,7 +90,7 @@ describe('deleteGame function', () => {
     mockGetDatabaseStatus.mockReturnValue({ connected: false, error: 'Not connected' })
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(503)
     expect(result.jsonBody).toHaveProperty('error')
@@ -91,11 +98,11 @@ describe('deleteGame function', () => {
 
   it('should return 401 when organizer token is missing', async () => {
     const request = createMockRequest({ code: '123456' })
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(401)
     expect(result.jsonBody).toEqual({
-      error: 'Organizer token is required to delete a game'
+      error: 'Organizer token is required to archive a game'
     })
   })
 
@@ -103,7 +110,7 @@ describe('deleteGame function', () => {
     mockGetGameByCode.mockResolvedValue(null)
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=some-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(404)
     expect(result.jsonBody).toEqual({
@@ -115,7 +122,7 @@ describe('deleteGame function', () => {
     mockGetGameByCode.mockResolvedValue(mockGame)
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=wrong-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(403)
     expect(result.jsonBody).toEqual({
@@ -123,41 +130,63 @@ describe('deleteGame function', () => {
     })
   })
 
-  it('should delete game successfully with valid token', async () => {
+  it('should archive game successfully with valid token', async () => {
     mockGetGameByCode.mockResolvedValue(mockGame)
-    mockDeleteGame.mockResolvedValue()
+    mockArchiveGame.mockResolvedValue()
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(200)
     expect(result.jsonBody).toEqual({
       success: true,
-      message: 'Game deleted successfully',
-      deletedCode: '123456'
+      message: 'Game archived successfully',
+      archivedCode: '123456'
     })
-    expect(mockDeleteGame).toHaveBeenCalledWith('game-id-123')
+    expect(mockArchiveGame).toHaveBeenCalledWith('game-id-123')
   })
 
   it('should accept organizer token from header', async () => {
     mockGetGameByCode.mockResolvedValue(mockGame)
-    mockDeleteGame.mockResolvedValue()
+    mockArchiveGame.mockResolvedValue()
     
     const request = createMockRequest({ code: '123456' }, '', { 'x-organizer-token': 'valid-organizer-token' })
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(200)
-    expect(mockDeleteGame).toHaveBeenCalledWith('game-id-123')
+    expect(mockArchiveGame).toHaveBeenCalledWith('game-id-123')
   })
 
   it('should return 500 on database error', async () => {
     mockGetGameByCode.mockRejectedValue(new Error('Database error'))
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(500)
-    expect(result.jsonBody).toHaveProperty('error', 'Failed to delete game')
+    expect(result.jsonBody).toHaveProperty('error', 'Failed to archive game')
     expect(mockContext.error).toHaveBeenCalled()
+  })
+
+  it('should return 404 when archiveGame throws GameNotFoundError', async () => {
+    mockGetGameByCode.mockResolvedValue(mockGame)
+    mockArchiveGame.mockRejectedValue(new cosmosdb.GameNotFoundError('game-id-123'))
+
+    const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
+    const result = await archiveGameHandler(request, mockContext)
+
+    expect(result.status).toBe(404)
+    expect(result.jsonBody).toHaveProperty('error', 'Game not found')
+  })
+
+  it('should return 409 when game is already archived', async () => {
+    mockGetGameByCode.mockResolvedValue({ ...mockGame, isArchived: true })
+
+    const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
+    const result = await archiveGameHandler(request, mockContext)
+
+    expect(result.status).toBe(409)
+    expect(result.jsonBody).toHaveProperty('error', 'Game is already archived')
+    expect(mockArchiveGame).not.toHaveBeenCalled()
   })
 })

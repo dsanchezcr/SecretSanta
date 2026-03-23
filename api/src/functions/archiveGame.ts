@@ -1,13 +1,13 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
-import { getGameByCode, deleteGame, getDatabaseStatus } from '../shared/cosmosdb'
+import { getGameByCode, archiveGame, getDatabaseStatus, GameNotFoundError, GameAlreadyArchivedError } from '../shared/cosmosdb'
 import { trackError, trackEvent, ApiErrorCode, createErrorResponse, getHttpStatusForError } from '../shared/telemetry'
 
-export async function deleteGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+export async function archiveGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const requestId = context.invocationId
   const gameCode = request.params.code
   const organizerToken = request.query.get('organizerToken') || request.headers.get('x-organizer-token')
   
-  context.log(`Delete game request for code: ${gameCode} [requestId: ${requestId}]`)
+  context.log(`Archive game request for code: ${gameCode} [requestId: ${requestId}]`)
   
   // Check database connectivity first
   const dbStatus = getDatabaseStatus()
@@ -30,7 +30,7 @@ export async function deleteGameHandler(request: HttpRequest, context: Invocatio
     if (!organizerToken) {
       const error = createErrorResponse(
         ApiErrorCode.UNAUTHORIZED,
-        'Organizer token is required to delete a game',
+        'Organizer token is required to archive a game',
         undefined,
         requestId
       )
@@ -40,8 +40,8 @@ export async function deleteGameHandler(request: HttpRequest, context: Invocatio
       }
     }
     
-    // Find the game
-    const game = await getGameByCode(gameCode)
+    // Find the game (include archived to give 409 when already archived, not 404)
+    const game = await getGameByCode(gameCode, true)
     
     if (!game) {
       const error = createErrorResponse(
@@ -64,47 +64,78 @@ export async function deleteGameHandler(request: HttpRequest, context: Invocatio
         undefined,
         requestId
       )
-      trackEvent(context, 'UnauthorizedDeleteAttempt', { requestId, gameCode })
+      trackEvent(context, 'UnauthorizedArchiveAttempt', { requestId, gameCode })
       return {
         status: getHttpStatusForError(ApiErrorCode.FORBIDDEN),
         jsonBody: { error: error.message }
       }
     }
+
+    // Reject if game is already archived
+    if (game.isArchived) {
+      const error = createErrorResponse(
+        ApiErrorCode.CONFLICT,
+        'Game is already archived',
+        undefined,
+        requestId
+      )
+      return {
+        status: getHttpStatusForError(ApiErrorCode.CONFLICT),
+        jsonBody: { error: error.message }
+      }
+    }
     
-    // Delete the game
-    await deleteGame(game.id)
+    // Archive the game (soft delete)
+    await archiveGame(game.id)
     
-    trackEvent(context, 'GameDeleted', { 
+    trackEvent(context, 'GameArchived', { 
       requestId, 
       gameCode,
       participantCount: String(game.participants.length),
       eventDate: game.date
     })
     
-    context.log(`✅ Game ${gameCode} deleted by organizer [requestId: ${requestId}]`)
+    context.log(`✅ Game ${gameCode} archived by organizer [requestId: ${requestId}]`)
     
     return {
       status: 200,
       jsonBody: { 
         success: true, 
-        message: 'Game deleted successfully',
-        deletedCode: gameCode
+        message: 'Game archived successfully',
+        archivedCode: gameCode
       }
     }
     
   } catch (error: any) {
-    context.error('Error deleting game:', error)
+    context.error('Error archiving game:', error)
+
+    if (error instanceof GameNotFoundError) {
+      const notFoundError = createErrorResponse(ApiErrorCode.NOT_FOUND, 'Game not found', undefined, requestId)
+      return {
+        status: getHttpStatusForError(ApiErrorCode.NOT_FOUND),
+        jsonBody: { error: notFoundError.message }
+      }
+    }
+
+    if (error instanceof GameAlreadyArchivedError) {
+      const conflictError = createErrorResponse(ApiErrorCode.CONFLICT, 'Game is already archived', undefined, requestId)
+      return {
+        status: getHttpStatusForError(ApiErrorCode.CONFLICT),
+        jsonBody: { error: conflictError.message }
+      }
+    }
+
     trackError(context, error, { requestId, gameCode })
     return {
       status: 500,
-      jsonBody: { error: 'Failed to delete game', details: error.message }
+      jsonBody: { error: 'Failed to archive game', details: error.message }
     }
   }
 }
 
-app.http('deleteGame', {
+app.http('archiveGame', {
   methods: ['DELETE'],
   authLevel: 'anonymous',
   route: 'games/{code}',
-  handler: deleteGameHandler
+  handler: archiveGameHandler
 })

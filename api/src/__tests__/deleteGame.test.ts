@@ -4,8 +4,13 @@ import * as telemetry from '../shared/telemetry'
 import { HttpRequest, InvocationContext } from '@azure/functions'
 import { Game } from '../shared/types'
 
-// Mock the cosmosdb module
-jest.mock('../shared/cosmosdb')
+// Mock the cosmosdb module, but keep the typed error classes as real implementations
+jest.mock('../shared/cosmosdb', () => ({
+  ...jest.requireActual('../shared/cosmosdb'),
+  getDatabaseStatus: jest.fn(),
+  getGameByCode: jest.fn(),
+  archiveGame: jest.fn()
+}))
 
 // Mock the telemetry module
 jest.mock('../shared/telemetry', () => ({
@@ -15,6 +20,7 @@ jest.mock('../shared/telemetry', () => ({
     UNAUTHORIZED: 'UNAUTHORIZED',
     FORBIDDEN: 'FORBIDDEN',
     NOT_FOUND: 'NOT_FOUND',
+    CONFLICT: 'CONFLICT',
     SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE'
   },
   createErrorResponse: jest.fn((code, message) => ({ code, message })),
@@ -23,6 +29,7 @@ jest.mock('../shared/telemetry', () => ({
       case 'UNAUTHORIZED': return 401
       case 'FORBIDDEN': return 403
       case 'NOT_FOUND': return 404
+      case 'CONFLICT': return 409
       case 'SERVICE_UNAVAILABLE': return 503
       default: return 500
     }
@@ -159,5 +166,27 @@ describe('deleteGame function', () => {
     expect(result.status).toBe(500)
     expect(result.jsonBody).toHaveProperty('error', 'Failed to archive game')
     expect(mockContext.error).toHaveBeenCalled()
+  })
+
+  it('should return 404 when archiveGame throws GameNotFoundError', async () => {
+    mockGetGameByCode.mockResolvedValue(mockGame)
+    mockArchiveGame.mockRejectedValue(new cosmosdb.GameNotFoundError('game-id-123'))
+
+    const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
+    const result = await deleteGameHandler(request, mockContext)
+
+    expect(result.status).toBe(404)
+    expect(result.jsonBody).toHaveProperty('error', 'Game not found')
+  })
+
+  it('should return 409 when archiveGame throws GameAlreadyArchivedError', async () => {
+    mockGetGameByCode.mockResolvedValue(mockGame)
+    mockArchiveGame.mockRejectedValue(new cosmosdb.GameAlreadyArchivedError('game-id-123'))
+
+    const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
+    const result = await deleteGameHandler(request, mockContext)
+
+    expect(result.status).toBe(409)
+    expect(result.jsonBody).toHaveProperty('error', 'Game is already archived')
   })
 })

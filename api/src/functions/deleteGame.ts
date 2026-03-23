@@ -1,5 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
-import { getGameByCode, archiveGame, getDatabaseStatus } from '../shared/cosmosdb'
+import { getGameByCode, archiveGame, getDatabaseStatus, GameNotFoundError, GameAlreadyArchivedError } from '../shared/cosmosdb'
 import { trackError, trackEvent, ApiErrorCode, createErrorResponse, getHttpStatusForError } from '../shared/telemetry'
 
 export async function deleteGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -94,6 +94,23 @@ export async function deleteGameHandler(request: HttpRequest, context: Invocatio
     
   } catch (error: any) {
     context.error('Error archiving game:', error)
+
+    if (error instanceof GameNotFoundError) {
+      const notFoundError = createErrorResponse(ApiErrorCode.NOT_FOUND, 'Game not found', undefined, requestId)
+      return {
+        status: getHttpStatusForError(ApiErrorCode.NOT_FOUND),
+        jsonBody: { error: notFoundError.message }
+      }
+    }
+
+    if (error instanceof GameAlreadyArchivedError) {
+      const conflictError = createErrorResponse(ApiErrorCode.CONFLICT, 'Game is already archived', undefined, requestId)
+      return {
+        status: getHttpStatusForError(ApiErrorCode.CONFLICT),
+        jsonBody: { error: conflictError.message }
+      }
+    }
+
     trackError(context, error, { requestId, gameCode })
     return {
       status: 500,

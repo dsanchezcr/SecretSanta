@@ -810,7 +810,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
     }
   }
 
-  // Delete game handler
+  // Archive game handler
   const handleDeleteGame = async () => {
     setIsDeletingGame(true)
     try {
@@ -819,12 +819,12 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
         try {
           await archiveGameAPI(game.code, game.organizerToken)
         } catch {
-          // API call failed - still delete locally
-          console.warn('API delete failed, deleting locally only')
+          // API archive failed - still remove locally
+          console.warn('API archive failed, removing locally only')
         }
       }
-      // Note: We always complete the delete locally even if API fails
-      // This allows offline deletion of games
+      // Note: We always complete the removal locally even if API fails
+      // This allows offline removal of games
       toast.success(t('gameDeleted'))
       setShowDeleteGameDialog(false)
       

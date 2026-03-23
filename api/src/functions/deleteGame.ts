@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { getGameByCode, archiveGame, getDatabaseStatus, GameNotFoundError, GameAlreadyArchivedError } from '../shared/cosmosdb'
 import { trackError, trackEvent, ApiErrorCode, createErrorResponse, getHttpStatusForError } from '../shared/telemetry'
 
-export async function deleteGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+export async function archiveGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const requestId = context.invocationId
   const gameCode = request.params.code
   const organizerToken = request.query.get('organizerToken') || request.headers.get('x-organizer-token')
@@ -137,5 +137,5 @@ app.http('deleteGame', {
   methods: ['DELETE'],
   authLevel: 'anonymous',
   route: 'games/{code}',
-  handler: deleteGameHandler
+  handler: archiveGameHandler
 })

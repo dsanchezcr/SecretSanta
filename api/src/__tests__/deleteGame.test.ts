@@ -1,4 +1,4 @@
-import { deleteGameHandler } from '../functions/deleteGame'
+import { archiveGameHandler } from '../functions/deleteGame'
 import * as cosmosdb from '../shared/cosmosdb'
 import * as telemetry from '../shared/telemetry'
 import { HttpRequest, InvocationContext } from '@azure/functions'
@@ -90,7 +90,7 @@ describe('archiveGame function', () => {
     mockGetDatabaseStatus.mockReturnValue({ connected: false, error: 'Not connected' })
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(503)
     expect(result.jsonBody).toHaveProperty('error')
@@ -98,7 +98,7 @@ describe('archiveGame function', () => {
 
   it('should return 401 when organizer token is missing', async () => {
     const request = createMockRequest({ code: '123456' })
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(401)
     expect(result.jsonBody).toEqual({
@@ -110,7 +110,7 @@ describe('archiveGame function', () => {
     mockGetGameByCode.mockResolvedValue(null)
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=some-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(404)
     expect(result.jsonBody).toEqual({
@@ -122,7 +122,7 @@ describe('archiveGame function', () => {
     mockGetGameByCode.mockResolvedValue(mockGame)
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=wrong-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(403)
     expect(result.jsonBody).toEqual({
@@ -135,7 +135,7 @@ describe('archiveGame function', () => {
     mockArchiveGame.mockResolvedValue()
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(200)
     expect(result.jsonBody).toEqual({
@@ -151,7 +151,7 @@ describe('archiveGame function', () => {
     mockArchiveGame.mockResolvedValue()
     
     const request = createMockRequest({ code: '123456' }, '', { 'x-organizer-token': 'valid-organizer-token' })
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(200)
     expect(mockArchiveGame).toHaveBeenCalledWith('game-id-123')
@@ -161,7 +161,7 @@ describe('archiveGame function', () => {
     mockGetGameByCode.mockRejectedValue(new Error('Database error'))
     
     const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(500)
     expect(result.jsonBody).toHaveProperty('error', 'Failed to archive game')
@@ -173,7 +173,7 @@ describe('archiveGame function', () => {
     mockArchiveGame.mockRejectedValue(new cosmosdb.GameNotFoundError('game-id-123'))
 
     const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(404)
     expect(result.jsonBody).toHaveProperty('error', 'Game not found')
@@ -183,7 +183,7 @@ describe('archiveGame function', () => {
     mockGetGameByCode.mockResolvedValue({ ...mockGame, isArchived: true })
 
     const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
-    const result = await deleteGameHandler(request, mockContext)
+    const result = await archiveGameHandler(request, mockContext)
 
     expect(result.status).toBe(409)
     expect(result.jsonBody).toHaveProperty('error', 'Game is already archived')

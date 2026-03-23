@@ -1,4 +1,4 @@
-import { archiveGameHandler } from '../functions/deleteGame'
+import { archiveGameHandler } from '../functions/archiveGame'
 import * as cosmosdb from '../shared/cosmosdb'
 import * as telemetry from '../shared/telemetry'
 import { HttpRequest, InvocationContext } from '@azure/functions'

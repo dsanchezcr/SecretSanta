@@ -35,13 +35,29 @@ Include as much of the information listed below as you can to help us better und
 - Sanitize user input on both frontend and API
 - Use HTTPS for all communications
 - Enable CORS restrictions appropriately
+- Use `crypto.randomUUID()` / `crypto.randomInt()` for all token and code generation — never `Math.random()`
+- Use `safeCompare()` from `api/src/shared/game-utils.ts` for all token comparisons (timing-safe via `crypto.timingSafeEqual`)
+- Enforce input length limits via `INPUT_LIMITS` in `api/src/shared/types.ts` (max 100 participants, name: 80 chars, notes: 2000 chars)
+- Never expose `error.message` or stack traces in API error responses
+
+### Rate Limiting
+- Game creation: 10 requests per minute per IP
+- Email sending: 20 requests per minute per IP
+- Rate limiter is in-memory (`api/src/shared/rate-limiter.ts`); for stronger enforcement, consider Azure API Management
+
+### Content Security Policy
+- Strict CSP with no `unsafe-eval` and no `unsafe-inline` for scripts
+- `frame-ancestors 'none'` to prevent clickjacking
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()` to disable unused browser APIs
+- See `staticwebapp.config.json` for the full CSP header
 
 ### Azure Resources
-- Use managed identities when possible
+- Use managed identities when possible (optional `enableManagedIdentity` Bicep parameter)
 - Rotate secrets regularly
 - Enable Application Insights for monitoring
 - Use resource group RBAC for access control
 - Enable audit logging
+- Budget alerts available via `budgetAmount` Bicep parameter
 
 ## Third-Party Services
 

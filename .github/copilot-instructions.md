@@ -1,7 +1,7 @@
 # Copilot Instructions for Secret Santa
 
 ## Project Overview
-Multilingual Secret Santa gift exchange app built with React + Vite frontend and Azure Functions API, deployed on Azure Static Web Apps with Cosmos DB.
+Multilingual Secret Santa gift exchange app built with React + Vite frontend and Azure Functions API, deployed on Azure Static Web Apps with Cosmos DB. Features PWA support, dark mode, QR code sharing, calendar integration, and hardened security (crypto-secure randomness, timing-safe token comparison, rate limiting, strict CSP).
 
 ## Environment Strategy
 - **PR**: Ephemeral resource group per PR (`secretsanta-pr-{number}`) with Free tier resources
@@ -24,18 +24,22 @@ secretsanta/
 ├── src/                    # React frontend
 │   ├── components/         # UI components
 │   │   └── ui/            # shadcn/ui components
-│   ├── lib/               # Utilities, types, translations
-│   └── hooks/             # Custom React hooks
+│   ├── lib/               # Utilities, types, translations, calendar, sharing
+│   ├── hooks/             # Custom React hooks (dark mode, localStorage, mobile)
+│   └── styles/            # CSS theme (light/dark mode support)
 ├── api/                   # Azure Functions backend
 │   └── src/
 │       ├── functions/     # HTTP endpoints
-│       └── shared/        # Cosmos DB, email, telemetry
-├── e2e/                   # Playwright E2E tests
+│       ├── shared/        # Cosmos DB, email, telemetry, rate limiter
+│       └── __tests__/     # Unit tests (Jest, 248+ tests)
+├── e2e/                   # Playwright E2E tests (Chromium, Firefox, WebKit)
 ├── infra/                 # Bicep infrastructure
-│   ├── main.bicep         # Main template
+│   ├── main.bicep         # Main template (includes optional Managed Identity, Front Door, Budget alerts)
 │   ├── parameters.dev.json    # PR environments
 │   ├── parameters.qa.json     # QA environment (isolated in secretsanta-qa RG)
 │   └── parameters.prod.json   # Production
+├── public/                # PWA manifest, service worker, static assets
+├── scripts/               # Utility scripts (type validation, setup)
 ├── docs/                  # Documentation
 │   ├── getting-started.md # Local development guide
 │   ├── github-deployment.md # CI/CD setup guide
@@ -50,16 +54,27 @@ secretsanta/
 ## Key Patterns
 
 ### Frontend
-- **View Navigation**: `App.tsx` manages view state (no router)
+- **View Navigation**: `App.tsx` manages view state with hash-based routing (`#create`) and path-based routing (`/privacy`, `/organizer-guide`, `/participant-guide`) for browser back button support
 - **i18n**: `LanguageProvider` context + `useLanguage()` hook
-- **Translations**: All in `src/lib/translations.ts`
+- **Translations**: Split into per-language files under `src/lib/translations/` (en.ts, es.ts, etc.)
 - **State**: `useLocalStorage` hook for client-side persistence
+- **Dark Mode**: `useDarkMode` hook + `DarkModeToggle` component, toggles `.dark-theme` class on `#app`
+- **PWA**: `public/manifest.json` + `public/sw.js` service worker with cache-first strategy
+- **QR Codes**: `QRCodeDisplay` component using `qrcode` library for invitation links
+- **Calendar**: `generateICS()` / `downloadICS()` in `src/lib/calendar-utils.ts` for `.ics` downloads
+- **Event Countdown**: `EventCountdown` component with live timer updates
 
 ### API
 - **Runtime**: Azure Functions v4 with TypeScript
 - **Database**: Azure Cosmos DB (serverless)
 - **Email**: Azure Communication Services (optional)
 - **Telemetry**: Application Insights via `api/src/shared/telemetry.ts`
+- **Rate Limiting**: IP-based rate limiting via `api/src/shared/rate-limiter.ts` (createGame: 10/min, sendEmail: 20/min)
+- **Security**:
+  - All tokens/IDs generated with `crypto.randomUUID()` / `crypto.randomInt()`
+  - Token comparisons use `safeCompare()` (timing-safe via `crypto.timingSafeEqual`)
+  - Input length validation via `INPUT_LIMITS` constants in `api/src/shared/types.ts`
+  - Max 100 participants per game, field lengths enforced (name: 80, notes: 2000, etc.)
 - **Routes**:
   - `POST /api/games` - Create game (validates date is today or future)
   - `GET /api/games/{code}` - Get game
@@ -75,10 +90,10 @@ secretsanta/
 
 ### Adding Translations
 ```typescript
-// src/lib/translations.ts
-export const translations = {
-  es: { newKey: "Spanish text" },
-  en: { newKey: "English text" }
+// src/lib/translations/en.ts (each language has its own file)
+export const en = {
+  // ...
+  newKey: "English text",
 }
 // Usage: const { t } = useLanguage(); t('newKey')
 ```
@@ -138,6 +153,7 @@ docker-compose up -d
 cd api && npm test             # API unit tests
 npm run test:e2e               # E2E tests
 npm run test:e2e:ui            # E2E with UI
+npm run validate:types         # Check frontend/API type sync
 ```
 
 ### Documentation
@@ -186,29 +202,31 @@ az deployment group create \
 | Variable | Description |
 |----------|-------------|
 | `COSMOS_ENDPOINT` | Cosmos DB endpoint |
-| `COSMOS_KEY` | Cosmos DB key |
+| `COSMOS_KEY` | Cosmos DB key (omitted when Managed Identity is enabled) |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | App Insights |
 | `ACS_CONNECTION_STRING` | Email service |
 | `APP_BASE_URL` | Application URL (from Static Web App output) |
 | `ENVIRONMENT` | pr/qa/prod |
 
 ## Domain Logic
-- **Game Code**: 6-digit numeric string
-- **Assignments**: Circular shuffle (each gives to next)
+- **Game Code**: 6-digit numeric string (crypto-secure via `crypto.randomInt`)
+- **Assignments**: Circular shuffle (each gives to next) with crypto-secure Fisher-Yates algorithm
+- **Exclusion Rules**: Optional pairs that should never be assigned to each other
 - **Reassignment**: Preserves cycle integrity
 - **Date Validation**: Games can only be created for today or future dates
 - **Data Retention**: Games auto-deleted 3 days after event date
 - **Manual Deletion**: Organizers can delete games anytime via DELETE endpoint
 
 ## Frontend Views
-- `home` - Landing page with game code entry and privacy link
+- `home` - Landing page with game code entry, dark mode toggle, and privacy link
 - `create-game` - Game creation form with date validation
-- `game-created` - Success page with organizer token
+- `game-created` - Success page with organizer token and QR code sharing
 - `select-participant` - Participant login for protected games
-- `assignment` - Shows gift assignment
+- `assignment` - Shows gift assignment with event countdown and calendar download
 - `organizer-panel` - Full game management (includes delete feature)
 - `privacy` - Data handling and retention policy
 - `game-not-found` - Error page for deleted/invalid games
 
 ## Types
 Types in `src/lib/types.ts` and `api/src/shared/types.ts` - keep in sync manually.
+Run `npm run validate:types` to check for drift between frontend and API types.

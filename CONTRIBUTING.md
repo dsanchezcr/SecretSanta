@@ -94,10 +94,19 @@ For details, see [Local Development Setup](docs/local-development-setup.md).
 
 ## 🧪 Testing Guidelines
 
-- **API tests**: Located in `api/src/__tests__/`
-- **E2E tests**: Located in `e2e/`
+- **API tests**: Located in `api/src/__tests__/` (248+ tests across 13 suites)
+- **E2E tests**: Located in `e2e/` (runs on Chromium, Firefox, and WebKit)
+- **Accessibility**: E2E tests include automated axe-core WCAG 2.0 AA checks
+- **Type validation**: Run `npm run validate:types` to ensure frontend/API types stay in sync
 - Run tests before submitting PRs
 - Add tests for new features
+
+## 🔒 Security Guidelines
+
+- Use `crypto.randomUUID()` / `crypto.randomInt()` — never `Math.random()`
+- Use `safeCompare()` for all token comparisons
+- Enforce input length limits via `INPUT_LIMITS` in `api/src/shared/types.ts`
+- Never expose `error.message` in API responses
 
 ## 💡 Code Style
 
@@ -111,7 +120,8 @@ For details, see [Local Development Setup](docs/local-development-setup.md).
 PRs automatically get:
 - Lint and build checks
 - Unit tests
-- E2E tests
+- E2E tests (Chromium, Firefox, WebKit)
+- Accessibility checks
 - Preview deployment
 
 ## ❓ Questions?

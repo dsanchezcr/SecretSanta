@@ -7,7 +7,8 @@ const SUPPORTED_LANGUAGES: Language[] = ['en', 'es', 'pt', 'fr', 'it', 'ja', 'zh
 /**
  * HTML-escape user-provided content to prevent XSS in email templates.
  */
-export function escapeHtml(text: string): string {
+export function escapeHtml(text: string | undefined): string {
+  if (!text) return ''
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -2266,11 +2267,11 @@ export function generateEventDetailsChangedEmailContent(data: EventDetailsChange
     changesText += `${t.time}: ${changes.time.old || '-'} → ${changes.time.new || '-'}\n`
   }
   if (changes.location) {
-    changesHtml += `<tr><td style="padding: 8px; font-weight: bold;">${t.location}</td><td style="padding: 8px; text-decoration: line-through; color: #999;">${escapeHtml(changes.location.old) || '-'}</td><td style="padding: 8px; color: #165B33; font-weight: bold;">${escapeHtml(changes.location.new)}</td></tr>`
+    changesHtml += `<tr><td style="padding: 8px; font-weight: bold;">${t.location}</td><td style="padding: 8px; text-decoration: line-through; color: #999;">${escapeHtml(changes.location.old) || '-'}</td><td style="padding: 8px; color: #165B33; font-weight: bold;">${escapeHtml(changes.location.new) || '-'}</td></tr>`
     changesText += `${t.location}: ${changes.location.old || '-'} → ${changes.location.new}\n`
   }
   if (changes.generalNotes) {
-    changesHtml += `<tr><td style="padding: 8px; font-weight: bold;">${t.notes}</td><td style="padding: 8px; text-decoration: line-through; color: #999;">${escapeHtml(changes.generalNotes.old) || '-'}</td><td style="padding: 8px; color: #165B33; font-weight: bold;">${escapeHtml(changes.generalNotes.new)}</td></tr>`
+    changesHtml += `<tr><td style="padding: 8px; font-weight: bold;">${t.notes}</td><td style="padding: 8px; text-decoration: line-through; color: #999;">${escapeHtml(changes.generalNotes.old) || '-'}</td><td style="padding: 8px; color: #165B33; font-weight: bold;">${escapeHtml(changes.generalNotes.new) || '-'}</td></tr>`
     changesText += `${t.notes}: ${changes.generalNotes.old || '-'} → ${changes.generalNotes.new}\n`
   }
 

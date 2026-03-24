@@ -12,8 +12,10 @@ export function useDarkMode() {
     if (!root) return
     if (isDark) {
       root.classList.add('dark-theme')
+      root.setAttribute('data-appearance', 'dark')
     } else {
       root.classList.remove('dark-theme')
+      root.setAttribute('data-appearance', 'light')
     }
   }, [isDark])
 

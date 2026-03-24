@@ -451,13 +451,18 @@ export function regenerateParticipantTokenLocal(game: Game, participantId: strin
   return { ...game, participants: updatedParticipants }
 }
 
-// Crypto-secure Fisher-Yates shuffle (browser-native)
+// Crypto-secure Fisher-Yates shuffle with rejection sampling (browser-native)
 function secureShuffleLocal<T>(arr: T[]): T[] {
   const shuffled = [...arr]
-  const randomValues = new Uint32Array(shuffled.length)
-  crypto.getRandomValues(randomValues)
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = randomValues[i] % (i + 1)
+    // Rejection sampling to eliminate modulo bias
+    const range = i + 1
+    const limit = 2 ** 32 - (2 ** 32 % range)
+    const randomValues = new Uint32Array(1)
+    do {
+      crypto.getRandomValues(randomValues)
+    } while (randomValues[0] >= limit)
+    const j = randomValues[0] % range
     ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
   }
   return shuffled

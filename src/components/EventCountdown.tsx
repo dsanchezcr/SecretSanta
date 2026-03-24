@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLanguage } from './useLanguage'
 
 interface CountdownProps {
   targetDate: string // YYYY-MM-DD
@@ -6,8 +7,23 @@ interface CountdownProps {
   label: string
 }
 
+// Time unit translations
+const timeUnits: Record<string, { d: string; h: string; m: string }> = {
+  en: { d: 'd', h: 'h', m: 'm' },
+  es: { d: 'd', h: 'h', m: 'min' },
+  pt: { d: 'd', h: 'h', m: 'min' },
+  fr: { d: 'j', h: 'h', m: 'min' },
+  it: { d: 'g', h: 'h', m: 'min' },
+  ja: { d: '日', h: '時間', m: '分' },
+  zh: { d: '天', h: '时', m: '分' },
+  de: { d: 'T', h: 'Std', m: 'Min' },
+  nl: { d: 'd', h: 'u', m: 'min' },
+}
+
 export function EventCountdown({ targetDate, targetTime, label }: CountdownProps) {
   const [timeLeft, setTimeLeft] = useState('')
+  const { language } = useLanguage()
+  const units = timeUnits[language] || timeUnits.en
 
   useEffect(() => {
     const calculate = () => {
@@ -27,18 +43,18 @@ export function EventCountdown({ targetDate, targetTime, label }: CountdownProps
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
 
       if (days > 0) {
-        setTimeLeft(`${days}d ${hours}h ${minutes}m`)
+        setTimeLeft(`${days}${units.d} ${hours}${units.h} ${minutes}${units.m}`)
       } else if (hours > 0) {
-        setTimeLeft(`${hours}h ${minutes}m`)
+        setTimeLeft(`${hours}${units.h} ${minutes}${units.m}`)
       } else {
-        setTimeLeft(`${minutes}m`)
+        setTimeLeft(`${minutes}${units.m}`)
       }
     }
 
     calculate()
-    const interval = setInterval(calculate, 60_000) // Update every minute
+    const interval = setInterval(calculate, 60_000)
     return () => clearInterval(interval)
-  }, [targetDate, targetTime])
+  }, [targetDate, targetTime, units])
 
   if (!timeLeft) return null
 

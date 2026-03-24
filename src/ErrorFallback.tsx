@@ -2,10 +2,13 @@ import { Alert, AlertTitle, AlertDescription } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { AlertTriangleIcon, RefreshCwIcon } from "lucide-react";
 import type { FallbackProps } from "react-error-boundary";
+import { trackAppInsightsException } from "./lib/app-insights";
 
 export const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
+  // Track the error in Application Insights
+  trackAppInsightsException(error, { source: 'ErrorBoundary' })
+
   // When encountering an error in the development mode, rethrow it and don't display the boundary.
-  // The parent UI will take care of showing a more helpful dialog.
   if (import.meta.env.DEV) throw error;
 
   return (

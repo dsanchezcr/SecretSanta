@@ -13,9 +13,13 @@ export function generateId(): string {
  * Constant-time string comparison to prevent timing attacks on token validation.
  * Returns false if either value is empty/undefined.
  * Performs a dummy comparison on length mismatch to avoid leaking length info.
+ * Rejects inputs exceeding MAX_TOKEN_LENGTH to prevent DoS via large allocations.
  */
+const MAX_TOKEN_LENGTH = 512
+
 export function safeCompare(a: string | undefined, b: string | undefined): boolean {
   if (!a || !b) return false
+  if (a.length > MAX_TOKEN_LENGTH || b.length > MAX_TOKEN_LENGTH) return false
   const bufA = Buffer.from(a)
   const bufB = Buffer.from(b)
   if (bufA.length !== bufB.length) {

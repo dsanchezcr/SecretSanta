@@ -66,7 +66,7 @@ param deploymentId string = ''
 @secure()
 param cleanupSecret string = ''
 
-@description('Enable Managed Identity for Cosmos DB authentication (recommended for production)')
+@description('Enable Managed Identity for Cosmos DB authentication (experimental - requires API-side AAD token-credential support before enabling in production; see comment in app settings block)')
 param enableManagedIdentity bool = false
 
 @description('Enable Azure Front Door for WAF and global CDN (production only)')
@@ -341,6 +341,10 @@ resource cosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssi
 
 // ============================================================================
 // Azure Front Door (Optional, for production WAF/CDN)
+// NOTE: This currently creates only a Front Door profile + endpoint.
+// Origin group, origin, route, and optional WAF policy are not yet configured.
+// Enabling this parameter will provision billable Front Door resources without
+// routing traffic. Complete the origin/route configuration before using in prod.
 // ============================================================================
 
 resource frontDoorProfile 'Microsoft.Cdn/profiles@2024-09-01' = if (enableFrontDoor) {

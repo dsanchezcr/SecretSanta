@@ -12,6 +12,8 @@ export function QRCodeDisplay({ value, size = 200, className }: QRCodeDisplayPro
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    // Reset error state when inputs change so transient failures don't permanently hide the QR code
+    setError(false)
     if (!canvasRef.current) return
     QRCode.toCanvas(canvasRef.current, value, {
       width: size,
@@ -25,8 +27,9 @@ export function QRCodeDisplay({ value, size = 200, className }: QRCodeDisplayPro
   return (
     <canvas
       ref={canvasRef}
+      role="img"
+      aria-label={`QR code linking to: ${value}`}
       className={`rounded-lg border bg-white ${className || ''}`}
-      aria-label="QR code for game invitation"
     />
   )
 }

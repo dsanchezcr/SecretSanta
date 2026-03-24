@@ -18,21 +18,25 @@ export function generateICS(event: {
   if (time) {
     const timeParts = time.replace(/:/g, '')
     dtStart = `${dateParts}T${timeParts}00`
-    // Default 2-hour event
-    const start = new Date(`${date}T${time}`)
-    start.setHours(start.getHours() + 2)
-    const endH = String(start.getHours()).padStart(2, '0')
-    const endM = String(start.getMinutes()).padStart(2, '0')
-    dtEnd = `${dateParts}T${endH}${endM}00`
+    // Default 2-hour event; build end from a local date to handle midnight crossings
+    const [year, month, day] = date.split('-').map(Number)
+    const [hour, minute] = time.split(':').map(Number)
+    const end = new Date(year, month - 1, day, hour + 2, minute)
+    const endDate = String(end.getFullYear()) +
+      String(end.getMonth() + 1).padStart(2, '0') +
+      String(end.getDate()).padStart(2, '0')
+    const endH = String(end.getHours()).padStart(2, '0')
+    const endM = String(end.getMinutes()).padStart(2, '0')
+    dtEnd = `${endDate}T${endH}${endM}00`
   } else {
     dtStart = dateParts
-    // All-day events: end date is next day
-    const d = new Date(date)
-    d.setDate(d.getDate() + 1)
+    // All-day events: end date is next day; parse components explicitly to avoid UTC shift
+    const [year, month, day] = date.split('-').map(Number)
+    const d = new Date(year, month - 1, day + 1)
     const y = d.getFullYear()
     const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    dtEnd = `${y}${m}${day}`
+    const dy = String(d.getDate()).padStart(2, '0')
+    dtEnd = `${y}${m}${dy}`
   }
 
   const randomBytes = new Uint8Array(8)

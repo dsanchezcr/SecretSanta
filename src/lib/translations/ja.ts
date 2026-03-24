@@ -341,6 +341,8 @@ export const ja = {
     desiredGiftOptional: "（オプション）",
     desiredGiftPlaceholder: "例: 本、ビデオゲーム、衣服...",
     done: "完了",
+    downloadCard: "カードをダウンロード",
+    downloadingCard: "カードを生成中...",
     emailNotConfiguredSaveLink: "メールサービスが設定されていません。イベントを管理するためにこのリンクを保存してください",
     useOrganizerPanelLink: "このリンクを使用してオーガナイザーパネルにアクセスしてください",
     emailAlreadyExists: "このメールアドレスは別の参加者が既に使用しています",

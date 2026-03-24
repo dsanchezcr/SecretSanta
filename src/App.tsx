@@ -365,6 +365,12 @@ function App() {
       setTimeout(() => handleJoinGame(code, participantParam), 0)
     } else if (code) {
       setTimeout(() => handleJoinGame(code), 0)
+    } else if (pathname === '/' && !code) {
+      // Handle hash-based routing on initial load (e.g., /#create shared links)
+      const hash = window.location.hash.replace('#', '')
+      if (hash === 'create') {
+        setTimeout(() => setView('create-game'), 0)
+      }
     }
   }, [handleJoinGame, handleOrganizerAccess])
 

@@ -3,7 +3,7 @@ import { useLocalStorage } from './use-local-storage'
 
 export function useDarkMode() {
   const [isDark, setIsDark] = useLocalStorage<boolean>(
-    'secretsanta:dark-mode',
+    'dark-mode',
     typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
   )
 

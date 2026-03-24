@@ -60,11 +60,11 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       validateLength('Currency', body.currency, INPUT_LIMITS.CURRENCY),
       validateLength('General notes', body.generalNotes, INPUT_LIMITS.GENERAL_NOTES),
       validateLength('Organizer email', body.organizerEmail, INPUT_LIMITS.EMAIL),
-      ...body.participants.flatMap(p => [
-        validateLength(`Participant name "${p.name}"`, p.name, INPUT_LIMITS.PARTICIPANT_NAME),
-        validateLength(`Desired gift for "${p.name}"`, p.desiredGift, INPUT_LIMITS.DESIRED_GIFT),
-        validateLength(`Wish for "${p.name}"`, p.wish, INPUT_LIMITS.WISH),
-        validateLength(`Email for "${p.name}"`, p.email, INPUT_LIMITS.EMAIL),
+      ...body.participants.flatMap((p, index) => [
+        validateLength(`Participant #${index + 1} name`, p.name, INPUT_LIMITS.PARTICIPANT_NAME),
+        validateLength(`Participant #${index + 1} desired gift`, p.desiredGift, INPUT_LIMITS.DESIRED_GIFT),
+        validateLength(`Participant #${index + 1} wish`, p.wish, INPUT_LIMITS.WISH),
+        validateLength(`Participant #${index + 1} email`, p.email, INPUT_LIMITS.EMAIL),
       ])
     ].filter(Boolean)
 
@@ -116,10 +116,26 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
     const gameId = generateId()
     // Generate game code with collision check (retry up to 5 times)
     let gameCode = generateGameCode()
+    let foundUniqueCode = false
     for (let i = 0; i < 5; i++) {
       const existing = await getGameByCode(gameCode)
-      if (!existing) break
+      if (!existing) {
+        foundUniqueCode = true
+        break
+      }
       gameCode = generateGameCode()
+    }
+    if (!foundUniqueCode) {
+      const error = createErrorResponse(
+        ApiErrorCode.DATABASE_ERROR,
+        'Failed to generate unique game code',
+        undefined,
+        requestId
+      )
+      return {
+        status: getHttpStatusForError(ApiErrorCode.DATABASE_ERROR),
+        jsonBody: { error: error.message }
+      }
     }
     const organizerToken = generateId()
     const invitationToken = generateId()

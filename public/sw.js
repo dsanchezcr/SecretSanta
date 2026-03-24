@@ -35,8 +35,11 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        const clone = response.clone()
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
+        // Only cache successful same-origin responses; skip errors (404, 500, etc.)
+        if (response.ok && response.type === 'basic') {
+          const clone = response.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
+        }
         return response
       })
       .catch(() => caches.match(request).then((cached) => cached || caches.match('/')))

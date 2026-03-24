@@ -13,15 +13,13 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Secret Santa - Gift Exchange Organizer" />
     <meta property="og:description" content="Organize your Secret Santa gift exchange easily. Create games, assign participants, set budgets, and send invitations." />
-    <meta property="og:image" content="/og-image.png" />
     <meta property="og:url" content="https://secretsanta.dsanchezcr.com" />
     <meta property="og:site_name" content="Secret Santa" />
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Secret Santa - Gift Exchange Organizer" />
     <meta name="twitter:description" content="Organize your Secret Santa gift exchange easily." />
-    <meta name="twitter:image" content="/og-image.png" />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
@@ -58,13 +56,6 @@
 <body>
     <div id="app"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {})
-        })
-      }
-    </script>
 </body>
 
 </html>

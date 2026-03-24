@@ -341,6 +341,8 @@ export const zh = {
     desiredGiftOptional: "（可选）",
     desiredGiftPlaceholder: "例如: 书, 视频游戏, 衣服...",
     done: "完成",
+    downloadCard: "下载卡片",
+    downloadingCard: "正在生成卡片...",
     emailNotConfiguredSaveLink: "电子邮件服务未配置。请保存此链接以管理活动",
     useOrganizerPanelLink: "使用此链接访问组织者面板",
     emailAlreadyExists: "此电子邮件已被其他参与者使用",

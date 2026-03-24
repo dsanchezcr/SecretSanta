@@ -1,6 +1,6 @@
 /**
  * Validates that frontend and API types are in sync.
- * Run: node scripts/validate-types.js
+ * Run: node scripts/validate-types.cjs
  */
 const fs = require('fs')
 const path = require('path')
@@ -19,6 +19,9 @@ function extractInterfaces(content) {
       .split('\n')
       .map(l => l.trim())
       .filter(l => l && !l.startsWith('//') && !l.startsWith('*'))
+      // Strip inline comments before comparing
+      .map(l => l.replace(/\s*\/\/.*$/, '').trim())
+      .filter(Boolean)
       .sort()
     interfaces[name] = fields
   }
@@ -52,12 +55,14 @@ for (const name of sharedInterfaces) {
 
   for (const field of apiFields) {
     if (!frontendSet.has(field)) {
-      console.warn(`⚠️  "${name}" field in API but not frontend: ${field}`)
+      console.error(`❌ "${name}" field in API but not frontend: ${field}`)
+      hasErrors = true
     }
   }
   for (const field of frontendFields) {
     if (!apiSet.has(field)) {
-      console.warn(`⚠️  "${name}" field in frontend but not API: ${field}`)
+      console.error(`❌ "${name}" field in frontend but not API: ${field}`)
+      hasErrors = true
     }
   }
 }

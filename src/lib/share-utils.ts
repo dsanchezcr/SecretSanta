@@ -33,3 +33,25 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return success
   }
 }
+
+/**
+ * Use the Web Share API for native sharing on mobile.
+ * Returns true if sharing was initiated, false if not supported.
+ */
+export async function nativeShare(data: { title: string; text: string; url: string }): Promise<boolean> {
+  if (!navigator.share) return false
+  try {
+    await navigator.share(data)
+    return true
+  } catch {
+    // User cancelled or share failed
+    return false
+  }
+}
+
+/**
+ * Check if the Web Share API is available (for conditional UI rendering).
+ */
+export function canNativeShare(): boolean {
+  return typeof navigator !== 'undefined' && !!navigator.share
+}

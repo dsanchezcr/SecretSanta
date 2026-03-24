@@ -4,6 +4,18 @@ import { Game, Participant, Assignment, ReassignmentRequest, Language } from './
 // Supported languages array for type safety
 const SUPPORTED_LANGUAGES: Language[] = ['en', 'es', 'pt', 'fr', 'it', 'ja', 'zh', 'de', 'nl']
 
+/**
+ * HTML-escape user-provided content to prevent XSS in email templates.
+ */
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 // Helper function to get translation with fallback to English
 function getTranslation<T extends Record<Language, any>>(translations: T, language: Language): T[Language] {
   if (language in translations) {

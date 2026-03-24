@@ -93,7 +93,10 @@ export async function initializeStorage(): Promise<void> {
             console.log(`🔒 Cosmos DB local emulator: Using custom CA cert from ${emulatorCertPath}`);
           } else {
             // For Docker-based emulator, certificate isn't available locally
-            // Use rejectUnauthorized: false for local development only
+            // SAFETY: Only allow insecure connections in non-production environments
+            if (process.env.ENVIRONMENT === 'prod') {
+              throw new Error('Cannot disable TLS verification in production environment')
+            }
             console.warn(`⚠️ Local Cosmos DB emulator CA cert not found at: ${emulatorCertPath}`);
             console.log(`🔓 Using insecure connection for local Docker emulator (localhost only)`);
             clientOptions.agent = new https.Agent({ rejectUnauthorized: false });

@@ -399,11 +399,11 @@ output staticWebAppId string = staticWebApp.id
 output cosmosAccountName string = cosmosAccount.name
 output cosmosEndpoint string = cosmosAccount.properties.documentEndpoint
 output appInsightsName string = appInsights.name
-output appInsightsInstrumentationKey string = appInsights.properties.InstrumentationKey
-output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output logAnalyticsWorkspaceId string = logAnalyticsWorkspace.id
 output environment string = environment
 output resourceGroupName string = resourceGroup().name
 
+// NOTE: Deployment token is fetched directly in CI/CD via `az staticwebapp secrets list`
+// rather than outputting it here, to avoid exposing it in ARM deployment logs.
 #disable-next-line outputs-should-not-contain-secrets
 output deploymentToken string = staticWebApp.listSecrets().properties.apiKey

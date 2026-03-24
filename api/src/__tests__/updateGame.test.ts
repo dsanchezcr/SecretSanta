@@ -17,6 +17,10 @@ jest.mock('../shared/game-utils', () => ({
   safeCompare: jest.fn().mockImplementation((a: string, b: string) => a === b)
 }))
 
+jest.mock('../shared/rate-limiter', () => ({
+  checkRateLimit: jest.fn().mockReturnValue(null)
+}))
+
 import { getGameByCode, updateGame, getDatabaseStatus } from '../shared/cosmosdb'
 import { reassignParticipant, generateAssignments, generateAssignmentsWithLocks, generateId } from '../shared/game-utils'
 
@@ -1372,8 +1376,7 @@ describe('updateGame function', () => {
 
       expect(response.status).toBe(500)
       expect(response.jsonBody).toEqual({
-        error: 'Failed to update game',
-        details: 'Database error'
+        error: 'Failed to update game'
       })
     })
 

@@ -129,7 +129,7 @@ export async function archiveGameHandler(request: HttpRequest, context: Invocati
     trackError(context, error, { requestId, gameCode })
     return {
       status: 500,
-      jsonBody: { error: 'Failed to archive game', details: error.message }
+      jsonBody: { error: 'Failed to archive game' }
     }
   }
 }

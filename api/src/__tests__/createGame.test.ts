@@ -5,7 +5,8 @@ import { Game } from '../shared/types'
 // Mock the modules
 jest.mock('../shared/cosmosdb', () => ({
   createGame: jest.fn(),
-  getDatabaseStatus: jest.fn()
+  getDatabaseStatus: jest.fn(),
+  getGameByCode: jest.fn().mockResolvedValue(null)
 }))
 
 jest.mock('../shared/rate-limiter', () => ({
@@ -15,6 +16,13 @@ jest.mock('../shared/rate-limiter', () => ({
 jest.mock('../shared/game-utils', () => ({
   generateGameCode: jest.fn().mockReturnValue('123456'),
   generateId: jest.fn().mockImplementation(() => 'mock-id-' + Math.random().toString(36).substr(2, 9)),
+  generateAssignmentsWithResult: jest.fn().mockImplementation((participants) => ({
+    assignments: participants.map((p: any, i: number) => ({
+      giverId: p.id,
+      receiverId: participants[(i + 1) % participants.length].id
+    })),
+    exclusionsHonored: true
+  })),
   generateAssignments: jest.fn().mockImplementation((participants) => 
     participants.map((p: any, i: number) => ({
       giverId: p.id,

@@ -12,11 +12,18 @@ export function generateId(): string {
 /**
  * Constant-time string comparison to prevent timing attacks on token validation.
  * Returns false if either value is empty/undefined.
+ * Performs a dummy comparison on length mismatch to avoid leaking length info.
  */
 export function safeCompare(a: string | undefined, b: string | undefined): boolean {
   if (!a || !b) return false
-  if (a.length !== b.length) return false
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) {
+    // Perform a dummy comparison to prevent timing leak on length mismatch
+    timingSafeEqual(bufA, Buffer.alloc(bufA.length))
+    return false
+  }
+  return timingSafeEqual(bufA, bufB)
 }
 
 // Crypto-secure Fisher-Yates shuffle
@@ -29,7 +36,17 @@ function secureShuffle<T>(arr: T[]): T[] {
   return shuffled
 }
 
+export interface AssignmentResult {
+  assignments: Assignment[]
+  exclusionsHonored: boolean
+}
+
 export function generateAssignments(participants: Participant[], exclusions: ExclusionPair[] = []): Assignment[] {
+  const result = generateAssignmentsWithResult(participants, exclusions)
+  return result.assignments
+}
+
+export function generateAssignmentsWithResult(participants: Participant[], exclusions: ExclusionPair[] = []): AssignmentResult {
   if (participants.length < 3) {
     throw new Error('Need at least 3 participants')
   }
@@ -57,7 +74,7 @@ export function generateAssignments(participants: Participant[], exclusions: Exc
       assignments.push({ giverId: giver.id, receiverId: receiver.id })
     }
 
-    if (valid) return assignments
+    if (valid) return { assignments, exclusionsHonored: true }
   }
 
   // Fallback: return assignments without exclusion enforcement and log a warning
@@ -75,7 +92,7 @@ export function generateAssignments(participants: Participant[], exclusions: Exc
     })
   }
 
-  return assignments
+  return { assignments, exclusionsHonored: false }
 }
 
 /**

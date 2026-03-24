@@ -14,8 +14,13 @@ import {
   sendNewOrganizerLinkEmail,
   EventChanges
 } from '../shared/email-service'
+import { checkRateLimit } from '../shared/rate-limiter'
 
 export async function updateGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  // Rate limit check
+  const rateLimitResponse = checkRateLimit(request, 'default')
+  if (rateLimitResponse) return rateLimitResponse
+
   const code = request.params.code
   
   if (!code) {
@@ -900,7 +905,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
     context.error('Error updating game:', error)
     return {
       status: 500,
-      jsonBody: { error: 'Failed to update game', details: error.message }
+      jsonBody: { error: 'Failed to update game' }
     }
   }
 }

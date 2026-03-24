@@ -1,8 +1,13 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { getGameByCode, getDatabaseStatus, Game } from '../shared/cosmosdb'
 import { safeCompare } from '../shared/game-utils'
+import { checkRateLimit } from '../shared/rate-limiter'
 
 export async function getGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  // Rate limit check
+  const rateLimitResponse = checkRateLimit(request, 'default')
+  if (rateLimitResponse) return rateLimitResponse
+
   const code = request.params.code
   
   if (!code) {
@@ -14,10 +19,10 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
   
   context.log(`Getting game with code: ${code}`)
   
-  // Get optional query parameters for token-based access
-  const participantToken = request.query.get('participantToken')
-  const organizerToken = request.query.get('organizerToken')
-  const participantId = request.query.get('participantId') // For non-protected games to filter assignments
+  // Get optional parameters for token-based access (support both query params and headers)
+  const participantToken = request.query.get('participantToken') || request.headers.get('x-participant-token')
+  const organizerToken = request.query.get('organizerToken') || request.headers.get('x-organizer-token')
+  const participantId = request.query.get('participantId')
   
   // Check database connectivity first
   const dbStatus = getDatabaseStatus()
@@ -190,7 +195,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
     context.error('Error getting game:', error)
     return {
       status: 500,
-      jsonBody: { error: 'Failed to get game', details: error.message }
+      jsonBody: { error: 'Failed to get game' }
     }
   }
 }

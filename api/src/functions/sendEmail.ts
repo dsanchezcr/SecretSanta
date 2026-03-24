@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { getGameByCode, getDatabaseStatus } from '../shared/cosmosdb'
 import { safeCompare } from '../shared/game-utils'
 import { checkRateLimit } from '../shared/rate-limiter'
+import { SendEmailPayload, INPUT_LIMITS } from '../shared/types'
 import {
   getEmailServiceStatus,
   sendOrganizerEmail, 
@@ -45,8 +46,16 @@ export async function sendEmailHandler(request: HttpRequest, context: Invocation
   }
 
   try {
-    const body = await request.json() as any
+    const body = await request.json() as SendEmailPayload
     const { code, type, organizerToken, participantId, language = 'es', customMessage } = body
+
+    // Validate custom message length
+    if (customMessage && customMessage.length > INPUT_LIMITS.GENERAL_NOTES) {
+      return {
+        status: 400,
+        jsonBody: { error: `Custom message must be ${INPUT_LIMITS.GENERAL_NOTES} characters or less` }
+      }
+    }
 
     if (!code) {
       return {

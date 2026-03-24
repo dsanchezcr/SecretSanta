@@ -20,9 +20,10 @@ Secret Santa gift exchange web application built with React + Vite, Azure Functi
 - 📱 **QR Code Sharing**: Generate QR codes for invitation links
 - 🌙 **Dark Mode**: Toggle dark theme with OS preference detection
 - 📱 **PWA Support**: Installable as a Progressive Web App with offline caching
-- 🔐 **API Rate Limiting**: IP-based rate limiting on game creation and email endpoints
-- 🛡️ **Hardened CSP**: Strict Content Security Policy with no `unsafe-eval`, `frame-ancestors 'none'`, and `Permissions-Policy`
-- 🧹 **Auto-Cleanup**: Games automatically archived 3 days after the event
+- 🔐 **API Rate Limiting**: IP-based rate limiting on all API endpoints (game creation, retrieval, updates, email)
+- 🛡️ **Hardened CSP & HSTS**: Strict CSP, HSTS, `Permissions-Policy`, no `unsafe-eval`, `frame-ancestors 'none'`
+- 🧹 **Auto-Cleanup**: Games archived 3 days after event, permanently deleted after 30 days (GDPR compliant)
+- 📤 **Web Share API**: Native mobile sharing via `navigator.share()` when available
 - 📊 **Application Insights**: Built-in monitoring and error tracking
 - ♿ **Accessibility Testing**: Automated WCAG 2.0 AA checks via axe-core in E2E tests
 - 🧪 **Cross-Browser E2E**: Playwright tests run in Chromium, Firefox, and WebKit
@@ -288,12 +289,18 @@ Each environment includes Application Insights for:
 - **No External Sharing**: Data is never shared with third parties
 ## 🔒 Security Highlights
 
-- **Crypto-secure randomness**: All tokens, game codes, and assignments use `crypto.randomInt` / `crypto.randomUUID` instead of `Math.random()`
-- **Timing-safe comparisons**: All token validations use `crypto.timingSafeEqual` to prevent timing attacks
+- **Crypto-secure randomness**: All tokens, game codes, and assignments use `crypto.randomInt` / `crypto.randomUUID` — including client-side offline operations
+- **Timing-safe comparisons**: All token validations use `crypto.timingSafeEqual` with dummy comparison on length mismatch to prevent timing side-channels
 - **Input validation & length limits**: Max lengths enforced on all fields (names: 80 chars, notes: 2000 chars, max 100 participants)
-- **Rate limiting**: IP-based rate limiting on game creation (10/min) and email sending (20/min)
-- **Content Security Policy**: Strict CSP with no `unsafe-eval`, `frame-ancestors 'none'`, and `Permissions-Policy`
+- **Rate limiting**: IP-based rate limiting on all API endpoints — game creation (10/min), email (20/min), general (60/min)
+- **Content Security Policy**: Strict CSP with HSTS, no `unsafe-eval`, `frame-ancestors 'none'`, and `Permissions-Policy`
 - **No error leaking**: API error responses never expose internal details or stack traces
+- **HTML-escaped emails**: All user content is HTML-escaped before embedding in email templates
+- **Game code collision detection**: New game codes are checked against existing codes to prevent collisions
+- **Production TLS guard**: Cosmos DB emulator's TLS bypass is blocked in production environments
+- **GDPR-compliant data retention**: Archived games are permanently deleted after 30 days
+- **Service worker safety**: Only static assets are cached — never API responses or dynamic content
+- **localStorage TTL**: Old game data is automatically cleaned up after 30 days
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting and full security policy.
 ## 📜 License

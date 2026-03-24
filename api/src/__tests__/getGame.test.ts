@@ -15,6 +15,10 @@ jest.mock('../shared/game-utils', () => ({
   })
 }))
 
+jest.mock('../shared/rate-limiter', () => ({
+  checkRateLimit: jest.fn().mockReturnValue(null)
+}))
+
 import { getGameByCode, getDatabaseStatus } from '../shared/cosmosdb'
 
 const mockGetGameByCode = getGameByCode as jest.Mock
@@ -144,8 +148,7 @@ describe('getGame function', () => {
 
     expect(response.status).toBe(500)
     expect(response.jsonBody).toEqual({
-      error: 'Failed to get game',
-      details: 'Query failed'
+      error: 'Failed to get game'
     })
   })
 

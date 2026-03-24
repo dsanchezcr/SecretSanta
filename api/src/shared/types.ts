@@ -245,3 +245,15 @@ export type GameUpdatePayload =
   | UpdateParticipantEmailPayload
   | ConfirmAssignmentPayload
   | JoinInvitationPayload
+
+export type SendEmailType = 'organizer' | 'participant' | 'allParticipants' | 'reminder' | 'reminderAll' | 'recoverOrganizerLink' | 'recoverParticipantLink'
+
+export interface SendEmailPayload {
+  code: string
+  type: SendEmailType
+  organizerToken?: string
+  participantId?: string
+  email?: string
+  language?: Language
+  customMessage?: string
+}

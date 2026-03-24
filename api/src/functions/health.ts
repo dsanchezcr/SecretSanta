@@ -186,8 +186,8 @@ export async function healthHandler(request: HttpRequest, context: InvocationCon
     checks
   }
   
-  // Include system info in verbose mode
-  if (verbose) {
+  // Include system info in verbose mode (only in non-production environments)
+  if (verbose && process.env.ENVIRONMENT !== 'prod') {
     result.system = getSystemInfo()
   }
   

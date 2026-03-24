@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
-import { createGame, Game, getDatabaseStatus } from '../shared/cosmosdb'
-import { generateGameCode, generateId, generateAssignments, validateDateString } from '../shared/game-utils'
+import { createGame, Game, getDatabaseStatus, getGameByCode } from '../shared/cosmosdb'
+import { generateGameCode, generateId, generateAssignmentsWithResult, validateDateString } from '../shared/game-utils'
 import { getEmailServiceStatus, sendOrganizerEmail, sendAllParticipantEmails } from '../shared/email-service'
 import { trackError, trackEvent, ApiErrorCode, createErrorResponse, getHttpStatusForError } from '../shared/telemetry'
 import { CreateGamePayload, INPUT_LIMITS, validateLength } from '../shared/types'
@@ -114,7 +114,13 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
     }
     
     const gameId = generateId()
-    const gameCode = generateGameCode()
+    // Generate game code with collision check (retry up to 5 times)
+    let gameCode = generateGameCode()
+    for (let i = 0; i < 5; i++) {
+      const existing = await getGameByCode(gameCode)
+      if (!existing) break
+      gameCode = generateGameCode()
+    }
     const organizerToken = generateId()
     const invitationToken = generateId()
     
@@ -138,7 +144,8 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
     }))
     
     const exclusions = body.exclusions || []
-    const assignments = generateAssignments(participants, exclusions)
+    const assignmentResult = generateAssignmentsWithResult(participants, exclusions)
+    const assignments = assignmentResult.assignments
     
     const game: Game = {
       id: gameId,
@@ -201,7 +208,8 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       status: 201,
       jsonBody: {
         ...createdGame,
-        emailResults: emailStatus.configured ? emailResults : undefined
+        emailResults: emailStatus.configured ? emailResults : undefined,
+        exclusionsHonored: exclusions.length > 0 ? assignmentResult.exclusionsHonored : undefined
       }
     }
   } catch (error: any) {

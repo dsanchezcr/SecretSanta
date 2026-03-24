@@ -21,6 +21,26 @@ import { useLocalStorage } from '@/hooks/use-local-storage'
 import { checkApiStatus, getGameAPI, CreateGameResponse } from '@/lib/api'
 import { initializeAnalytics } from '@/lib/analytics'
 
+// Clean up old game data from localStorage (TTL: 30 days)
+function cleanupOldGameData() {
+  try {
+    const raw = localStorage.getItem('secretsanta:games')
+    if (!raw) return
+    const games = JSON.parse(raw) as Record<string, { createdAt?: number }>
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
+    let changed = false
+    for (const code of Object.keys(games)) {
+      if (games[code]?.createdAt && games[code].createdAt! < cutoff) {
+        delete games[code]
+        changed = true
+      }
+    }
+    if (changed) {
+      localStorage.setItem('secretsanta:games', JSON.stringify(games))
+    }
+  } catch { /* ignore */ }
+}
+
 // API health check configuration for initial load
 const INITIAL_CHECK_RETRIES = 2
 const INITIAL_CHECK_RETRY_DELAY = 1000 // ms
@@ -120,6 +140,9 @@ function App() {
     
     // Initialize Google Analytics if user has consented
     initializeAnalytics()
+    
+    // Clean up old game data from localStorage (>30 days)
+    cleanupOldGameData()
     
     // Re-check every 30 seconds (without retries)
     const interval = setInterval(() => checkStatus(false), 30000)

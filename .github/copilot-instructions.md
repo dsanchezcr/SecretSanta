@@ -69,7 +69,7 @@ secretsanta/
 - **Database**: Azure Cosmos DB (serverless)
 - **Email**: Azure Communication Services (optional)
 - **Telemetry**: Application Insights via `api/src/shared/telemetry.ts`
-- **Rate Limiting**: IP-based rate limiting via `api/src/shared/rate-limiter.ts` (createGame: 10/min, sendEmail: 20/min)
+- **Rate Limiting**: IP-based rate limiting via `api/src/shared/rate-limiter.ts` (createGame: 10/min, sendEmail: 20/min, GET/PATCH: 60/min)
 - **Security**:
   - All tokens/IDs generated with `crypto.randomUUID()` / `crypto.randomInt()`
   - Token comparisons use `safeCompare()` (timing-safe via `crypto.timingSafeEqual`)
@@ -214,7 +214,7 @@ az deployment group create \
 - **Exclusion Rules**: Optional pairs that should never be assigned to each other
 - **Reassignment**: Preserves cycle integrity
 - **Date Validation**: Games can only be created for today or future dates
-- **Data Retention**: Games auto-deleted 3 days after event date
+- **Data Retention**: Games auto-archived 3 days after event date, permanently deleted 30 days after archival (GDPR compliant)
 - **Manual Deletion**: Organizers can delete games anytime via DELETE endpoint
 
 ## Frontend Views

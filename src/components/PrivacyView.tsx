@@ -126,6 +126,7 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
               <ul className="list-disc list-inside space-y-2 ml-2">
                 <li>{t('privacyDataRetentionItem1')}</li>
                 <li>{t('privacyDataRetentionItem2')}</li>
+                <li>{t('privacyDataRetentionItem3')}</li>
               </ul>
             </div>
           </Card>

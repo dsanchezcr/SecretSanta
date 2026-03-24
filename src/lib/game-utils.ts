@@ -1,11 +1,42 @@
 import { Assignment, Participant, Language } from './types'
 
+// Generate a cryptographically secure random integer in [0, maxExclusive)
+function getSecureRandomInt(maxExclusive: number): number {
+  if (maxExclusive <= 0) {
+    throw new Error('maxExclusive must be positive')
+  }
+  const array = new Uint32Array(1)
+  window.crypto.getRandomValues(array)
+  return array[0] % maxExclusive
+}
+
+// Generate a cryptographically secure base-36 string of at least the given length
+function getSecureRandomBase36(length: number): string {
+  if (length <= 0) {
+    throw new Error('length must be positive')
+  }
+  let result = ''
+  const buffer = new Uint32Array(4)
+  while (result.length < length) {
+    window.crypto.getRandomValues(buffer)
+    for (let i = 0; i < buffer.length && result.length < length; i++) {
+      result += buffer[i].toString(36)
+    }
+  }
+  return result.slice(0, length)
+}
+
 export function generateGameCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  // Preserve the original 6-digit range [100000, 999999]
+  const value = 100000 + getSecureRandomInt(900000)
+  return value.toString()
 }
 
 export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2)
+  // Date prefix plus secure random suffix
+  const prefix = Date.now().toString(36)
+  const suffix = getSecureRandomBase36(10)
+  return prefix + suffix
 }
 
 /**

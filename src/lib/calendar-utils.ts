@@ -35,7 +35,12 @@ export function generateICS(event: {
     dtEnd = `${y}${m}${day}`
   }
 
-  const uid = `secretsanta-${dateParts}-${Math.random().toString(36).slice(2)}@secretsanta`
+  const randomBytes = new Uint8Array(8)
+  window.crypto.getRandomValues(randomBytes)
+  const randomHex = Array.from(randomBytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+  const uid = `secretsanta-${dateParts}-${randomHex}@secretsanta`
   const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
 
   const lines = [

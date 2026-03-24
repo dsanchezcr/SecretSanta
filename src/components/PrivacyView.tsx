@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ArrowLeft, ShieldCheck, Database, Lock, Trash, Globe } from '@phosphor-icons/react'
+import { ArrowLeft, ShieldCheck, Database, Lock, Trash, Globe, Shield } from '@phosphor-icons/react'
 import { useLanguage } from './useLanguage'
 import { LanguageToggle } from './LanguageToggle'
 import { motion } from 'framer-motion'
@@ -144,6 +144,30 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
             </h2>
             <div className="space-y-3 text-muted-foreground">
               <p>{t('privacyThirdPartiesDesc')}</p>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Security & Data Protection */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+        >
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+              <Shield size={20} className="text-primary" />
+              {t('privacySecurityTitle')}
+            </h2>
+            <div className="space-y-3 text-muted-foreground">
+              <p>{t('privacySecurityDesc')}</p>
+              <ul className="list-disc list-inside space-y-2 ml-2">
+                <li>{t('privacySecurityItem1')}</li>
+                <li>{t('privacySecurityItem2')}</li>
+                <li>{t('privacySecurityItem3')}</li>
+                <li>{t('privacySecurityItem4')}</li>
+                <li>{t('privacySecurityItem5')}</li>
+              </ul>
             </div>
           </Card>
         </motion.div>

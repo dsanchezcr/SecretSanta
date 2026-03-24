@@ -113,7 +113,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
-        run: npx playwright test
+        run: npx playwright test --project=chromium
 
       - name: Upload E2E test report
         uses: actions/upload-artifact@v7
@@ -316,7 +316,7 @@ jobs:
           BASE_URL: ${{ needs.preview.outputs.preview_url }}
         run: |
           echo "Running E2E tests against Preview: $BASE_URL"
-          npx playwright test
+          npx playwright test --project=chromium
 
       - name: Upload Preview E2E test report
         uses: actions/upload-artifact@v7
@@ -577,7 +577,7 @@ jobs:
           BASE_URL: ${{ needs.deploy-qa.outputs.deployed_url }}
         run: |
           echo "Running E2E tests against QA: $BASE_URL"
-          npx playwright test
+          npx playwright test --project=chromium
 
       - name: Upload QA E2E test report
         uses: actions/upload-artifact@v7

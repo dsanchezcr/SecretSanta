@@ -348,6 +348,8 @@ export const fr = {
     participantNameExists: "Ce nom de participant existe déjà",
     eventCountdown: "Temps avant l'événement",
     addToCalendar: "Ajouter au calendrier",
+    downloadCard: "Télécharger la carte",
+    downloadingCard: "Génération de la carte...",
     editEvent: "Modifier l'Événement",
     editGameDetails: "Modifier les Détails du Jeu",
     editParticipantDesc: "Modifiez les données du participant",

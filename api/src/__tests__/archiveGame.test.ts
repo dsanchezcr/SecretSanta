@@ -103,6 +103,15 @@ describe('archiveGame function', () => {
     expect(result.jsonBody).toHaveProperty('error')
   })
 
+  it('should return 503 when database is not connected with null error', async () => {
+    mockGetDatabaseStatus.mockReturnValue({ connected: false, error: null })
+
+    const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
+    const result = await archiveGameHandler(request, mockContext)
+
+    expect(result.status).toBe(503)
+  })
+
   it('should return 401 when organizer token is missing', async () => {
     const request = createMockRequest({ code: '123456' })
     const result = await archiveGameHandler(request, mockContext)
@@ -195,5 +204,15 @@ describe('archiveGame function', () => {
     expect(result.status).toBe(409)
     expect(result.jsonBody).toHaveProperty('error', 'Game is already archived')
     expect(mockArchiveGame).not.toHaveBeenCalled()
+  })
+
+  it('should return 409 when archiveGame throws GameAlreadyArchivedError', async () => {
+    mockGetGameByCode.mockResolvedValue(mockGame)
+    mockArchiveGame.mockRejectedValue(new cosmosdb.GameAlreadyArchivedError('game-id-123'))
+
+    const request = createMockRequest({ code: '123456' }, 'organizerToken=valid-organizer-token')
+    const result = await archiveGameHandler(request, mockContext)
+
+    expect(result.status).toBe(409)
   })
 })

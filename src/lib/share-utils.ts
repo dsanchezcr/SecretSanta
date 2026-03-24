@@ -1,13 +1,10 @@
 /**
- * Generates a QR code SVG data URL using a third-party API-free approach.
- * Uses a simple encoding of the URL into a visual grid pattern.
- * For production use, this creates a shareable text-based representation.
+ * Sharing and clipboard utilities.
  */
 
 /**
  * Copy the invitation URL to clipboard and show a toast.
- * This is the primary sharing mechanism; QR code generation
- * can be added later with a library like `qrcode`.
+ * QR code display is handled by the QRCodeDisplay component.
  */
 export function getShareableUrl(baseUrl: string, gameCode: string, token?: string): string {
   const params = new URLSearchParams()

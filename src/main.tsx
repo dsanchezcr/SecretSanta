@@ -15,6 +15,21 @@ if ('serviceWorker' in navigator) {
   })
 }
 
+// Inject JSON-LD structured data via JS (CSP-safe: avoids inline <script> in HTML)
+const ldJson = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Secret Santa',
+  description: 'Organize your Secret Santa gift exchange easily. Create games, assign participants, set budgets, and send invitations.',
+  applicationCategory: 'EntertainmentApplication',
+  operatingSystem: 'Any',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+}
+const ldScript = document.createElement('script')
+ldScript.type = 'application/ld+json'
+ldScript.text = JSON.stringify(ldJson)
+document.head.appendChild(ldScript)
+
 createRoot(document.getElementById('app')!).render(
   <ErrorBoundary FallbackComponent={ErrorFallback}>
     <App />

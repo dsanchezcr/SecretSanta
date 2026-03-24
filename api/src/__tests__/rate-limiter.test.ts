@@ -45,3 +45,37 @@ describe('rate-limiter', () => {
     delete RATE_LIMITS[category]
   })
 })
+
+describe('rate-limiter - cleanup interval', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('should clean up stale entries after the interval', () => {
+    const { checkRateLimit: rl, RATE_LIMITS: limits } = jest.requireActual('../shared/rate-limiter') as typeof import('../shared/rate-limiter')
+    const category = 'test-cleanup-' + Date.now()
+    limits[category] = { windowMs: 1000, maxRequests: 1 }
+
+    const createMockReq = (ip: string) => ({
+      headers: new Map([['x-forwarded-for', ip]]),
+      method: 'POST',
+      url: 'http://localhost/api/games',
+      query: new URLSearchParams(),
+      params: {},
+    }) as unknown as import('@azure/functions').HttpRequest
+
+    const request = createMockReq('10.0.0.99')
+    rl(request, category) // consume the 1 allowed request
+    const blocked = rl(request, category)
+    expect(blocked).not.toBeNull() // blocked
+
+    // Advance time past the cleanup interval (5 minutes)
+    jest.advanceTimersByTime(5 * 60 * 1000 + 100)
+
+    delete limits[category]
+  })
+})

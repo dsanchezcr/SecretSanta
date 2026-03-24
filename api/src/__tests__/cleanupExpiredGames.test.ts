@@ -1,4 +1,4 @@
-import { performCleanup, cleanupExpiredGamesHandler } from '../functions/cleanupExpiredGames'
+import { performCleanup, performHardDelete, cleanupExpiredGamesHandler } from '../functions/cleanupExpiredGames'
 import * as cosmosdb from '../shared/cosmosdb'
 import { HttpRequest, InvocationContext } from '@azure/functions'
 import { Game } from '../shared/types'
@@ -129,6 +129,13 @@ describe('cleanupExpiredGames HTTP function', () => {
       const request = createMockRequest({ 'x-cleanup-secret': 'test-secret' })
       const response = await cleanupExpiredGamesHandler(request, mockContext)
       expect(response.status).toBe(200)
+    })
+
+    it('should return 500 when cleanup throws an error', async () => {
+      mockGetContainer.mockRejectedValue(new Error('Container error'))
+      const request = createMockRequest({ 'x-cleanup-secret': 'test-secret' })
+      const response = await cleanupExpiredGamesHandler(request, mockContext)
+      expect(response.status).toBe(500)
     })
 
     it('should return 503 when database is not connected', async () => {
@@ -264,6 +271,63 @@ describe('cleanupExpiredGames HTTP function', () => {
 
       expect(mockContext.log).toHaveBeenCalledWith(expect.stringContaining('Archived game: 123456'))
       expect(mockContext.log).toHaveBeenCalledWith(expect.stringContaining('event date: 2025-11-01'))
+    })
+  })
+
+  describe('performHardDelete', () => {
+    it('should return zero counts when database is not connected', async () => {
+      mockGetDatabaseStatus.mockReturnValue({ connected: false, error: 'Not connected' })
+
+      const result = await performHardDelete(mockContext)
+
+      expect(result.deletedCount).toBe(0)
+      expect(result.failedCount).toBe(0)
+      expect(mockGetContainer).not.toHaveBeenCalled()
+    })
+
+    it('should return zero counts when no old archived games exist', async () => {
+      mockQuery.mockReturnValue({
+        fetchAll: jest.fn().mockResolvedValue({ resources: [] })
+      })
+
+      const result = await performHardDelete(mockContext)
+
+      expect(result.deletedCount).toBe(0)
+      expect(result.failedCount).toBe(0)
+    })
+
+    it('should hard-delete old archived games and return correct counts', async () => {
+      const oldArchivedGame = {
+        ...createMockGame('game-old', '999999', '2024-01-01'),
+        isArchived: true,
+        archivedAt: Date.now() - (35 * 24 * 60 * 60 * 1000)
+      }
+      mockQuery.mockReturnValue({
+        fetchAll: jest.fn().mockResolvedValue({ resources: [oldArchivedGame] })
+      })
+      mockDelete.mockResolvedValue({})
+
+      const result = await performHardDelete(mockContext)
+
+      expect(result.deletedCount).toBe(1)
+      expect(result.failedCount).toBe(0)
+    })
+
+    it('should count failures when hard-delete fails', async () => {
+      const oldArchivedGame = {
+        ...createMockGame('game-old', '999999', '2024-01-01'),
+        isArchived: true,
+        archivedAt: Date.now() - (35 * 24 * 60 * 60 * 1000)
+      }
+      mockQuery.mockReturnValue({
+        fetchAll: jest.fn().mockResolvedValue({ resources: [oldArchivedGame] })
+      })
+      mockDelete.mockRejectedValue(new Error('Delete failed'))
+
+      const result = await performHardDelete(mockContext)
+
+      expect(result.deletedCount).toBe(0)
+      expect(result.failedCount).toBe(1)
     })
   })
 })

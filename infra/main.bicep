@@ -308,7 +308,10 @@ resource staticWebAppSettings 'Microsoft.Web/staticSites/config@2024-11-01' = {
       // For staging/prod: Uses the shared resource's actual hostname
       APP_BASE_URL: 'https://${staticWebApp.properties.defaultHostname}'
     },
-    // Only include Cosmos DB key when NOT using Managed Identity
+    // Include Cosmos DB key unless Managed Identity is fully enabled.
+    // NOTE: The API's initializeStorage() requires COSMOS_KEY when not using AAD auth.
+    // Only set enableManagedIdentity=true once the API supports token-credential-based
+    // Cosmos DB access to avoid a configuration mismatch at runtime.
     !enableManagedIdentity ? {
       COSMOS_KEY: cosmosAccount.listKeys().primaryMasterKey
     } : {},
@@ -330,7 +333,7 @@ resource cosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssi
   name: guid(cosmosAccount.id, staticWebApp.id, '00000000-0000-0000-0000-000000000002')
   properties: {
     // Cosmos DB Built-in Data Contributor role
-    roleDefinitionId: '/${subscription().id}/resourceGroups/${resourceGroup().name}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosAccountName}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
+    roleDefinitionId: '${cosmosAccount.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
     principalId: staticWebApp.identity.principalId
     scope: cosmosAccount.id
   }

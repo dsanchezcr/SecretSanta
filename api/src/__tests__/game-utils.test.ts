@@ -3,6 +3,7 @@ import {
   generateId,
   generateAssignments,
   generateAssignmentsWithLocks,
+  generateAssignmentsWithResult,
   reassignParticipant,
   validateDateString
 } from '../shared/game-utils'
@@ -501,6 +502,68 @@ describe('game-utils', () => {
 
       const resultMax = validateDateString('2100-12-31')
       expect(resultMax.valid).toBe(true)
+    })
+  })
+
+  describe('generateAssignmentsWithResult', () => {
+    const makeParticipants = (count: number): Participant[] =>
+      Array.from({ length: count }, (_, i) => ({
+        id: `p${i + 1}`,
+        name: `Participant ${i + 1}`,
+        desiredGift: '',
+        wish: '',
+        hasConfirmedAssignment: false,
+        hasPendingReassignmentRequest: false
+      }))
+
+    it('should generate valid assignments with no exclusions', () => {
+      const participants = makeParticipants(4)
+      const result = generateAssignmentsWithResult(participants, [])
+
+      expect(result.assignments).toHaveLength(4)
+      expect(result.exclusionsHonored).toBe(true)
+    })
+
+    it('should honor exclusion rules when possible', () => {
+      const participants = makeParticipants(4)
+      const exclusions = [{ participantId1: 'p1', participantId2: 'p2' }]
+
+      // Run multiple times since shuffling is random
+      let honored = false
+      for (let i = 0; i < 10; i++) {
+        const result = generateAssignmentsWithResult(participants, exclusions)
+        if (result.exclusionsHonored) {
+          honored = true
+          // Verify p1 doesn't give to p2 and p2 doesn't give to p1
+          result.assignments.forEach(a => {
+            if (a.giverId === 'p1') expect(a.receiverId).not.toBe('p2')
+            if (a.giverId === 'p2') expect(a.receiverId).not.toBe('p1')
+          })
+        }
+      }
+      expect(honored).toBe(true)
+    })
+
+    it('should fall back to unrestricted assignments when exclusions cannot be satisfied', () => {
+      // 3 participants with circular exclusions that can never all be satisfied
+      // p1 cannot give to p2, p2 cannot give to p3, p3 cannot give to p1
+      // AND p1 cannot give to p3, p2 cannot give to p1, p3 cannot give to p2
+      // This makes it impossible to satisfy all exclusions
+      const participants = makeParticipants(3)
+      const exclusions = [
+        { participantId1: 'p1', participantId2: 'p2' },
+        { participantId1: 'p2', participantId2: 'p3' },
+        { participantId1: 'p3', participantId2: 'p1' },
+        { participantId1: 'p1', participantId2: 'p3' },
+        { participantId1: 'p2', participantId2: 'p1' },
+        { participantId1: 'p3', participantId2: 'p2' }
+      ]
+
+      const result = generateAssignmentsWithResult(participants, exclusions)
+
+      expect(result.assignments).toHaveLength(3)
+      // With all assignments excluded, it falls back
+      expect(result.exclusionsHonored).toBe(false)
     })
   })
 })

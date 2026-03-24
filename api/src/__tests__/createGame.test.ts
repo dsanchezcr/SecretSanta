@@ -50,11 +50,12 @@ jest.mock('../shared/game-utils', () => ({
   })
 }))
 
-import { createGame, getDatabaseStatus } from '../shared/cosmosdb'
+import { createGame, getDatabaseStatus, getGameByCode } from '../shared/cosmosdb'
 import { generateGameCode, generateId, generateAssignments } from '../shared/game-utils'
 
 const mockCreateGame = createGame as jest.Mock
 const mockGetDatabaseStatus = getDatabaseStatus as jest.Mock
+const mockGetGameByCode = getGameByCode as jest.Mock
 const mockGenerateGameCode = generateGameCode as jest.Mock
 const mockGenerateId = generateId as jest.Mock
 const mockGenerateAssignments = generateAssignments as jest.Mock
@@ -718,5 +719,157 @@ describe('createGame function', () => {
       })
     })
 
+  })
+
+  describe('input length validation', () => {
+    it('should reject when participant count exceeds MAX_PARTICIPANTS', async () => {
+      const participants = Array.from({ length: 101 }, (_, i) => ({ name: `Participant${i + 1}` }))
+      const requestBody = {
+        name: 'Too Many Participants',
+        participants
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Maximum')
+      })
+    })
+
+    it('should reject when game name exceeds max length', async () => {
+      const requestBody = {
+        name: 'A'.repeat(101), // INPUT_LIMITS.GAME_NAME = 100
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Game name must be')
+      })
+    })
+
+    it('should reject when participant name exceeds max length', async () => {
+      const requestBody = {
+        name: 'Test Game',
+        participants: [
+          { name: 'A'.repeat(81) }, // INPUT_LIMITS.PARTICIPANT_NAME = 80
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Participant #1 name must be')
+      })
+    })
+
+    it('should reject when participant email exceeds max length', async () => {
+      const requestBody = {
+        name: 'Test Game',
+        participants: [
+          { name: 'Alice', email: 'a'.repeat(250) + '@test.com' }, // > EMAIL limit of 254
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Participant #1 email must be')
+      })
+    })
+
+    it('should reject when location exceeds max length', async () => {
+      const requestBody = {
+        name: 'Test Game',
+        location: 'A'.repeat(201), // INPUT_LIMITS.LOCATION = 200
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Location must be')
+      })
+    })
+  })
+
+  describe('game code collision handling', () => {
+    it('should return 503 when all retry attempts for unique code are exhausted', async () => {
+      // Make getGameByCode always return a mock game (all codes already taken)
+      const mockExistingGame = { id: 'existing-game', code: '123456' }
+      mockGetGameByCode.mockResolvedValue(mockExistingGame)
+
+      const requestBody = {
+        name: 'Collision Test',
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(503)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Failed to generate unique game code')
+      })
+
+      // getGameByCode should have been called 5 times (one per retry)
+      expect(mockGetGameByCode).toHaveBeenCalledTimes(5)
+
+      // Restore default mock
+      mockGetGameByCode.mockResolvedValue(null)
+    })
+
+    it('should succeed after a code collision on first attempt', async () => {
+      const mockExistingGame = { id: 'existing-game', code: '123456' }
+      // First call returns existing (collision), second returns null (unique)
+      mockGetGameByCode
+        .mockResolvedValueOnce(mockExistingGame)
+        .mockResolvedValueOnce(null)
+
+      const requestBody = {
+        name: 'One Collision Game',
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      expect(mockGetGameByCode).toHaveBeenCalledTimes(2)
+
+      // Restore default mock
+      mockGetGameByCode.mockResolvedValue(null)
+    })
   })
 })

@@ -1,12 +1,17 @@
 import { Assignment, Participant, Language } from './types'
 
 // Generate a cryptographically secure random integer in [0, maxExclusive)
+// Uses rejection sampling to eliminate modulo bias
 function getSecureRandomInt(maxExclusive: number): number {
   if (maxExclusive <= 0) {
     throw new Error('maxExclusive must be positive')
   }
+  // Rejection sampling: discard values in the biased tail
+  const limit = 2 ** 32 - (2 ** 32 % maxExclusive)
   const array = new Uint32Array(1)
-  window.crypto.getRandomValues(array)
+  do {
+    window.crypto.getRandomValues(array)
+  } while (array[0] >= limit)
   return array[0] % maxExclusive
 }
 

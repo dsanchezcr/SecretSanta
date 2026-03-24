@@ -680,7 +680,7 @@ export function AssignmentView({
                       location: game.location,
                       description: game.generalNotes || undefined,
                     })
-                    downloadICS(ics, `${game.name.replace(/\s+/g, '-')}.ics`)
+                    downloadICS(ics, `${game.name.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-').slice(0, 50) || 'event'}.ics`)
                   }}
                 >
                   <CalendarBlank size={16} />

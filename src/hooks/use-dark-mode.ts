@@ -17,5 +17,5 @@ export function useDarkMode() {
     }
   }, [isDark])
 
-  return { isDark, toggle: () => setIsDark(!isDark) }
+  return { isDark, toggle: () => setIsDark(prev => !prev) }
 }

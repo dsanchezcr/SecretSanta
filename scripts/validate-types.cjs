@@ -8,7 +8,7 @@ const path = require('path')
 const frontendTypes = fs.readFileSync(path.join(__dirname, '..', 'src', 'lib', 'types.ts'), 'utf-8')
 const apiTypes = fs.readFileSync(path.join(__dirname, '..', 'api', 'src', 'shared', 'types.ts'), 'utf-8')
 
-// Extract interface names and their fields
+// Extract interface names and their fields (merges duplicate declarations)
 function extractInterfaces(content) {
   const interfaces = {}
   const regex = /export interface (\w+)\s*\{([^}]+)\}/g
@@ -23,7 +23,14 @@ function extractInterfaces(content) {
       .map(l => l.replace(/\s*\/\/.*$/, '').trim())
       .filter(Boolean)
       .sort()
-    interfaces[name] = fields
+    // Merge fields from duplicate interface declarations
+    if (interfaces[name]) {
+      const existing = new Set(interfaces[name])
+      for (const f of fields) existing.add(f)
+      interfaces[name] = [...existing].sort()
+    } else {
+      interfaces[name] = fields
+    }
   }
   return interfaces
 }

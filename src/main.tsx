@@ -15,11 +15,16 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   })
 }
 
-// Load JSON-LD structured data from static file (CSP-safe: no inline scripts)
-const ldLink = document.createElement('script')
-ldLink.type = 'application/ld+json'
-ldLink.src = '/structured-data.json'
-document.head.appendChild(ldLink)
+// Fetch JSON-LD structured data and inject inline (crawlers don't follow script src for JSON-LD)
+fetch('/structured-data.json')
+  .then(r => r.text())
+  .then(text => {
+    const ldScript = document.createElement('script')
+    ldScript.type = 'application/ld+json'
+    ldScript.text = text
+    document.head.appendChild(ldScript)
+  })
+  .catch(() => {})
 
 createRoot(document.getElementById('app')!).render(
   <ErrorBoundary FallbackComponent={ErrorFallback}>

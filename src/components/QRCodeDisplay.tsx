@@ -22,13 +22,25 @@ export function QRCodeDisplay({ value, size = 200, className }: QRCodeDisplayPro
       .catch(() => setError(true))
   }, [value, size])
 
+  if (error) {
+    return (
+      <a
+        href={value}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`inline-block text-sm underline text-blue-600 ${className || ''}`}
+      >
+        {value}
+      </a>
+    )
+  }
+
   return (
     <canvas
       ref={canvasRef}
       role="img"
       aria-label={`QR code linking to: ${value}`}
       className={`rounded-lg border bg-white ${className || ''}`}
-      style={error ? { display: 'none' } : undefined}
     />
   )
 }

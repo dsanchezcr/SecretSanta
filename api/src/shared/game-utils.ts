@@ -51,11 +51,19 @@ export function generateAssignmentsWithResult(participants: Participant[], exclu
     throw new Error('Need at least 3 participants')
   }
 
+  // Precompute a lookup set for exclusion pairs to avoid repeated linear scans
+  const exclusionSet = new Set<string>()
+  for (const e of exclusions) {
+    const id1 = e.participantId1
+    const id2 = e.participantId2
+    if (!id1 || !id2) continue
+    const [minId, maxId] = id1 < id2 ? [id1, id2] : [id2, id1]
+    exclusionSet.add(`${minId}|${maxId}`)
+  }
+
   const isExcluded = (giverId: string, receiverId: string): boolean => {
-    return exclusions.some(e =>
-      (e.participantId1 === giverId && e.participantId2 === receiverId) ||
-      (e.participantId2 === giverId && e.participantId1 === receiverId)
-    )
+    const [minId, maxId] = giverId < receiverId ? [giverId, receiverId] : [receiverId, giverId]
+    return exclusionSet.has(`${minId}|${maxId}`)
   }
 
   // Retry shuffling to find a valid assignment that respects exclusions

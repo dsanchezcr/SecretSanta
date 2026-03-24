@@ -118,7 +118,7 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
     let gameCode = generateGameCode()
     let foundUniqueCode = false
     for (let i = 0; i < 5; i++) {
-      const existing = await getGameByCode(gameCode)
+      const existing = await getGameByCode(gameCode, true)
       if (!existing) {
         foundUniqueCode = true
         break
@@ -159,7 +159,7 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       preferredLanguage: storeLanguagePreference && body.language ? body.language : undefined
     }))
     
-    const exclusions = body.exclusions || []
+    const exclusions = (body.exclusions || []).slice(0, participants.length * 2)
     const assignmentResult = generateAssignmentsWithResult(participants, exclusions)
     const assignments = assignmentResult.assignments
     

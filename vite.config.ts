@@ -81,6 +81,6 @@ export default defineConfig({
     }
   },
   build: {
-    cssMinify: 'esbuild',
+    cssMinify: false,
   },
 });

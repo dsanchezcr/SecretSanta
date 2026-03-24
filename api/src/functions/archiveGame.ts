@@ -1,5 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { getGameByCode, archiveGame, getDatabaseStatus, GameNotFoundError, GameAlreadyArchivedError } from '../shared/cosmosdb'
+import { safeCompare } from '../shared/game-utils'
 import { trackError, trackEvent, ApiErrorCode, createErrorResponse, getHttpStatusForError } from '../shared/telemetry'
 
 export async function archiveGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -57,7 +58,7 @@ export async function archiveGameHandler(request: HttpRequest, context: Invocati
     }
     
     // Validate organizer token
-    if (game.organizerToken !== organizerToken) {
+    if (!safeCompare(organizerToken, game.organizerToken)) {
       const error = createErrorResponse(
         ApiErrorCode.FORBIDDEN,
         'Invalid organizer token',

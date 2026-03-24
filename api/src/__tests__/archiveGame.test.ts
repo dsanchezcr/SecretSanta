@@ -12,6 +12,13 @@ jest.mock('../shared/cosmosdb', () => ({
   archiveGame: jest.fn()
 }))
 
+jest.mock('../shared/game-utils', () => ({
+  safeCompare: jest.fn().mockImplementation((a: string, b: string) => {
+    if (!a || !b) return false
+    return a === b
+  })
+}))
+
 // Mock the telemetry module
 jest.mock('../shared/telemetry', () => ({
   trackError: jest.fn(),

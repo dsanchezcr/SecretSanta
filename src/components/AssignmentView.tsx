@@ -36,6 +36,8 @@ import { Game, Participant } from '@/lib/types'
 import { useLanguage } from './useLanguage'
 import { formatDate } from '@/lib/game-utils'
 import { formatAmount } from '@/lib/currency-utils'
+import { generateICS, downloadICS } from '@/lib/calendar-utils'
+import { EventCountdown } from './EventCountdown'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { LanguageToggle } from './LanguageToggle'
@@ -654,6 +656,37 @@ export function AssignmentView({
                   </div>
                 )}
               </div>
+
+              {/* Countdown timer */}
+              {game.date && (
+                <EventCountdown
+                  targetDate={game.date}
+                  targetTime={game.time}
+                  label={t('eventCountdown') || 'Time until event'}
+                />
+              )}
+
+              {/* Add to Calendar button */}
+              {game.date && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={() => {
+                    const ics = generateICS({
+                      name: game.name,
+                      date: game.date,
+                      time: game.time,
+                      location: game.location,
+                      description: game.generalNotes || undefined,
+                    })
+                    downloadICS(ics, `${game.name.replace(/\s+/g, '-')}.ics`)
+                  }}
+                >
+                  <CalendarBlank size={16} />
+                  {t('addToCalendar') || 'Add to Calendar'}
+                </Button>
+              )}
             </div>
 
             <div className="flex justify-between gap-3 pt-4">

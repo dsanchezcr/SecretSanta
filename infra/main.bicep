@@ -66,6 +66,18 @@ param deploymentId string = ''
 @secure()
 param cleanupSecret string = ''
 
+@description('Enable Managed Identity for Cosmos DB authentication (recommended for production)')
+param enableManagedIdentity bool = false
+
+@description('Enable Azure Front Door for WAF and global CDN (production only)')
+param enableFrontDoor bool = false
+
+@description('Monthly budget amount in USD (0 to disable budget alerts)')
+param budgetAmount int = 0
+
+@description('Email address for budget alert notifications')
+param budgetAlertEmail string = ''
+
 // ============================================================================
 // Variables
 // ============================================================================
@@ -216,6 +228,9 @@ resource staticWebApp 'Microsoft.Web/staticSites@2024-11-01' = {
     name: staticWebAppSku
     tier: staticWebAppSku
   }
+  identity: enableManagedIdentity ? {
+    type: 'SystemAssigned'
+  } : null
   properties: {
     repositoryUrl: !empty(repositoryUrl) ? repositoryUrl : null
     branch: !empty(repositoryUrl) ? repositoryBranch : null
@@ -275,7 +290,6 @@ resource staticWebAppSettings 'Microsoft.Web/staticSites/config@2024-11-01' = {
     {
       // Database configuration
       COSMOS_ENDPOINT: cosmosAccount.properties.documentEndpoint
-      COSMOS_KEY: cosmosAccount.listKeys().primaryMasterKey
       COSMOS_DATABASE_NAME: databaseName
       COSMOS_CONTAINER_NAME: containerName
       // Application Insights
@@ -294,11 +308,85 @@ resource staticWebAppSettings 'Microsoft.Web/staticSites/config@2024-11-01' = {
       // For staging/prod: Uses the shared resource's actual hostname
       APP_BASE_URL: 'https://${staticWebApp.properties.defaultHostname}'
     },
+    // Only include Cosmos DB key when NOT using Managed Identity
+    !enableManagedIdentity ? {
+      COSMOS_KEY: cosmosAccount.listKeys().primaryMasterKey
+    } : {},
     enableEmailService ? {
       ACS_CONNECTION_STRING: communicationService!.listKeys().primaryConnectionString
       ACS_SENDER_ADDRESS: 'DoNotReply@${emailDomain!.properties.mailFromSenderDomain}'
     } : {}
   )
+}
+
+// ============================================================================
+// Managed Identity - Cosmos DB RBAC (Optional, for production)
+// ============================================================================
+// When enabled, the Static Web App's system-assigned managed identity gets
+// the Cosmos DB Built-in Data Contributor role, eliminating the need for keys.
+
+resource cosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-11-15' = if (enableManagedIdentity) {
+  parent: cosmosAccount
+  name: guid(cosmosAccount.id, staticWebApp.id, '00000000-0000-0000-0000-000000000002')
+  properties: {
+    // Cosmos DB Built-in Data Contributor role
+    roleDefinitionId: '/${subscription().id}/resourceGroups/${resourceGroup().name}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosAccountName}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
+    principalId: staticWebApp.identity.principalId
+    scope: cosmosAccount.id
+  }
+}
+
+// ============================================================================
+// Azure Front Door (Optional, for production WAF/CDN)
+// ============================================================================
+
+resource frontDoorProfile 'Microsoft.Cdn/profiles@2024-09-01' = if (enableFrontDoor) {
+  name: 'ss-fd-${uniqueSuffix}'
+  location: 'global'
+  sku: {
+    name: 'Standard_AzureFrontDoor'
+  }
+}
+
+resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2024-09-01' = if (enableFrontDoor) {
+  parent: frontDoorProfile
+  name: 'ss-${envSuffix}'
+  location: 'global'
+  properties: {
+    enabledState: 'Enabled'
+  }
+}
+
+// ============================================================================
+// Budget Alert (Optional)
+// ============================================================================
+
+resource budget 'Microsoft.Consumption/budgets@2024-08-01' = if (budgetAmount > 0 && !empty(budgetAlertEmail)) {
+  name: 'ss-budget-${envSuffix}'
+  properties: {
+    category: 'Cost'
+    amount: budgetAmount
+    timeGrain: 'Monthly'
+    timePeriod: {
+      startDate: '${substring(deploymentTime, 0, 7)}-01' // First day of deployment month
+    }
+    notifications: {
+      Actual_GreaterThan_80_Percent: {
+        enabled: true
+        operator: 'GreaterThan'
+        threshold: 80
+        contactEmails: [budgetAlertEmail]
+        thresholdType: 'Actual'
+      }
+      Forecasted_GreaterThan_100_Percent: {
+        enabled: true
+        operator: 'GreaterThan'
+        threshold: 100
+        contactEmails: [budgetAlertEmail]
+        thresholdType: 'Forecasted'
+      }
+    }
+  }
 }
 
 // ============================================================================

@@ -6,6 +6,12 @@ import * as emailService from '../shared/email-service'
 // Mock the modules
 jest.mock('../shared/cosmosdb')
 jest.mock('../shared/email-service')
+jest.mock('../shared/game-utils', () => ({
+  safeCompare: jest.fn().mockImplementation((a: string, b: string) => a === b)
+}))
+jest.mock('../shared/rate-limiter', () => ({
+  checkRateLimit: jest.fn().mockReturnValue(null)
+}))
 jest.mock('@azure/communication-email', () => ({
   EmailClient: jest.fn(),
   KnownEmailSendStatus: {

@@ -15,6 +15,11 @@ export interface Assignment {
   receiverId: string
 }
 
+export interface ExclusionPair {
+  participantId1: string
+  participantId2: string
+}
+
 export interface ReassignmentRequest {
   participantId: string
   participantName: string
@@ -65,6 +70,7 @@ export interface Game {
   participants: Participant[]
   assignments: Assignment[]
   reassignmentRequests: ReassignmentRequest[]
+  exclusions?: ExclusionPair[]
   organizerToken: string
   organizerEmail?: string // Optional email for organizer notifications
   organizerLanguage?: Language // Preferred language for organizer email notifications (only stored when email service is configured)

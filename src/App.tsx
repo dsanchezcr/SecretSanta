@@ -127,6 +127,7 @@ function App() {
   }, [])
 
   const handleCreateGame = () => {
+    window.history.pushState({ view: 'create-game' }, '', '#create')
     setView('create-game')
   }
 
@@ -381,6 +382,12 @@ function App() {
       
       // Default to home if no special route
       if (pathname === '/' && !params.get('code')) {
+        // Check hash-based routing
+        const hash = window.location.hash.replace('#', '')
+        if (hash === 'create') {
+          setView('create-game')
+          return
+        }
         setView('home')
         setCurrentGameCode('')
         setCurrentParticipant(null)

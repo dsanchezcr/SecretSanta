@@ -8,6 +8,13 @@ jest.mock('../shared/cosmosdb', () => ({
   getDatabaseStatus: jest.fn()
 }))
 
+jest.mock('../shared/game-utils', () => ({
+  safeCompare: jest.fn().mockImplementation((a: string, b: string) => {
+    if (!a || !b) return false
+    return a === b
+  })
+}))
+
 import { getGameByCode, getDatabaseStatus } from '../shared/cosmosdb'
 
 const mockGetGameByCode = getGameByCode as jest.Mock

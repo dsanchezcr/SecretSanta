@@ -49,9 +49,9 @@ describe('game-utils', () => {
       expect(ids.size).toBe(100)
     })
 
-    it('should contain alphanumeric characters', () => {
+    it('should contain valid UUID characters', () => {
       const id = generateId()
-      expect(id).toMatch(/^[a-z0-9]+$/i)
+      expect(id).toMatch(/^[a-f0-9-]+$/i)
     })
   })
 

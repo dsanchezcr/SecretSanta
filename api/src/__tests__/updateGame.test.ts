@@ -13,7 +13,8 @@ jest.mock('../shared/game-utils', () => ({
   reassignParticipant: jest.fn(),
   generateAssignments: jest.fn(),
   generateAssignmentsWithLocks: jest.fn(),
-  generateId: jest.fn().mockReturnValue('new-participant-id')
+  generateId: jest.fn().mockReturnValue('new-participant-id'),
+  safeCompare: jest.fn().mockImplementation((a: string, b: string) => a === b)
 }))
 
 import { getGameByCode, updateGame, getDatabaseStatus } from '../shared/cosmosdb'

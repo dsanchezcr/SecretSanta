@@ -1,6 +1,31 @@
 // Supported languages for email notifications
 export type Language = 'en' | 'es' | 'pt' | 'fr' | 'it' | 'ja' | 'zh' | 'de' | 'nl'
 
+// Input length limits to prevent abuse and stay within Cosmos DB 2MB item limit
+export const INPUT_LIMITS = {
+  GAME_NAME: 100,
+  PARTICIPANT_NAME: 80,
+  LOCATION: 200,
+  AMOUNT: 20,
+  CURRENCY: 10,
+  GENERAL_NOTES: 2000,
+  DESIRED_GIFT: 500,
+  WISH: 500,
+  EMAIL: 254,
+  MAX_PARTICIPANTS: 100,
+} as const
+
+/**
+ * Validates that a string does not exceed the specified max length.
+ * Returns an error message if invalid, or null if valid.
+ */
+export function validateLength(field: string, value: string | undefined, maxLength: number): string | null {
+  if (value && value.length > maxLength) {
+    return `${field} must be ${maxLength} characters or less (got ${value.length})`
+  }
+  return null
+}
+
 export interface Participant {
   id: string
   name: string
@@ -16,6 +41,12 @@ export interface Participant {
 export interface Assignment {
   giverId: string
   receiverId: string
+}
+
+// Pair of participant IDs that should never be assigned to give to each other
+export interface ExclusionPair {
+  participantId1: string
+  participantId2: string
 }
 
 export interface ReassignmentRequest {
@@ -39,6 +70,7 @@ export interface Game {
   participants: Participant[]
   assignments: Assignment[]
   reassignmentRequests: ReassignmentRequest[]
+  exclusions?: ExclusionPair[] // Pairs that should never be assigned to each other
   organizerToken: string
   organizerEmail?: string // Optional email for organizer notifications
   organizerLanguage?: Language // Preferred language for organizer email notifications (only stored when email service is configured)
@@ -191,6 +223,7 @@ export interface CreateGamePayload {
   generalNotes?: string
   organizerEmail?: string
   participants: CreateGameParticipant[]
+  exclusions?: ExclusionPair[]
   sendEmails?: boolean
   language?: Language
 }

@@ -226,6 +226,10 @@ export const es = {
     downloadCard: "Descargar Tarjeta",
     downloadingCard: "Generando tarjeta...",
     cardDownloaded: "¡Tarjeta descargada!",
+    eventCountdown: "Tiempo para el evento",
+    addToCalendar: "Agregar al Calendario",
+    darkMode: "Modo oscuro",
+    lightMode: "Modo claro",
     
     organizerPanel: "Panel del Organizador",
     organizerPanelDesc: "Este enlace es exclusivo para organizadores del juego",

@@ -1,19 +1,68 @@
-import { Assignment, Participant } from './types'
+import { randomInt, randomUUID, timingSafeEqual } from 'crypto'
+import { Assignment, Participant, ExclusionPair } from './types'
 
 export function generateGameCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  return randomInt(100000, 1000000).toString()
 }
 
 export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2)
+  return randomUUID()
 }
 
-export function generateAssignments(participants: Participant[]): Assignment[] {
+/**
+ * Constant-time string comparison to prevent timing attacks on token validation.
+ * Returns false if either value is empty/undefined.
+ */
+export function safeCompare(a: string | undefined, b: string | undefined): boolean {
+  if (!a || !b) return false
+  if (a.length !== b.length) return false
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+}
+
+// Crypto-secure Fisher-Yates shuffle
+function secureShuffle<T>(arr: T[]): T[] {
+  const shuffled = [...arr]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = randomInt(0, i + 1)
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
+export function generateAssignments(participants: Participant[], exclusions: ExclusionPair[] = []): Assignment[] {
   if (participants.length < 3) {
     throw new Error('Need at least 3 participants')
   }
 
-  const shuffled = [...participants].sort(() => Math.random() - 0.5)
+  const isExcluded = (giverId: string, receiverId: string): boolean => {
+    return exclusions.some(e =>
+      (e.participantId1 === giverId && e.participantId2 === receiverId) ||
+      (e.participantId2 === giverId && e.participantId1 === receiverId)
+    )
+  }
+
+  // Retry shuffling to find a valid assignment that respects exclusions
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const shuffled = secureShuffle(participants)
+    const assignments: Assignment[] = []
+    let valid = true
+
+    for (let i = 0; i < shuffled.length; i++) {
+      const giver = shuffled[i]
+      const receiver = shuffled[(i + 1) % shuffled.length]
+      if (isExcluded(giver.id, receiver.id)) {
+        valid = false
+        break
+      }
+      assignments.push({ giverId: giver.id, receiverId: receiver.id })
+    }
+
+    if (valid) return assignments
+  }
+
+  // Fallback: return assignments without exclusion enforcement and log a warning
+  console.warn('⚠️ Could not generate assignments respecting all exclusion rules after 200 attempts. Falling back to unrestricted assignments.')
+  const shuffled = secureShuffle(participants)
   const assignments: Assignment[] = []
 
   for (let i = 0; i < shuffled.length; i++) {
@@ -80,8 +129,8 @@ export function generateAssignmentsWithLocks(
   }
 
   // Shuffle unlocked participants and available receivers
-  const shuffledUnlocked = [...unlockedParticipants].sort(() => Math.random() - 0.5)
-  const shuffledReceivers = [...availableReceivers].sort(() => Math.random() - 0.5)
+  const shuffledUnlocked = secureShuffle(unlockedParticipants)
+  const shuffledReceivers = secureShuffle(availableReceivers)
 
   // Create new assignments for unlocked participants, avoiding self-assignment
   const newAssignments: Assignment[] = [...lockedAssignments]
@@ -116,7 +165,9 @@ export function generateAssignmentsWithLocks(
     }
     
     // Shuffle receivers again and retry
-    shuffledReceivers.sort(() => Math.random() - 0.5)
+    const reshuffled = secureShuffle(shuffledReceivers)
+    shuffledReceivers.length = 0
+    shuffledReceivers.push(...reshuffled)
     assignmentAttempts++
   }
   
@@ -187,8 +238,8 @@ export function reassignParticipant(
   })
   
   const swapPartner = unconfirmedPartners.length > 0
-    ? unconfirmedPartners[Math.floor(Math.random() * unconfirmedPartners.length)]
-    : sortedSwapPartners[Math.floor(Math.random() * sortedSwapPartners.length)]
+    ? unconfirmedPartners[randomInt(0, unconfirmedPartners.length)]
+    : sortedSwapPartners[randomInt(0, sortedSwapPartners.length)]
   
   // Perform the swap:
   // Before: A → B, C → D

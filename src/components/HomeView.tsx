@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { useState } from 'react'
 import { useLanguage } from './useLanguage'
 import { LanguageToggle } from './LanguageToggle'
+import { DarkModeToggle } from './DarkModeToggle'
 
 interface HomeViewProps {
   onCreateGame: () => void
@@ -26,7 +27,8 @@ export function HomeView({ onCreateGame, onJoinGame, onPrivacy, onOrganizerGuide
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="flex justify-end p-4">
+      <header className="flex justify-end p-4 gap-2">
+        <DarkModeToggle />
         <LanguageToggle />
       </header>
 

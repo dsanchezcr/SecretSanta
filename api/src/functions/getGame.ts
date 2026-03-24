@@ -1,5 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { getGameByCode, getDatabaseStatus, Game } from '../shared/cosmosdb'
+import { safeCompare } from '../shared/game-utils'
 
 export async function getGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const code = request.params.code
@@ -43,7 +44,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
     // If game is protected, handle access control
     if (game.isProtected) {
       // Organizer has full access
-      if (organizerToken && organizerToken === game.organizerToken) {
+      if (organizerToken && safeCompare(organizerToken, game.organizerToken)) {
         return {
           status: 200,
           jsonBody: game
@@ -52,7 +53,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
       
       // Participant with valid token gets limited view (only their participant info)
       if (participantToken) {
-        const participant = game.participants.find(p => p.token === participantToken)
+        const participant = game.participants.find(p => safeCompare(participantToken, p.token))
         if (participant) {
           // Find who this participant is giving to (their assignment)
           const participantAssignment = game.assignments.find(a => a.giverId === participant.id)
@@ -110,7 +111,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
     
     // Non-protected game
     // If organizer token is provided and valid, return full game
-    if (organizerToken && organizerToken === game.organizerToken) {
+    if (organizerToken && safeCompare(organizerToken, game.organizerToken)) {
       return {
         status: 200,
         jsonBody: game

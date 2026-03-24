@@ -8,6 +8,10 @@ jest.mock('../shared/cosmosdb', () => ({
   getDatabaseStatus: jest.fn()
 }))
 
+jest.mock('../shared/rate-limiter', () => ({
+  checkRateLimit: jest.fn().mockReturnValue(null)
+}))
+
 jest.mock('../shared/game-utils', () => ({
   generateGameCode: jest.fn().mockReturnValue('123456'),
   generateId: jest.fn().mockImplementation(() => 'mock-id-' + Math.random().toString(36).substr(2, 9)),
@@ -17,10 +21,24 @@ jest.mock('../shared/game-utils', () => ({
       receiverId: participants[(i + 1) % participants.length].id
     }))
   ),
+  safeCompare: jest.fn().mockImplementation((a: string, b: string) => a === b),
   validateDateString: jest.fn().mockImplementation((dateString: string) => {
-    // Use the actual validation logic
-    const actualModule = jest.requireActual('../shared/game-utils')
-    return actualModule.validateDateString(dateString)
+    // Inline validation logic (matches the real implementation)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return { valid: false, error: 'Invalid date format. Expected YYYY-MM-DD' }
+    }
+    const parts = dateString.split('-')
+    const year = parseInt(parts[0], 10)
+    const month = parseInt(parts[1], 10)
+    const day = parseInt(parts[2], 10)
+    if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+      return { valid: false, error: 'Invalid date values. Year must be 1900-2100, month 1-12, day 1-31' }
+    }
+    const eventDate = new Date(year, month - 1, day)
+    if (eventDate.getFullYear() !== year || eventDate.getMonth() !== month - 1 || eventDate.getDate() !== day) {
+      return { valid: false, error: 'Invalid calendar date. The date does not exist (e.g., February 31, April 31).' }
+    }
+    return { valid: true, year, month, day }
   })
 }))
 
@@ -226,8 +244,7 @@ describe('createGame function', () => {
 
     expect(response.status).toBe(500)
     expect(response.jsonBody).toEqual({
-      error: 'Failed to create game',
-      details: 'Database write failed'
+      error: 'Failed to create game'
     })
   })
 

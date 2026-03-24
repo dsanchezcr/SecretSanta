@@ -1,7 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { getGameByCode, updateGame, getDatabaseStatus, Participant, Game, GameUpdatePayload, ReassignmentRequest } from '../shared/cosmosdb'
-import { reassignParticipant, generateAssignments, generateAssignmentsWithLocks, generateId } from '../shared/game-utils'
-import { JoinInvitationPayload } from '../shared/types'
+import { reassignParticipant, generateAssignments, generateAssignmentsWithLocks, generateId, safeCompare } from '../shared/game-utils'
+import { JoinInvitationPayload, INPUT_LIMITS, validateLength } from '../shared/types'
 import { 
   getEmailServiceStatus,
   sendParticipantConfirmedEmail,
@@ -54,7 +54,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
     if (body.action === 'updateGameDetails' || body.action === 'addParticipant' || body.action === 'removeParticipant' || body.action === 'updateParticipantDetails' || body.action === 'approveReassignment' || body.action === 'approveAllReassignments' || body.action === 'reassignAll' || body.action === 'cancelReassignmentRequest' || body.action === 'regenerateToken' || body.action === 'regenerateOrganizerToken' || body.action === 'forceReassignParticipant') {
       const organizerToken = (body as any).organizerToken
       
-      if (!organizerToken || organizerToken !== game.organizerToken) {
+      if (!organizerToken || !safeCompare(organizerToken, game.organizerToken)) {
         return {
           status: 403,
           jsonBody: { error: 'Invalid organizer token' }
@@ -67,6 +67,19 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       }
 
       if (body.action === 'updateGameDetails') {
+        // Validate input lengths
+        const lengthErrors = [
+          validateLength('Game name', body.name, INPUT_LIMITS.GAME_NAME),
+          validateLength('Location', body.location, INPUT_LIMITS.LOCATION),
+          validateLength('Amount', body.amount, INPUT_LIMITS.AMOUNT),
+          validateLength('Currency', body.currency, INPUT_LIMITS.CURRENCY),
+          validateLength('General notes', body.generalNotes, INPUT_LIMITS.GENERAL_NOTES),
+        ].filter(Boolean)
+
+        if (lengthErrors.length > 0) {
+          return { status: 400, jsonBody: { error: lengthErrors[0] } }
+        }
+
         // Track changes for email notification
         const changes: EventChanges = {}
         const emailStatus = getEmailServiceStatus()
@@ -125,6 +138,18 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
             status: 400,
             jsonBody: { error: 'Participant name is required' }
           }
+        }
+
+        // Validate input lengths
+        const nameErr = validateLength('Participant name', participantName, INPUT_LIMITS.PARTICIPANT_NAME)
+        const emailErr = validateLength('Email', participantEmail, INPUT_LIMITS.EMAIL)
+        if (nameErr || emailErr) {
+          return { status: 400, jsonBody: { error: nameErr || emailErr } }
+        }
+
+        // Check max participants
+        if (game.participants.length >= INPUT_LIMITS.MAX_PARTICIPANTS) {
+          return { status: 400, jsonBody: { error: `Maximum ${INPUT_LIMITS.MAX_PARTICIPANTS} participants reached` } }
         }
 
         // Check for duplicate names
@@ -763,7 +788,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       const language = payload.language
       
       // Validate invitation token
-      if (!invitationToken || invitationToken !== game.invitationToken) {
+      if (!invitationToken || !safeCompare(invitationToken, game.invitationToken)) {
         return {
           status: 403,
           jsonBody: { 

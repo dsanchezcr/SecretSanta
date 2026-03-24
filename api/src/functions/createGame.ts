@@ -3,11 +3,16 @@ import { createGame, Game, getDatabaseStatus } from '../shared/cosmosdb'
 import { generateGameCode, generateId, generateAssignments, validateDateString } from '../shared/game-utils'
 import { getEmailServiceStatus, sendOrganizerEmail, sendAllParticipantEmails } from '../shared/email-service'
 import { trackError, trackEvent, ApiErrorCode, createErrorResponse, getHttpStatusForError } from '../shared/telemetry'
-import { CreateGamePayload } from '../shared/types'
+import { CreateGamePayload, INPUT_LIMITS, validateLength } from '../shared/types'
+import { checkRateLimit } from '../shared/rate-limiter'
 
 export async function createGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const requestId = context.invocationId
   context.log(`Creating new game [requestId: ${requestId}]`)
+
+  // Rate limit check
+  const rateLimitResponse = checkRateLimit(request, 'createGame')
+  if (rateLimitResponse) return rateLimitResponse
   
   // Check database connectivity first
   const dbStatus = getDatabaseStatus()
@@ -38,6 +43,35 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       return {
         status: getHttpStatusForError(ApiErrorCode.VALIDATION_ERROR),
         jsonBody: { error: error.message }
+      }
+    }
+
+    // Validate input lengths to prevent abuse
+    if (body.participants.length > INPUT_LIMITS.MAX_PARTICIPANTS) {
+      return {
+        status: getHttpStatusForError(ApiErrorCode.VALIDATION_ERROR),
+        jsonBody: { error: `Maximum ${INPUT_LIMITS.MAX_PARTICIPANTS} participants allowed` }
+      }
+    }
+    const lengthErrors = [
+      validateLength('Game name', body.name, INPUT_LIMITS.GAME_NAME),
+      validateLength('Location', body.location, INPUT_LIMITS.LOCATION),
+      validateLength('Amount', body.amount, INPUT_LIMITS.AMOUNT),
+      validateLength('Currency', body.currency, INPUT_LIMITS.CURRENCY),
+      validateLength('General notes', body.generalNotes, INPUT_LIMITS.GENERAL_NOTES),
+      validateLength('Organizer email', body.organizerEmail, INPUT_LIMITS.EMAIL),
+      ...body.participants.flatMap(p => [
+        validateLength(`Participant name "${p.name}"`, p.name, INPUT_LIMITS.PARTICIPANT_NAME),
+        validateLength(`Desired gift for "${p.name}"`, p.desiredGift, INPUT_LIMITS.DESIRED_GIFT),
+        validateLength(`Wish for "${p.name}"`, p.wish, INPUT_LIMITS.WISH),
+        validateLength(`Email for "${p.name}"`, p.email, INPUT_LIMITS.EMAIL),
+      ])
+    ].filter(Boolean)
+
+    if (lengthErrors.length > 0) {
+      return {
+        status: getHttpStatusForError(ApiErrorCode.VALIDATION_ERROR),
+        jsonBody: { error: lengthErrors[0] }
       }
     }
     
@@ -103,7 +137,8 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       preferredLanguage: storeLanguagePreference && body.language ? body.language : undefined
     }))
     
-    const assignments = generateAssignments(participants)
+    const exclusions = body.exclusions || []
+    const assignments = generateAssignments(participants, exclusions)
     
     const game: Game = {
       id: gameId,
@@ -120,6 +155,7 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
       participants,
       assignments,
       reassignmentRequests: [],
+      exclusions,
       organizerToken,
       organizerEmail: body.organizerEmail || undefined, // Optional organizer email
       // Only store organizer language preference if email service is configured
@@ -170,9 +206,10 @@ export async function createGameHandler(request: HttpRequest, context: Invocatio
     }
   } catch (error: any) {
     context.error('Error creating game:', error)
+    trackError(context, error, { requestId })
     return {
       status: 500,
-      jsonBody: { error: 'Failed to create game', details: error.message }
+      jsonBody: { error: 'Failed to create game' }
     }
   }
 }

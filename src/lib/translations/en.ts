@@ -350,7 +350,7 @@ export const en = {
     privacyDataRetentionItem2: "Archived game data is permanently deleted after 30 days",
     privacyDataRetentionItem3: "Organizers can archive all game data at any time",
     privacyThirdPartiesTitle: "Third Parties",
-    privacyThirdPartiesDesc: "We use Azure Communication Services to send notification emails when you explicitly request it. If you consent, we also use Google Analytics to understand how the application is used and improve the user experience. You can manage your analytics preferences through the cookie consent banner.",
+    privacyThirdPartiesDesc: "We use Azure Communication Services to send notification emails when you explicitly request it. We use Azure Application Insights to monitor application health, track errors, and ensure reliability — this telemetry is automatic and does not require consent. If you consent, we also use Google Analytics to understand how the application is used and improve the user experience. You can manage your analytics preferences through the cookie consent banner.",
     privacySecurityTitle: "Security & Data Protection",
     privacySecurityDesc: "We take the security of your data seriously. The following measures protect your information:",
     privacySecurityItem1: "All tokens and game codes are generated using cryptographically secure randomness",
@@ -359,7 +359,7 @@ export const en = {
     privacySecurityItem4: "Input validation and length limits are enforced on all data fields",
     privacySecurityItem5: "The app can be installed as a PWA; cached data is limited to static assets and never includes personal information",
     privacyAnalyticsTitle: "Analytics",
-    privacyAnalyticsDesc: "With your consent, we use Google Analytics to collect anonymous usage data to improve the application. This includes page views and interaction patterns. You can opt out at any time.",
+    privacyAnalyticsDesc: "We use Azure Application Insights to automatically collect anonymous performance and error telemetry to ensure the application runs reliably. This does not track personal information. Additionally, with your consent, we use Google Analytics to collect anonymous usage data such as page views and interaction patterns. You can opt out of Google Analytics at any time.",
     privacyLastUpdated: "Last updated",
     privacyLink: "Privacy Policy",
 

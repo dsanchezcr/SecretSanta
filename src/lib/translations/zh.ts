@@ -205,7 +205,7 @@ export const zh = {
     privacyDataRetentionItem2: "归档数据在30天后永久删除",
     privacyDataRetentionItem3: "组织者可以随时手动归档所有游戏数据",
     privacyThirdPartiesTitle: "第三方",
-    privacyThirdPartiesDesc: "我们使用Azure通信服务在您明确请求时发送通知邮件。如果您同意，我们还会使用Google Analytics了解应用的使用情况并改善用户体验。您可以通过Cookie同意横幅管理分析偏好。",
+    privacyThirdPartiesDesc: "我们使用Azure通信服务在您明确请求时发送通知邮件。我们使用Azure Application Insights监控应用程序健康状况、跟踪错误并确保可靠性——此遥测是自动的，不需要同意。如果您同意，我们还会使用Google Analytics了解应用的使用情况并改善用户体验。您可以通过Cookie同意横幅管理分析偏好。",
     privacySecurityTitle: "安全与数据保护",
     privacySecurityDesc: "我们认真对待您数据的安全。以下措施保护您的信息：",
     privacySecurityItem1: "所有令牌和游戏代码都使用加密安全的随机数生成",
@@ -214,7 +214,7 @@ export const zh = {
     privacySecurityItem4: "所有数据字段都应用了输入验证和长度限制",
     privacySecurityItem5: "应用可以作为PWA安装；缓存数据仅限于静态资源，从不包含个人信息",
     privacyAnalyticsTitle: "分析",
-    privacyAnalyticsDesc: "经您同意，我们使用Google Analytics收集匿名使用数据以改进应用。这包括页面浏览和交互模式。您可以随时选择退出。",
+    privacyAnalyticsDesc: "我们使用Azure Application Insights自动收集匿名的性能和错误遥测数据，以确保应用程序可靠运行。这不会跟踪个人信息。此外，经您同意，我们使用Google Analytics收集匿名使用数据，如页面浏览和交互模式。您可以随时选择退出Google Analytics。",
     privacyLastUpdated: "最后更新时间",
     privacyLink: "隐私政策",
 

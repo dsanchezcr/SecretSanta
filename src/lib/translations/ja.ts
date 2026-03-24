@@ -205,7 +205,7 @@ export const ja = {
     privacyDataRetentionItem2: "アーカイブされたデータは30日後に完全に削除されます",
     privacyDataRetentionItem3: "オーガナイザーはいつでもゲームのすべてのデータをアーカイブできます",
     privacyThirdPartiesTitle: "第三者",
-    privacyThirdPartiesDesc: "明示的に要求された場合、通知メールを送信するためにAzure Communication Servicesを使用します。同意いただいた場合、アプリケーションの使用状況を理解し、ユーザーエクスペリエンスを向上させるためにGoogle Analyticsも使用します。Cookie同意バナーで分析設定を管理できます。",
+    privacyThirdPartiesDesc: "明示的に要求された場合、通知メールを送信するためにAzure Communication Servicesを使用します。Azure Application Insightsを使用してアプリケーションの健全性を監視し、エラーを追跡し、信頼性を確保します — このテレメトリは自動的であり、同意を必要としません。同意いただいた場合、アプリケーションの使用状況を理解し、ユーザーエクスペリエンスを向上させるためにGoogle Analyticsも使用します。Cookie同意バナーで分析設定を管理できます。",
     privacySecurityTitle: "セキュリティとデータ保護",
     privacySecurityDesc: "お客様のデータのセキュリティを真剣に受け止めています。以下の対策で情報を保護しています：",
     privacySecurityItem1: "すべてのトークンとゲームコードは暗号学的に安全な乱数で生成されます",
@@ -214,7 +214,7 @@ export const ja = {
     privacySecurityItem4: "すべてのデータフィールドに入力検証と長さ制限が適用されています",
     privacySecurityItem5: "アプリはPWAとしてインストール可能です。キャッシュデータは静的リソースに限定され、個人情報は含まれません",
     privacyAnalyticsTitle: "分析",
-    privacyAnalyticsDesc: "同意いただいた場合、アプリケーションを改善するために匿名の使用データを収集するGoogle Analyticsを使用します。これにはページビューとインタラクションパターンが含まれます。いつでもオプトアウトできます。",
+    privacyAnalyticsDesc: "Azure Application Insightsを使用して、アプリケーションが確実に動作するよう、匿名のパフォーマンスおよびエラーテレメトリを自動的に収集します。個人情報は追跡されません。さらに、同意いただいた場合、ページビューやインタラクションパターンなどの匿名使用データを収集するためにGoogle Analyticsを使用します。Google Analyticsはいつでもオプトアウトできます。",
     privacyLastUpdated: "最終更新",
     privacyLink: "プライバシーポリシー",
 

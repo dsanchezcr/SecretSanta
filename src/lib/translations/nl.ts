@@ -342,7 +342,7 @@ export const nl = {
     privacyDataRetentionItem2: "Gearchiveerde gegevens worden na 30 dagen permanent verwijderd",
     privacyDataRetentionItem3: "Organisatoren kunnen alle spelgegevens op elk moment archiveren",
     privacyThirdPartiesTitle: "Derden",
-    privacyThirdPartiesDesc: "We gebruiken Azure Communication Services om meldings-e-mails te verzenden wanneer u dit uitdrukkelijk aanvraagt. Als u toestemming geeft, gebruiken we ook Google Analytics om te begrijpen hoe de toepassing wordt gebruikt en de gebruikerservaring te verbeteren. U kunt uw analysevoorkeuren beheren via de cookietoestemmingsbanner.",
+    privacyThirdPartiesDesc: "We gebruiken Azure Communication Services om meldings-e-mails te verzenden wanneer u dit uitdrukkelijk aanvraagt. We gebruiken Azure Application Insights om de gezondheid van de applicatie te monitoren, fouten te traceren en betrouwbaarheid te garanderen — deze telemetrie is automatisch en vereist geen toestemming. Als u toestemming geeft, gebruiken we ook Google Analytics om te begrijpen hoe de toepassing wordt gebruikt en de gebruikerservaring te verbeteren. U kunt uw analysevoorkeuren beheren via de cookietoestemmingsbanner.",
     privacySecurityTitle: "Beveiliging en Gegevensbescherming",
     privacySecurityDesc: "Wij nemen de beveiliging van uw gegevens serieus. De volgende maatregelen beschermen uw informatie:",
     privacySecurityItem1: "Alle tokens en spelcodes worden gegenereerd met cryptografisch veilige willekeurigheid",
@@ -351,7 +351,7 @@ export const nl = {
     privacySecurityItem4: "Invoervalidatie en lengtebeperkingen worden toegepast op alle gegevensvelden",
     privacySecurityItem5: "De app kan als PWA worden geïnstalleerd; gecachte gegevens zijn beperkt tot statische bronnen en bevatten nooit persoonlijke informatie",
     privacyAnalyticsTitle: "Analyse",
-    privacyAnalyticsDesc: "Met uw toestemming gebruiken we Google Analytics om anonieme gebruiksgegevens te verzamelen om de toepassing te verbeteren. Dit omvat paginaweergaven en interactiepatronen. U kunt zich op elk moment afmelden.",
+    privacyAnalyticsDesc: "We gebruiken Azure Application Insights om automatisch anonieme prestatie- en fouttelemetrie te verzamelen om de betrouwbare werking van de applicatie te garanderen. Dit volgt geen persoonlijke informatie. Daarnaast gebruiken we met uw toestemming Google Analytics om anonieme gebruiksgegevens te verzamelen, zoals paginaweergaven en interactiepatronen. U kunt zich op elk moment afmelden voor Google Analytics.",
     privacyLastUpdated: "Laatst bijgewerkt",
     privacyLink: "Privacybeleid",
 

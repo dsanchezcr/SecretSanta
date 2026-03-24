@@ -349,7 +349,7 @@ export const pt = {
     privacyDataRetentionItem2: "Dados arquivados são permanentemente excluídos após 30 dias",
     privacyDataRetentionItem3: "Os organizadores podem arquivar todos os dados do jogo a qualquer momento",
     privacyThirdPartiesTitle: "Terceiros",
-    privacyThirdPartiesDesc: "Usamos o Azure Communication Services para enviar emails de notificação quando você solicita explicitamente. Se você consentir, também usamos o Google Analytics para entender como a aplicação é usada e melhorar a experiência do usuário. Você pode gerenciar suas preferências de análise através do banner de consentimento de cookies.",
+    privacyThirdPartiesDesc: "Usamos o Azure Communication Services para enviar emails de notificação quando você solicita explicitamente. Usamos o Azure Application Insights para monitorar a saúde da aplicação, rastrear erros e garantir a confiabilidade — essa telemetria é automática e não requer consentimento. Se você consentir, também usamos o Google Analytics para entender como a aplicação é usada e melhorar a experiência do usuário. Você pode gerenciar suas preferências de análise através do banner de consentimento de cookies.",
     privacySecurityTitle: "Segurança e Proteção de Dados",
     privacySecurityDesc: "Levamos a segurança dos seus dados a sério. As seguintes medidas protegem suas informações:",
     privacySecurityItem1: "Todos os tokens e códigos de jogo são gerados com aleatoriedade criptograficamente segura",
@@ -358,7 +358,7 @@ export const pt = {
     privacySecurityItem4: "Validação de entrada e limites de comprimento são aplicados em todos os campos de dados",
     privacySecurityItem5: "O app pode ser instalado como PWA; dados em cache limitam-se a recursos estáticos e nunca incluem informações pessoais",
     privacyAnalyticsTitle: "Análises",
-    privacyAnalyticsDesc: "Com seu consentimento, usamos o Google Analytics para coletar dados de uso anônimos para melhorar a aplicação. Isso inclui visualizações de página e padrões de interação. Você pode optar por não participar a qualquer momento.",
+    privacyAnalyticsDesc: "Usamos o Azure Application Insights para coletar automaticamente telemetria anônima de desempenho e erros para garantir que a aplicação funcione de forma confiável. Isso não rastreia informações pessoais. Além disso, com seu consentimento, usamos o Google Analytics para coletar dados de uso anônimos, como visualizações de página e padrões de interação. Você pode optar por não participar do Google Analytics a qualquer momento.",
     privacyLastUpdated: "Última atualização",
     privacyLink: "Política de Privacidade",
 

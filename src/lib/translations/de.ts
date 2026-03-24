@@ -342,7 +342,7 @@ export const de = {
     privacyDataRetentionItem2: "Archivierte Daten werden nach 30 Tagen dauerhaft gelöscht",
     privacyDataRetentionItem3: "Organisatoren können alle Spieldaten jederzeit archivieren",
     privacyThirdPartiesTitle: "Dritte",
-    privacyThirdPartiesDesc: "Wir nutzen Azure Communication Services, um Benachrichtigungs-E-Mails zu versenden, wenn Sie dies ausdrücklich anfordern. Mit Ihrer Zustimmung verwenden wir auch Google Analytics, um zu verstehen, wie die Anwendung genutzt wird, und die Benutzererfahrung zu verbessern. Sie können Ihre Analyse-Präferenzen über das Cookie-Zustimmungsbanner verwalten.",
+    privacyThirdPartiesDesc: "Wir nutzen Azure Communication Services, um Benachrichtigungs-E-Mails zu versenden, wenn Sie dies ausdrücklich anfordern. Wir verwenden Azure Application Insights zur Überwachung der Anwendungsgesundheit, Fehlerverfolgung und Sicherstellung der Zuverlässigkeit — diese Telemetrie ist automatisch und erfordert keine Zustimmung. Mit Ihrer Zustimmung verwenden wir auch Google Analytics, um zu verstehen, wie die Anwendung genutzt wird, und die Benutzererfahrung zu verbessern. Sie können Ihre Analyse-Präferenzen über das Cookie-Zustimmungsbanner verwalten.",
     privacySecurityTitle: "Sicherheit und Datenschutz",
     privacySecurityDesc: "Wir nehmen die Sicherheit Ihrer Daten ernst. Folgende Maßnahmen schützen Ihre Informationen:",
     privacySecurityItem1: "Alle Token und Spielcodes werden mit kryptographisch sicherer Zufälligkeit generiert",
@@ -351,7 +351,7 @@ export const de = {
     privacySecurityItem4: "Eingabevalidierung und Längenbeschränkungen werden auf alle Datenfelder angewendet",
     privacySecurityItem5: "Die App kann als PWA installiert werden; zwischengespeicherte Daten beschränken sich auf statische Ressourcen und enthalten nie persönliche Informationen",
     privacyAnalyticsTitle: "Analyse",
-    privacyAnalyticsDesc: "Mit Ihrer Zustimmung verwenden wir Google Analytics, um anonyme Nutzungsdaten zu sammeln, um die Anwendung zu verbessern. Dies umfasst Seitenaufrufe und Interaktionsmuster. Sie können jederzeit widersprechen.",
+    privacyAnalyticsDesc: "Wir verwenden Azure Application Insights, um automatisch anonyme Leistungs- und Fehlertelemetrie zu sammeln, um den zuverlässigen Betrieb der Anwendung sicherzustellen. Dabei werden keine persönlichen Daten erfasst. Darüber hinaus verwenden wir mit Ihrer Zustimmung Google Analytics, um anonyme Nutzungsdaten wie Seitenaufrufe und Interaktionsmuster zu sammeln. Sie können Google Analytics jederzeit deaktivieren.",
     privacyLastUpdated: "Zuletzt aktualisiert",
     privacyLink: "Datenschutzrichtlinie",
 

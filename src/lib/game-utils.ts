@@ -98,7 +98,12 @@ export function generateAssignments(participants: Participant[]): Assignment[] {
     throw new Error('Need at least 3 participants')
   }
 
-  const shuffled = [...participants].sort(() => Math.random() - 0.5)
+  const shuffled = [...participants]
+  // Crypto-secure Fisher-Yates shuffle
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = getSecureRandomInt(i + 1)
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
   const assignments: Assignment[] = []
 
   for (let i = 0; i < shuffled.length; i++) {

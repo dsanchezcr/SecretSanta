@@ -3,9 +3,8 @@ const PRECACHE_URLS = [
   '/manifest.json',
 ]
 
-// Cache static assets (JS, CSS, fonts, images) but use network-first for HTML
+// Cache static assets (JS, CSS, fonts, images) but use network-first for navigation
 const CACHEABLE_EXTENSIONS = /\.(js|css|woff2?|ttf|eot|ico|png|jpg|jpeg|gif|svg|webp)$/
-const HTML_ROUTES = ['/', '/index.html']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -30,8 +29,9 @@ self.addEventListener('fetch', (event) => {
   // Skip API calls and non-GET requests
   if (url.pathname.startsWith('/api/') || request.method !== 'GET') return
 
-  // Network-first for HTML to always serve fresh app shell after deployments
-  if (HTML_ROUTES.includes(url.pathname)) {
+  // Network-first for navigation requests (HTML pages) to always serve fresh app shell
+  // This handles all routes including deep links like /privacy, /organizer-guide, etc.
+  if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {

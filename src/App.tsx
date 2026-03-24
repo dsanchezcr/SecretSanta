@@ -30,7 +30,9 @@ function cleanupOldGameData() {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
     let changed = false
     for (const code of Object.keys(games)) {
-      if (games[code]?.createdAt && games[code].createdAt! < cutoff) {
+      const createdAt = games[code]?.createdAt
+      // Treat entries without createdAt as expired (legacy data)
+      if (!createdAt || createdAt < cutoff) {
         delete games[code]
         changed = true
       }

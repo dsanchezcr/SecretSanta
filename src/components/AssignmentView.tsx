@@ -662,7 +662,7 @@ export function AssignmentView({
                 <EventCountdown
                   targetDate={game.date}
                   targetTime={game.time}
-                  label={t('eventCountdown') || 'Time until event'}
+                  label={t('eventCountdown')}
                 />
               )}
 
@@ -684,7 +684,7 @@ export function AssignmentView({
                   }}
                 >
                   <CalendarBlank size={16} />
-                  {t('addToCalendar') || 'Add to Calendar'}
+                  {t('addToCalendar')}
                 </Button>
               )}
             </div>

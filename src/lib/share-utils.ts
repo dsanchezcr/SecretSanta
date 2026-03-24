@@ -3,7 +3,7 @@
  */
 
 /**
- * Copy the invitation URL to clipboard and show a toast.
+ * Build a shareable invitation URL with game code and optional token.
  * QR code display is handled by the QRCodeDisplay component.
  */
 export function getShareableUrl(baseUrl: string, gameCode: string, token?: string): string {

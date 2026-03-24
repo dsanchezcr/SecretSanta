@@ -506,9 +506,12 @@ function findValidSwapPartner(game: Game, participantId: string): Participant | 
 
   if (eligiblePartners.length === 0) return null
 
-  // Return a random eligible partner
+  // Use rejection sampling for unbiased random selection
+  const limit = 2 ** 32 - (2 ** 32 % eligiblePartners.length)
   const randomValues = new Uint32Array(1)
-  crypto.getRandomValues(randomValues)
+  do {
+    crypto.getRandomValues(randomValues)
+  } while (randomValues[0] >= limit)
   return eligiblePartners[randomValues[0] % eligiblePartners.length]
 }
 

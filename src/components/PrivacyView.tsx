@@ -24,11 +24,11 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
     if (consent) {
       setAnalyticsConsent(true)
       setAnalyticsConsentState(true)
-      toast.success(t('analyticsEnabled') || 'Analytics enabled')
+      toast.success(t('analyticsEnabled'))
     } else {
       setAnalyticsDeclined()
       setAnalyticsConsentState(false)
-      toast.success(t('analyticsDisabled') || 'Analytics disabled')
+      toast.success(t('analyticsDisabled'))
     }
   }
 
@@ -192,12 +192,12 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-foreground">
-                      {t('analyticsConsentStatus') || 'Analytics Status'}
+                      {t('analyticsConsentStatus')}
                     </p>
                     <p className="text-sm">
                       {analyticsConsent 
-                        ? (t('analyticsCurrentlyEnabled') || 'Analytics are currently enabled')
-                        : (t('analyticsCurrentlyDisabled') || 'Analytics are currently disabled')
+                        ? t('analyticsCurrentlyEnabled')
+                        : t('analyticsCurrentlyDisabled')
                       }
                     </p>
                   </div>
@@ -210,7 +210,7 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
                       onClick={() => handleConsentChange(true)}
                       className="flex-1 sm:flex-none"
                     >
-                      {t('enableAnalytics') || 'Enable Analytics'}
+                      {t('enableAnalytics')}
                     </Button>
                   )}
                   {analyticsConsent && (
@@ -221,7 +221,7 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
                       onClick={() => handleConsentChange(false)}
                       className="flex-1 sm:flex-none"
                     >
-                      {t('disableAnalytics') || 'Disable Analytics'}
+                      {t('disableAnalytics')}
                     </Button>
                   )}
                 </div>

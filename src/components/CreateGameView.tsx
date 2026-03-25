@@ -170,7 +170,7 @@ export function CreateGameView({ onGameCreated, onBack, emailConfigured = false 
       language
     }
 
-    toast.info(t('gameCreatedLocally') || 'Game created in demo mode (local storage only)')
+    toast.info(t('gameCreatedLocally'))
     onGameCreated(game)
   }
 

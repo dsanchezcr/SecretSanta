@@ -5,18 +5,19 @@ let initialized = false
 
 /**
  * Initialize Application Insights for frontend telemetry.
- * Fetches the connection string from the API's health endpoint at runtime.
+ * Fetches the connection string from a dedicated config endpoint at runtime.
  */
 export async function initializeAppInsights(): Promise<void> {
   if (typeof window === 'undefined' || initialized) return
-  initialized = true
 
   try {
-    const response = await fetch('/api/health')
+    const response = await fetch('/api/config')
     if (!response.ok) return
     const data = await response.json()
     const connectionString = data.appInsightsConnectionString
     if (!connectionString) return
+
+    initialized = true
 
     appInsights = new ApplicationInsights({
       config: {
@@ -34,6 +35,7 @@ export async function initializeAppInsights(): Promise<void> {
     appInsights.loadAppInsights()
   } catch {
     // Silently fail - telemetry is optional
+    initialized = false
   }
 }
 

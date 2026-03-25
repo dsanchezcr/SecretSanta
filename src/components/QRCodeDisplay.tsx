@@ -39,7 +39,7 @@ export function QRCodeDisplay({ value, size = 200, className }: QRCodeDisplayPro
     <canvas
       ref={canvasRef}
       role="img"
-      aria-label={`QR code linking to: ${value}`}
+      aria-label="Invitation QR code"
       className={`rounded-lg border bg-white ${className || ''}`}
     />
   )

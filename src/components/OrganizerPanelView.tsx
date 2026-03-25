@@ -611,7 +611,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to reassign participant'
       if (message.includes('no valid swap') || message.includes('No valid swap') || message.includes('Cannot reassign')) {
-        toast.error(t('reassignmentFailedSuggestAll') || 'Cannot reassign this participant individually. Too many participants have confirmed their assignments. Try "Reassign All" instead.')
+        toast.error(t('reassignmentFailedSuggestAll'))
       } else {
         toast.error(message)
       }
@@ -1423,11 +1423,11 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
                 return (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
                     <p className="text-amber-800 font-medium text-sm">
-                      ⚠️ {unassigned.map(p => p.name).join(', ')} {unassigned.length === 1 ? t('pendingAssignmentSingular') || 'has no assignment yet' : t('pendingAssignmentPlural') || 'have no assignments yet'}.
+                      ⚠️ {unassigned.map(p => p.name).join(', ')} {unassigned.length === 1 ? t('pendingAssignmentSingular') : t('pendingAssignmentPlural')}.
                     </p>
                     {allOthersConfirmed && (
                       <p className="text-amber-700 text-sm mt-1">
-                        {t('allConfirmedReassignNeeded') || 'All other participants have confirmed. You need to reassign all to include new participants.'}
+                        {t('allConfirmedReassignNeeded')}
                       </p>
                     )}
                   </div>

@@ -444,7 +444,7 @@ export function AssignmentView({
             </div>
             <h2 className="text-xl font-bold mb-2">{t('pendingAssignment')}</h2>
             <p className="text-muted-foreground">
-              {t('pendingAssignmentDesc') || 'Your assignment is being prepared. The organizer will finalize assignments soon.'}
+              {t('pendingAssignmentDesc')}
             </p>
           </Card>
         </div>

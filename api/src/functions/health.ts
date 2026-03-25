@@ -207,11 +207,7 @@ export async function healthHandler(request: HttpRequest, context: InvocationCon
       'Content-Type': 'application/json',
       'Cache-Control': 'no-cache, no-store, must-revalidate'
     },
-    jsonBody: {
-      ...result,
-      // Expose App Insights connection string for frontend telemetry
-      appInsightsConnectionString: process.env.APPLICATIONINSIGHTS_CONNECTION_STRING || null
-    }
+    jsonBody: result
   }
 }
 

@@ -800,6 +800,15 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       const desiredGift = payload.desiredGift?.trim() || ''
       const wish = payload.wish?.trim() || ''
       const language = payload.language
+
+      // Validate input lengths
+      const nameErr = validateLength('Participant name', participantName, INPUT_LIMITS.PARTICIPANT_NAME)
+      const emailErr = validateLength('Email', participantEmail, INPUT_LIMITS.EMAIL)
+      const giftErr = validateLength('Desired gift', desiredGift, INPUT_LIMITS.DESIRED_GIFT)
+      const wishErr = validateLength('Wish', wish, INPUT_LIMITS.WISH)
+      if (nameErr || emailErr || giftErr || wishErr) {
+        return { status: 400, jsonBody: { error: nameErr || emailErr || giftErr || wishErr } }
+      }
       
       // Validate invitation token
       if (!invitationToken || !safeCompare(invitationToken, game.invitationToken)) {

@@ -163,6 +163,8 @@ function App() {
     }))
     setCurrentGameCode(game.code)
     setEmailResults(results)
+    // Clear the #create hash so that refreshing the page doesn't reopen the create-game view
+    window.history.replaceState({ view: 'game-created' }, '', '/')
     setView('game-created')
   }
 

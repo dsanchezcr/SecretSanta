@@ -136,9 +136,18 @@ export async function healthHandler(request: HttpRequest, context: InvocationCon
     environment: process.env.ENVIRONMENT || 'Development',
     uptime: Math.round((Date.now() - startTime) / 1000),
     // Legacy checks object for backward compatibility with existing frontend code
+    // Maps new ServiceCheck statuses (Healthy/Degraded/Unhealthy) to legacy values (ok/not_configured/error)
     checks: {
-      database: { status: databaseService.status },
-      email: { status: emailService.status }
+      database: {
+        status: databaseService.status === 'Healthy' ? 'ok'
+               : databaseService.status === 'Degraded' ? 'not_configured'
+               : 'error'
+      },
+      email: {
+        status: emailService.status === 'Healthy' ? 'ok'
+              : emailService.status === 'Degraded' ? 'not_configured'
+              : 'error'
+      }
     },
     services
   }

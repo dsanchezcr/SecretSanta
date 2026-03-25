@@ -33,7 +33,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <link href="/src/main.css" rel="stylesheet" />
 
-    <!-- JSON-LD structured data (type=application/ld+json is not blocked by CSP) -->
+    <!-- JSON-LD structured data for search engine crawlers.
+         Note: <script type="application/ld+json"> is a non-executable data block per the HTML spec
+         and is NOT subject to CSP script-src restrictions (only JavaScript MIME types are restricted).
+         It is safe to include inline even without 'unsafe-inline' in script-src. -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",

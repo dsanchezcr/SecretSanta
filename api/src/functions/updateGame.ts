@@ -195,7 +195,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
             context.log(`All existing participants confirmed in game ${code}. New participant '${participantName}' added without assignment. Organizer must reassign all.`)
           } else {
             // Use lock-based assignment to preserve confirmed participants
-            game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments)
+            game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments, game.exclusions)
           }
         }
         
@@ -432,7 +432,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
         const confirmedBeforeReassignment = game.participants.filter(p => p.hasConfirmedAssignment && p.email)
         
         // Generate new assignments while preserving confirmed participants' assignments
-        game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments)
+        game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments, game.exclusions)
         
         // Clear pending reassignment requests for ALL participants
         game.reassignmentRequests = []
@@ -881,7 +881,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
         // All existing participants confirmed - keep existing assignments
         context.log(`All existing participants confirmed in game ${code}. New participant '${participantName}' added without assignment.`)
       } else {
-        game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments)
+        game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments, game.exclusions)
       }
       
       // Clear any pending reassignment requests since we're regenerating assignments

@@ -117,7 +117,8 @@ export function generateAssignmentsWithResult(participants: Participant[], exclu
  */
 export function generateAssignmentsWithLocks(
   participants: Participant[],
-  currentAssignments: Assignment[]
+  currentAssignments: Assignment[],
+  exclusions: ExclusionPair[] = []
 ): Assignment[] {
   if (participants.length < 3) {
     throw new Error('Need at least 3 participants')
@@ -134,9 +135,9 @@ export function generateAssignmentsWithLocks(
     return [...currentAssignments]
   }
 
-  // If no locked assignments, generate fresh assignments
+  // If no locked assignments, generate fresh assignments (with exclusions)
   if (lockedAssignments.length === 0) {
-    return generateAssignments(participants)
+    return generateAssignments(participants, exclusions)
   }
 
   // Build maps for quick lookup
@@ -202,7 +203,7 @@ export function generateAssignmentsWithLocks(
   
   // If we couldn't avoid self-assignment after many attempts, fall back to full regeneration
   if (assignmentAttempts >= maxAttempts) {
-    return generateAssignments(participants)
+    return generateAssignments(participants, exclusions)
   }
 
   return newAssignments

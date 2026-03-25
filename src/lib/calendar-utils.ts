@@ -7,8 +7,14 @@ export function generateICS(event: {
   time?: string // HH:MM
   location: string
   description?: string
+  assignedTo?: string
+  desiredGift?: string
+  wish?: string
+  amount?: string
+  currency?: string
+  generalNotes?: string
 }): string {
-  const { name, date, time, location, description } = event
+  const { name, date, time, location, description, assignedTo, desiredGift, wish, amount, currency, generalNotes } = event
   const dateParts = date.replace(/-/g, '')
 
   // If time is provided, use it. Otherwise, make it an all-day event.
@@ -47,6 +53,17 @@ export function generateICS(event: {
   const uid = `secretsanta-${dateParts}-${randomHex}@secretsanta`
   const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
 
+  // Build rich description with all game details
+  const descParts: string[] = []
+  if (assignedTo) descParts.push(`🎁 You are giving a gift to: ${assignedTo}`)
+  if (desiredGift) descParts.push(`🎄 Their desired gift: ${desiredGift}`)
+  if (wish) descParts.push(`✨ Their wish: ${wish}`)
+  if (amount && currency) descParts.push(`💰 Budget: ${currency} ${amount}`)
+  else if (amount) descParts.push(`💰 Budget: ${amount}`)
+  if (generalNotes) descParts.push(`📝 Notes: ${generalNotes}`)
+  if (description && description !== generalNotes) descParts.push(description)
+  const fullDescription = descParts.join('\n')
+
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -59,16 +76,40 @@ export function generateICS(event: {
     time ? `DTEND:${dtEnd}` : `DTEND;VALUE=DATE:${dtEnd}`,
     `SUMMARY:${escapeICS(name)}`,
     location ? `LOCATION:${escapeICS(location)}` : '',
-    description ? `DESCRIPTION:${escapeICS(description)}` : '',
+    fullDescription ? `DESCRIPTION:${escapeICS(fullDescription)}` : '',
     'END:VEVENT',
     'END:VCALENDAR',
   ].filter(Boolean)
 
-  return lines.join('\r\n')
+  // Apply RFC 5545 line folding: lines longer than 75 octets must be folded
+  return lines.map(foldLine).join('\r\n')
 }
 
 function escapeICS(text: string): string {
   return text.replace(/[\\;,]/g, (c) => `\\${c}`).replace(/\n/g, '\\n')
+}
+
+/**
+ * RFC 5545 line folding: lines longer than 75 octets are folded with CRLF + space.
+ */
+function foldLine(line: string): string {
+  const MAX_OCTETS = 75
+  if (new TextEncoder().encode(line).length <= MAX_OCTETS) return line
+  const encoder = new TextEncoder()
+  const parts: string[] = []
+  let remaining = line
+  let isFirst = true
+  while (remaining.length > 0) {
+    const limit = isFirst ? MAX_OCTETS : MAX_OCTETS - 1 // subsequent lines have leading space
+    let end = remaining.length
+    while (encoder.encode(remaining.slice(0, end)).length > limit && end > 1) {
+      end--
+    }
+    parts.push(remaining.slice(0, end))
+    remaining = remaining.slice(end)
+    isFirst = false
+  }
+  return parts.join('\r\n ')
 }
 
 export function downloadICS(icsContent: string, filename: string) {

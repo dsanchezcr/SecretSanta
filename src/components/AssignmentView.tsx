@@ -708,7 +708,12 @@ export function AssignmentView({
                       date: game.date,
                       time: game.time,
                       location: game.location,
-                      description: game.generalNotes || undefined,
+                      assignedTo: currentReceiver?.name,
+                      desiredGift: currentReceiver?.desiredGift,
+                      wish: currentReceiver?.wish,
+                      amount: game.amount,
+                      currency: game.currency,
+                      generalNotes: game.generalNotes,
                     })
                     downloadICS(ics, `${game.name.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-').slice(0, 50) || 'event'}.ics`)
                   }}

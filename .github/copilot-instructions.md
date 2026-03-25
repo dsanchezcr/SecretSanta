@@ -63,7 +63,7 @@ secretsanta/
 - **QR Codes**: `QRCodeDisplay` component using `qrcode` library for invitation links (with invite-only label)
 - **Calendar**: `generateICS()` / `downloadICS()` in `src/lib/calendar-utils.ts` for `.ics` downloads
 - **Event Countdown**: `EventCountdown` component with live timer updates and localized time units
-- **Telemetry**: Frontend Application Insights via `src/lib/app-insights.ts` (fetches connection string from `/api/health` at runtime)
+- **Telemetry**: Frontend Application Insights via `src/lib/app-insights.ts` (fetches connection string from `/api/config` at runtime)
 
 ### API
 - **Runtime**: Azure Functions v4 with TypeScript

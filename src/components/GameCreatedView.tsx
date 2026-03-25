@@ -419,6 +419,7 @@ export function GameCreatedView({ game, onContinue, emailResults }: GameCreatedV
                   <QRCodeDisplay
                     value={buildShareableUrl({ code: game.code, invitation: game.invitationToken, lang: language })}
                     size={160}
+                    ariaLabel={t('qrCodeAriaLabel')}
                   />
                   <p className="text-xs text-muted-foreground text-center">
                     {t('qrInviteOnly')}

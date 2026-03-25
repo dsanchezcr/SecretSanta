@@ -5,9 +5,10 @@ interface QRCodeDisplayProps {
   value: string
   size?: number
   className?: string
+  ariaLabel?: string
 }
 
-export function QRCodeDisplay({ value, size = 200, className }: QRCodeDisplayProps) {
+export function QRCodeDisplay({ value, size = 200, className, ariaLabel }: QRCodeDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [error, setError] = useState(false)
 
@@ -39,7 +40,7 @@ export function QRCodeDisplay({ value, size = 200, className }: QRCodeDisplayPro
     <canvas
       ref={canvasRef}
       role="img"
-      aria-label="Invitation QR code"
+      aria-label={ariaLabel || 'Invitation QR code'}
       className={`rounded-lg border bg-white ${className || ''}`}
     />
   )

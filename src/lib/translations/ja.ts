@@ -471,6 +471,7 @@ export const ja = {
     pendingAssignmentDesc: "割り当てが準備中です。オーガナイザーがまもなく割り当てを確定します。",
     allConfirmedReassignNeeded: "他の全参加者が割り当てを確認済みです。新しい参加者を含めるには'全員再割り当て'を使用してください。",
     qrInviteOnly: "スキャンして新しい参加者を招待",
+    qrCodeAriaLabel: "招待QRコード",
     reassignmentNotAllowed: "オーガナイザーは再割り当てを許可しません",
     reassignmentPending: "保留中のリクエスト",
     reassignmentPendingDesc: "オーガナイザーはすぐにあなたのリクエストを確認します。",

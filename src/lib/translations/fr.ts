@@ -471,6 +471,7 @@ export const fr = {
     pendingAssignmentDesc: "Votre attribution est en cours de préparation. L'organisateur finalisera les attributions bientôt.",
     allConfirmedReassignNeeded: "Tous les autres participants ont confirmé leurs attributions. Vous devez utiliser 'Réattribuer Tous' pour inclure de nouveaux participants.",
     qrInviteOnly: "Scannez pour inviter de nouveaux participants",
+    qrCodeAriaLabel: "Code QR d'invitation",
     reassignmentNotAllowed: "L'organisateur n'autorise pas les réattributions",
     reassignmentPending: "Demande en attente",
     reassignmentPendingDesc: "L'organisateur examinera votre demande bientôt.",

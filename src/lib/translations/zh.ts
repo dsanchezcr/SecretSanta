@@ -471,6 +471,7 @@ export const zh = {
     pendingAssignmentDesc: "您的分配正在准备中。组织者将很快完成分配。",
     allConfirmedReassignNeeded: "所有其他参与者已确认其分配。您需要使用\u2018全部重新分配\u2019来包含新参与者。",
     qrInviteOnly: "扫描以邀请新参与者",
+    qrCodeAriaLabel: "邀请二维码",
     reassignmentNotAllowed: "组织者不允许重新分配",
     reassignmentPending: "待处理的请求",
     reassignmentPendingDesc: "组织者将很快审查您的请求。",

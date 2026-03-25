@@ -230,6 +230,7 @@ export const en = {
     pendingAssignmentDesc: "Your assignment is being prepared. The organizer will finalize assignments soon.",
     allConfirmedReassignNeeded: "All other participants have confirmed their assignments. You need to use 'Reassign All' to include new participants.",
     qrInviteOnly: "Scan to invite new participants",
+    qrCodeAriaLabel: "Invitation QR code",
     
     downloadCard: "Download Card",
     downloadingCard: "Generating card...",

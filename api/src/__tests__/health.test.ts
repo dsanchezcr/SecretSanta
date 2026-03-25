@@ -21,9 +21,11 @@ jest.mock('../shared/telemetry', () => ({
 
 import { getDatabaseStatus } from '../shared/cosmosdb'
 import { getEmailServiceStatus } from '../shared/email-service'
+import { getTelemetryConfig } from '../shared/telemetry'
 
 const mockGetDatabaseStatus = getDatabaseStatus as jest.Mock
 const mockGetEmailServiceStatus = getEmailServiceStatus as jest.Mock
+const mockGetTelemetryConfig = getTelemetryConfig as jest.Mock
 
 describe('health function', () => {
   let mockRequest: HttpRequest
@@ -53,7 +55,28 @@ describe('health function', () => {
     })
   })
 
-  it('should return 200 healthy when database is connected', async () => {
+  it('should return 200 Healthy when database is connected', async () => {
+    mockGetDatabaseStatus.mockReturnValue({
+      connected: true,
+      error: null
+    })
+    mockGetEmailServiceStatus.mockReturnValue({ configured: true, error: null })
+    mockGetTelemetryConfig.mockReturnValue({ configured: true })
+
+    const response = await healthHandler(mockRequest, mockContext)
+
+    expect(response.status).toBe(200)
+    const body = response.jsonBody as any
+    expect(body.overallStatus).toBe('Healthy')
+    expect(body.services).toBeInstanceOf(Array)
+    expect(body.services.find((s: any) => s.name === 'Azure Cosmos DB').status).toBe('Healthy')
+    expect(body.timestamp).toBeDefined()
+    expect(body.version).toBeDefined()
+    expect(body.uptime).toBeDefined()
+    expect(body.environmentVariables).toBeDefined()
+  })
+
+  it('should return 200 Degraded when optional services are not configured', async () => {
     mockGetDatabaseStatus.mockReturnValue({
       connected: true,
       error: null
@@ -63,15 +86,11 @@ describe('health function', () => {
 
     expect(response.status).toBe(200)
     const body = response.jsonBody as any
-    expect(body.status).toBe('healthy')
-    expect(body.checks.database.status).toBe('ok')
-    expect(body.checks.email.status).toBe('not_configured')
-    expect(body.timestamp).toBeDefined()
-    expect(body.version).toBeDefined()
-    expect(body.uptime).toBeDefined()
+    expect(body.overallStatus).toBe('Degraded')
+    expect(body.services.find((s: any) => s.name === 'Azure Cosmos DB').status).toBe('Healthy')
   })
 
-  it('should return 503 unhealthy when database is not connected', async () => {
+  it('should return 503 Unhealthy when database is not connected', async () => {
     mockGetDatabaseStatus.mockReturnValue({
       connected: false,
       error: 'Connection failed'
@@ -81,9 +100,8 @@ describe('health function', () => {
 
     expect(response.status).toBe(503)
     const body = response.jsonBody as any
-    expect(body.status).toBe('unhealthy')
-    expect(body.checks.database.status).toBe('error')
-    expect(body.checks.database.error).toBe('Connection failed')
+    expect(body.overallStatus).toBe('Unhealthy')
+    expect(body.services.find((s: any) => s.name === 'Azure Cosmos DB').status).toBe('Unhealthy')
   })
 
   it('should include timestamp in ISO format', async () => {
@@ -108,6 +126,20 @@ describe('health function', () => {
     await healthHandler(mockRequest, mockContext)
 
     expect(mockContext.log).toHaveBeenCalledWith('Health check requested')
+  })
+
+  it('should show environment variable presence as booleans without values', async () => {
+    mockGetDatabaseStatus.mockReturnValue({ connected: true, error: null })
+    mockGetEmailServiceStatus.mockReturnValue({ configured: false, error: null })
+
+    const response = await healthHandler(mockRequest, mockContext)
+    const body = response.jsonBody as any
+
+    expect(body.environmentVariables).toBeDefined()
+    // All values should be booleans (true/false), never actual secret values
+    for (const val of Object.values(body.environmentVariables)) {
+      expect(typeof val).toBe('boolean')
+    }
   })
 })
 
@@ -135,7 +167,7 @@ describe('healthHandler - additional branches', () => {
     } as unknown as InvocationContext
   })
 
-  it('should return degraded status when email has error', async () => {
+  it('should return Degraded status when email has error', async () => {
     mockGetDatabaseStatus.mockReturnValue({ connected: true, error: null })
     mockGetEmailServiceStatus.mockReturnValue({ configured: true, error: 'ACS service error' })
 
@@ -143,42 +175,34 @@ describe('healthHandler - additional branches', () => {
 
     expect(response.status).toBe(200)
     const body = response.jsonBody as any
-    expect(body.status).toBe('degraded')
-    expect(body.checks.email.status).toBe('error')
+    expect(body.overallStatus).toBe('Degraded')
+    expect(body.services.find((s: any) => s.name === 'Azure Communication Services (Email)').status).toBe('Unhealthy')
   })
 
-  it('should return ok email status when email service is configured', async () => {
+  it('should return Healthy email status when email service is configured', async () => {
     mockGetDatabaseStatus.mockReturnValue({ connected: true, error: null })
     mockGetEmailServiceStatus.mockReturnValue({ configured: true, error: null })
 
     const response = await healthHandler(mockRequest, mockContext)
 
     const body = response.jsonBody as any
-    expect(body.checks.email.status).toBe('ok')
+    expect(body.services.find((s: any) => s.name === 'Azure Communication Services (Email)').status).toBe('Healthy')
   })
 
-  it('should include system info when verbose=true in non-prod environment', async () => {
+  it('should include services array with name, status, message, and responseTimeMs', async () => {
     mockGetDatabaseStatus.mockReturnValue({ connected: true, error: null })
     mockGetEmailServiceStatus.mockReturnValue({ configured: false, error: null })
 
-    const verboseRequest = {
-      method: 'GET',
-      url: 'http://localhost/api/health?verbose=true',
-      headers: new Headers(),
-      query: new URLSearchParams('verbose=true'),
-      params: {},
-    } as unknown as HttpRequest
-
-    const originalEnv = process.env.ENVIRONMENT
-    process.env.ENVIRONMENT = 'development'
-
-    const response = await healthHandler(verboseRequest, mockContext)
-
-    process.env.ENVIRONMENT = originalEnv
+    const response = await healthHandler(mockRequest, mockContext)
 
     const body = response.jsonBody as any
-    expect(body.system).toBeDefined()
-    expect(body.system.nodeVersion).toBeDefined()
+    expect(body.services).toHaveLength(3)
+    for (const service of body.services) {
+      expect(service).toHaveProperty('name')
+      expect(service).toHaveProperty('status')
+      expect(service).toHaveProperty('message')
+      expect(service).toHaveProperty('responseTimeMs')
+    }
   })
 })
 

@@ -229,6 +229,7 @@ export const pt = {
     pendingAssignmentDesc: "Sua atribuição está sendo preparada. O organizador finalizará as atribuições em breve.",
     allConfirmedReassignNeeded: "Todos os outros participantes confirmaram suas atribuições. Você precisa usar 'Reatribuir Todos' para incluir novos participantes.",
     qrInviteOnly: "Escaneie para convidar novos participantes",
+    qrCodeAriaLabel: "Código QR de convite",
     
     downloadCard: "Baixar Cartão",
     downloadingCard: "Gerando cartão...",

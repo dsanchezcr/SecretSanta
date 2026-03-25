@@ -226,6 +226,7 @@ export const de = {
     pendingAssignmentDesc: "Ihre Zuweisung wird vorbereitet. Der Organisator wird die Zuweisungen in Kürze abschließen.",
     allConfirmedReassignNeeded: "Alle anderen Teilnehmer haben ihre Zuweisungen bestätigt. Sie müssen 'Alle neu zuweisen' verwenden, um neue Teilnehmer einzubeziehen.",
     qrInviteOnly: "Scannen, um neue Teilnehmer einzuladen",
+    qrCodeAriaLabel: "Einladungs-QR-Code",
     
     downloadCard: "Karte herunterladen",
     downloadingCard: "Karte wird generiert...",

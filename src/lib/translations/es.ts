@@ -230,6 +230,7 @@ export const es = {
     pendingAssignmentDesc: "Tu asignación está siendo preparada. El organizador finalizará las asignaciones pronto.",
     allConfirmedReassignNeeded: "Todos los demás participantes han confirmado sus asignaciones. Necesitas usar 'Reasignar Todos' para incluir nuevos participantes.",
     qrInviteOnly: "Escanea para invitar nuevos participantes",
+    qrCodeAriaLabel: "Código QR de invitación",
     
     downloadCard: "Descargar Tarjeta",
     downloadingCard: "Generando tarjeta...",

@@ -226,6 +226,7 @@ export const nl = {
     pendingAssignmentDesc: "Uw toewijzing wordt voorbereid. De organisator zal de toewijzingen binnenkort afronden.",
     allConfirmedReassignNeeded: "Alle andere deelnemers hebben hun toewijzingen bevestigd. U moet 'Alles opnieuw toewijzen' gebruiken om nieuwe deelnemers op te nemen.",
     qrInviteOnly: "Scan om nieuwe deelnemers uit te nodigen",
+    qrCodeAriaLabel: "Uitnodigings-QR-code",
     
     downloadCard: "Kaart downloaden",
     downloadingCard: "Kaart wordt gegenereerd...",

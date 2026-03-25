@@ -471,6 +471,7 @@ export const it = {
     pendingAssignmentDesc: "Il tuo incarico è in preparazione. L'organizzatore finalizzerà gli incarichi presto.",
     allConfirmedReassignNeeded: "Tutti gli altri partecipanti hanno confermato i loro incarichi. Devi usare 'Riassegna Tutti' per includere nuovi partecipanti.",
     qrInviteOnly: "Scansiona per invitare nuovi partecipanti",
+    qrCodeAriaLabel: "Codice QR di invito",
     reassignmentNotAllowed: "L'organizzatore non consente riassegnazioni",
     reassignmentPending: "Richiesta in sospeso",
     reassignmentPendingDesc: "L'organizzatore esaminerà la tua richiesta presto.",

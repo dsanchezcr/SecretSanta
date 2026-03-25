@@ -26,7 +26,7 @@ Secret Santa gift exchange web application built with React + Vite, Azure Functi
 - 📤 **Web Share API**: Native mobile sharing via `navigator.share()` when available
 - 📊 **Application Insights**: Frontend and backend monitoring, error tracking, and performance telemetry
 - ♿ **Accessibility Testing**: Automated WCAG 2.0 AA checks via axe-core in E2E tests
-- 🧪 **Cross-Browser E2E**: Playwright tests run in Chromium, Firefox, and WebKit
+- 🧪 **Cross-Browser E2E**: Playwright tests support Chromium, Firefox, and WebKit locally; CI runs Chromium by default
 
 ## 🏗️ Environment Strategy
 

@@ -140,17 +140,7 @@ export async function healthHandler(request: HttpRequest, context: InvocationCon
       database: { status: databaseService.status },
       email: { status: emailService.status }
     },
-    services,
-    environmentVariables: {
-      COSMOS_ENDPOINT: !!process.env.COSMOS_ENDPOINT,
-      COSMOS_KEY: !!process.env.COSMOS_KEY,
-      COSMOS_DATABASE_NAME: !!process.env.COSMOS_DATABASE_NAME,
-      COSMOS_CONTAINER_NAME: !!process.env.COSMOS_CONTAINER_NAME,
-      APPLICATIONINSIGHTS_CONNECTION_STRING: !!process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
-      ACS_CONNECTION_STRING: !!process.env.ACS_CONNECTION_STRING,
-      APP_BASE_URL: !!process.env.APP_BASE_URL,
-      CLEANUP_SECRET: !!process.env.CLEANUP_SECRET
-    }
+    services
   }
 
   return {

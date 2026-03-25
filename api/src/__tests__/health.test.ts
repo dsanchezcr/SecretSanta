@@ -73,7 +73,6 @@ describe('health function', () => {
     expect(body.timestamp).toBeDefined()
     expect(body.version).toBeDefined()
     expect(body.uptime).toBeDefined()
-    expect(body.environmentVariables).toBeDefined()
   })
 
   it('should return 200 Degraded when optional services are not configured', async () => {
@@ -128,18 +127,14 @@ describe('health function', () => {
     expect(mockContext.log).toHaveBeenCalledWith('Health check requested')
   })
 
-  it('should show environment variable presence as booleans without values', async () => {
+  it('should not expose sensitive configuration in response', async () => {
     mockGetDatabaseStatus.mockReturnValue({ connected: true, error: null })
     mockGetEmailServiceStatus.mockReturnValue({ configured: false, error: null })
 
     const response = await healthHandler(mockRequest, mockContext)
     const body = response.jsonBody as any
 
-    expect(body.environmentVariables).toBeDefined()
-    // All values should be booleans (true/false), never actual secret values
-    for (const val of Object.values(body.environmentVariables)) {
-      expect(typeof val).toBe('boolean')
-    }
+    expect(body.environmentVariables).toBeUndefined()
   })
 })
 

@@ -8,8 +8,7 @@ export function useDarkMode() {
   )
 
   useEffect(() => {
-    const root = document.getElementById('app')
-    if (!root) return
+    const root = document.documentElement
     if (isDark) {
       root.classList.add('dark-theme')
       root.setAttribute('data-appearance', 'dark')

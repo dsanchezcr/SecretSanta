@@ -419,9 +419,13 @@ describe('createGame function', () => {
     })
 
     it('should reject past dates', async () => {
+      // Use a date far enough in the past to avoid timezone edge cases
       const pastDate = new Date()
-      pastDate.setDate(pastDate.getDate() - 1)
-      const dateStr = pastDate.toISOString().split('T')[0]
+      pastDate.setDate(pastDate.getDate() - 7)
+      const year = pastDate.getFullYear()
+      const month = String(pastDate.getMonth() + 1).padStart(2, '0')
+      const day = String(pastDate.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
       
       const requestBody = {
         name: 'Past Game',

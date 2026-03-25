@@ -58,11 +58,12 @@ secretsanta/
 - **i18n**: `LanguageProvider` context + `useLanguage()` hook
 - **Translations**: Split into per-language files under `src/lib/translations/` (en.ts, es.ts, etc.)
 - **State**: `useLocalStorage` hook for client-side persistence
-- **Dark Mode**: `useDarkMode` hook + `DarkModeToggle` component, toggles `.dark-theme` class on `#app`
+- **Dark Mode**: `useDarkMode` hook + `DarkModeToggle` component on all pages, toggles `.dark-theme` class on `<html>`
 - **PWA**: `public/manifest.json` + `public/sw.js` service worker with cache-first strategy
-- **QR Codes**: `QRCodeDisplay` component using `qrcode` library for invitation links
+- **QR Codes**: `QRCodeDisplay` component using `qrcode` library for invitation links (with invite-only label)
 - **Calendar**: `generateICS()` / `downloadICS()` in `src/lib/calendar-utils.ts` for `.ics` downloads
-- **Event Countdown**: `EventCountdown` component with live timer updates
+- **Event Countdown**: `EventCountdown` component with live timer updates and localized time units
+- **Telemetry**: Frontend Application Insights via `src/lib/app-insights.ts` (fetches connection string from `/api/health` at runtime)
 
 ### API
 - **Runtime**: Azure Functions v4 with TypeScript
@@ -212,7 +213,8 @@ az deployment group create \
 - **Game Code**: 6-digit numeric string (crypto-secure via `crypto.randomInt`)
 - **Assignments**: Circular shuffle (each gives to next) with crypto-secure Fisher-Yates algorithm
 - **Exclusion Rules**: Optional pairs that should never be assigned to each other
-- **Reassignment**: Preserves cycle integrity
+- **Adding Participants**: Preserves confirmed participants' assignments using lock-based regeneration; shows pending assignment state when all others confirmed
+- **Reassignment**: Individual reassignment for any participant from organizer panel; preserves cycle integrity
 - **Date Validation**: Games can only be created for today or future dates
 - **Data Retention**: Games auto-archived 3 days after event date, permanently deleted 30 days after archival (GDPR compliant)
 - **Manual Deletion**: Organizers can delete games anytime via DELETE endpoint
@@ -222,8 +224,8 @@ az deployment group create \
 - `create-game` - Game creation form with date validation
 - `game-created` - Success page with organizer token and QR code sharing
 - `select-participant` - Participant login for protected games
-- `assignment` - Shows gift assignment with event countdown and calendar download
-- `organizer-panel` - Full game management (includes delete feature)
+- `assignment` - Shows gift assignment with event countdown and calendar download; shows pending assignment page when no assignment exists
+- `organizer-panel` - Full game management with individual/bulk reassignment (includes delete feature)
 - `privacy` - Data handling and retention policy
 - `game-not-found` - Error page for deleted/invalid games
 

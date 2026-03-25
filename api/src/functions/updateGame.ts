@@ -187,8 +187,17 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
         game.participants.push(newParticipant)
         
         // Regenerate assignments if we have at least 3 participants
+        // Preserve confirmed participants' assignments when possible
         if (game.participants.length >= 3) {
-          game.assignments = generateAssignments(game.participants)
+          const confirmedCount = game.participants.filter(p => p.hasConfirmedAssignment).length
+          if (confirmedCount === game.participants.length - 1) {
+            // All existing participants confirmed - can't reassign without disrupting
+            // Keep existing assignments, new participant has no assignment yet
+            context.log(`All existing participants confirmed in game ${code}. New participant '${participantName}' added without assignment. Organizer must reassign all.`)
+          } else {
+            // Use lock-based assignment to preserve confirmed participants
+            game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments)
+          }
         }
         
         // Send invitation email to new participant if they have email
@@ -858,14 +867,19 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       // Add participant to game
       game.participants.push(newParticipant)
       
-      // Regenerate assignments to include new participant
-      game.assignments = generateAssignments(game.participants)
+      // Regenerate assignments to include new participant, preserving confirmed ones
+      const confirmedCount = game.participants.filter(p => p.hasConfirmedAssignment).length
+      if (confirmedCount === game.participants.length - 1) {
+        // All existing participants confirmed - keep existing assignments
+        context.log(`All existing participants confirmed in game ${code}. New participant '${participantName}' added without assignment.`)
+      } else {
+        game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments)
+      }
       
-      // Clear any pending reassignment requests since we're regenerating all assignments
+      // Clear any pending reassignment requests since we're regenerating assignments
       game.reassignmentRequests = []
       game.participants.forEach(p => {
         p.hasPendingReassignmentRequest = false
-        p.hasConfirmedAssignment = false // Clear confirmations when regenerating
       })
       
       context.log(`New participant '${participantName}' joined game via invitation: ${code}`)

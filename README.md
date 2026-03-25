@@ -11,20 +11,20 @@ Secret Santa gift exchange web application built with React + Vite, Azure Functi
 - 🎲 **Crypto-Secure Assignments**: Fair circular shuffle using `crypto.randomInt` + Fisher-Yates algorithm
 - 🔒 **Protected Games**: Optional participant tokens with timing-safe comparison
 - 📧 **Email Notifications**: Optional Azure Communication Services integration with 13+ notification types
-- 🔄 **Reassignment Requests**: Participants can request new assignments
-- 👤 **Organizer Panel**: Full game management for organizers
+- 🔄 **Reassignment**: Organizers can reassign individual participants or all at once; participants can request new assignments
+- 👤 **Organizer Panel**: Full game management with individual/bulk reassignment, participant editing, and status tracking
 - 🚫 **Exclusion Rules**: Prevent specific pairs from being matched (e.g., couples)
 - 📅 **Date Validation**: Games can only be created for today or future dates with input length limits
 - ⏱️ **Event Countdown**: Live countdown timer showing time until the event
 - 📅 **Calendar Integration**: Download `.ics` files to add events to any calendar app
-- 📱 **QR Code Sharing**: Generate QR codes for invitation links
-- 🌙 **Dark Mode**: Toggle dark theme with OS preference detection
+- 📱 **QR Code Sharing**: Generate QR codes for invitation links with invite-only labels
+- 🌙 **Dark Mode**: Toggle dark theme on all pages with OS preference detection
 - 📱 **PWA Support**: Installable as a Progressive Web App with offline caching
 - 🔐 **API Rate Limiting**: IP-based rate limiting on all API endpoints (game creation, retrieval, updates, email)
 - 🛡️ **Hardened CSP & HSTS**: Strict CSP, HSTS, `Permissions-Policy`, no `unsafe-eval`, `frame-ancestors 'none'`
 - 🧹 **Auto-Cleanup**: Games archived 3 days after event, permanently deleted after 30 days (GDPR compliant)
 - 📤 **Web Share API**: Native mobile sharing via `navigator.share()` when available
-- 📊 **Application Insights**: Built-in monitoring and error tracking
+- 📊 **Application Insights**: Frontend and backend monitoring, error tracking, and performance telemetry
 - ♿ **Accessibility Testing**: Automated WCAG 2.0 AA checks via axe-core in E2E tests
 - 🧪 **Cross-Browser E2E**: Playwright tests run in Chromium, Firefox, and WebKit
 

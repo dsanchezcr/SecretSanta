@@ -415,11 +415,14 @@ export function GameCreatedView({ game, onContinue, emailResults }: GameCreatedV
                   {t('copyInvitationLink')}
                 </Button>
                 {/* QR Code for invitation link */}
-                <div className="flex justify-center pt-2">
+                <div className="flex flex-col items-center pt-2 gap-1">
                   <QRCodeDisplay
                     value={buildShareableUrl({ code: game.code, invitation: game.invitationToken, lang: language })}
                     size={160}
                   />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {t('qrInviteOnly')}
+                  </p>
                 </div>
               </div>
             )}

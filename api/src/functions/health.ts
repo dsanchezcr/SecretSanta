@@ -128,11 +128,18 @@ export async function healthHandler(request: HttpRequest, context: InvocationCon
 
   const result: Record<string, unknown> = {
     overallStatus,
+    // Legacy top-level status field for backward compatibility
+    status: overallStatus,
     timestamp: new Date().toISOString(),
     version: BUILD_VERSION,
     buildDate: BUILD_DATE,
     environment: process.env.ENVIRONMENT || 'Development',
     uptime: Math.round((Date.now() - startTime) / 1000),
+    // Legacy checks object for backward compatibility with existing frontend code
+    checks: {
+      database: { status: databaseService.status },
+      email: { status: emailService.status }
+    },
     services,
     environmentVariables: {
       COSMOS_ENDPOINT: !!process.env.COSMOS_ENDPOINT,

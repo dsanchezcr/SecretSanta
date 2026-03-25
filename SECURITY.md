@@ -55,13 +55,11 @@ Include as much of the information listed below as you can to help us better und
 
 ### Data Protection
 - HTML escaping via `escapeHtml()` in `api/src/shared/email-service.ts` for all user content embedded in email templates
-- Service worker only caches static assets (JS, CSS, images, fonts) — never API responses or dynamic content
+- Service worker caches static assets (JS, CSS, images, fonts) and navigation (HTML) requests, but never API responses
 - localStorage game data is automatically cleaned up after 30 days
 - Game code collision detection prevents code reuse
 - Cosmos DB emulator TLS bypass is hard-blocked in production environments
-- Health endpoint verbose mode is restricted to non-production environments
 - API error responses never expose `error.message` or stack traces
-
 ### Azure Resources
 - Use managed identities when possible (optional `enableManagedIdentity` Bicep parameter)
 - Rotate secrets regularly

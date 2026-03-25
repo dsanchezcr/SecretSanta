@@ -38,8 +38,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
     return {
       status: 503,
       jsonBody: { 
-        error: 'Database not available',
-        details: dbStatus.error
+        error: 'Database not available'
       }
     }
   }

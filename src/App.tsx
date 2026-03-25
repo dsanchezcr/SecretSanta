@@ -17,14 +17,14 @@ import { JoinInvitationView } from '@/components/JoinInvitationView'
 import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { LoadingView } from '@/components/LoadingView'
 import { Game, Participant } from '@/lib/types'
-import { useLocalStorage } from '@/hooks/use-local-storage'
+import { useLocalStorage, LOCAL_STORAGE_PREFIX } from '@/hooks/use-local-storage'
 import { checkApiStatus, getGameAPI, CreateGameResponse } from '@/lib/api'
 import { initializeAnalytics } from '@/lib/analytics'
 
 // Clean up old game data from localStorage (TTL: 30 days)
 function cleanupOldGameData() {
   try {
-    const raw = localStorage.getItem('secretsanta:games')
+    const raw = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}games`)
     if (!raw) return
     const games = JSON.parse(raw) as Record<string, { createdAt?: number }>
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
@@ -38,7 +38,7 @@ function cleanupOldGameData() {
       }
     }
     if (changed) {
-      localStorage.setItem('secretsanta:games', JSON.stringify(games))
+      localStorage.setItem(`${LOCAL_STORAGE_PREFIX}games`, JSON.stringify(games))
     }
   } catch { /* ignore */ }
 }

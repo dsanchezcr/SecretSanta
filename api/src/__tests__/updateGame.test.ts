@@ -112,8 +112,7 @@ describe('updateGame function', () => {
 
       expect(response.status).toBe(503)
       expect(response.jsonBody).toEqual({
-        error: 'Database not available',
-        details: 'Connection failed'
+        error: 'Database not available'
       })
     })
 

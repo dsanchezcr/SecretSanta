@@ -409,6 +409,3 @@ output appInsightsName string = appInsights.name
 output logAnalyticsWorkspaceId string = logAnalyticsWorkspace.id
 output environment string = environment
 output resourceGroupName string = resourceGroup().name
-
-#disable-next-line outputs-should-not-contain-secrets
-output deploymentToken string = staticWebApp.listSecrets().properties.apiKey

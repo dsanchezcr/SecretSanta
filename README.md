@@ -13,7 +13,7 @@ Secret Santa gift exchange web application built with React + Vite, Azure Functi
 - 📧 **Email Notifications**: Optional Azure Communication Services integration with 13+ notification types
 - 🔄 **Reassignment**: Organizers can reassign individual participants or all at once; participants can request new assignments
 - 👤 **Organizer Panel**: Full game management with individual/bulk reassignment, participant editing, and status tracking
-- 🚫 **Exclusion Rules**: Prevent specific pairs from being matched (e.g., couples)
+- 🚫 **Exclusion Rules**: Prevent specific pairs from being matched (e.g., couples) — currently API-only; UI configuration planned
 - 📅 **Date Validation**: Games can only be created for today or future dates with input length limits
 - ⏱️ **Event Countdown**: Live countdown timer showing time until the event
 - 📅 **Calendar Integration**: Download `.ics` files to add events to any calendar app

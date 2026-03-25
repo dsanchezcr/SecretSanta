@@ -165,7 +165,13 @@ export async function cleanupExpiredGamesHandler(request: HttpRequest, context: 
     try {
       const a = Buffer.from(providedSecret)
       const b = Buffer.from(cleanupSecret)
-      secretsMatch = a.length === b.length && timingSafeEqual(a, b)
+      if (a.length !== b.length) {
+        // Perform dummy comparison to prevent timing leak on length mismatch
+        timingSafeEqual(a, Buffer.alloc(a.length))
+        secretsMatch = false
+      } else {
+        secretsMatch = timingSafeEqual(a, b)
+      }
     } catch {
       secretsMatch = false
     }

@@ -510,7 +510,7 @@ export const en = {
     guideFeatureQrCode: "QR Code Sharing",
     guideFeatureQrCodeDesc: "When a game is created, a QR code is generated for the invitation link. It is labeled as invite-only. Participants can scan it with their phone camera to join instantly — perfect for sharing in person at meetings or parties.",
     guideFeatureExclusions: "Exclusion Rules",
-    guideFeatureExclusionsDesc: "Prevent specific pairs from being matched. For example, exclude couples or family members so they don't draw each other. Set exclusion rules when creating the game.",
+    guideFeatureExclusionsDesc: "Prevent specific pairs from being matched. For example, exclude couples or family members so they don't draw each other. This feature is currently available via the API and UI configuration is planned for a future update.",
     guideFeatureDarkMode: "Dark Mode",
     guideFeatureDarkModeDesc: "Toggle between light and dark themes using the moon/sun icon in the header. Your preference is saved and persists across visits. The app also respects your operating system's theme preference.",
     guideFeatureCountdown: "Event Countdown",

@@ -39,8 +39,7 @@ export async function sendEmailHandler(request: HttpRequest, context: Invocation
     return {
       status: 503,
       jsonBody: {
-        error: 'Database not available',
-        details: dbStatus.error
+        error: 'Database not available'
       }
     }
   }

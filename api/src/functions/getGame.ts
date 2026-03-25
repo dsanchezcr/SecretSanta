@@ -30,8 +30,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
     return {
       status: 503,
       jsonBody: { 
-        error: 'Database not available',
-        details: dbStatus.error
+        error: 'Database not available'
       }
     }
   }

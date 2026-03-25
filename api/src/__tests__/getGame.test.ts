@@ -135,8 +135,7 @@ describe('getGame function', () => {
 
     expect(response.status).toBe(503)
     expect(response.jsonBody).toEqual({
-      error: 'Database not available',
-      details: 'Connection timeout'
+      error: 'Database not available'
     })
   })
 

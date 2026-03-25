@@ -180,7 +180,6 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     outputs:
       resource_group: ${{ steps.rg.outputs.name }}
-      static_web_app_token: ${{ steps.infra.outputs.deploymentToken }}
       static_web_app_url: ${{ steps.infra.outputs.staticWebAppUrl }}
       static_web_app_name: ${{ steps.infra.outputs.staticWebAppName }}
     
@@ -264,16 +263,27 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Download build
         uses: actions/download-artifact@v8
         with:
           name: build
 
+      - name: Get Static Web App Token
+        id: swa-token
+        run: |
+          TOKEN=$(az staticwebapp secrets list --name "${{ needs.deploy-pr-infrastructure.outputs.static_web_app_name }}" --resource-group "${{ needs.deploy-pr-infrastructure.outputs.resource_group }}" --query "properties.apiKey" -o tsv)
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
       - name: Deploy to Preview
         id: deploy
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ needs.deploy-pr-infrastructure.outputs.static_web_app_token }}
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           app_location: dist

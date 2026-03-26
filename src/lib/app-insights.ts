@@ -7,7 +7,7 @@ let initialized = false
 const SENSITIVE_PARAMS = ['code', 'organizer', 'participant', 'invitation']
 
 // Regex to redact 6-digit game codes embedded in API path segments (e.g. /api/games/123456)
-const SENSITIVE_PATH_PATTERN = /(\/(games|archive)\/)\d{6}(?=\/|$|\?)/g
+const SENSITIVE_PATH_PATTERN = /(\/(games|archive)\/)\d{6}(?=\/|$|\?)/
 
 /**
  * Strip sensitive data from a URL string:

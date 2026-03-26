@@ -76,6 +76,10 @@ describe('rate-limiter - cleanup interval', () => {
     // Advance time past the cleanup interval (5 minutes)
     jest.advanceTimersByTime(5 * 60 * 1000 + 100)
 
+    // After cleanup, the same request should be allowed again (no longer rate-limited)
+    const afterCleanup = rl(request, category)
+    expect(afterCleanup).toBeNull()
+
     delete limits[category]
   })
 })

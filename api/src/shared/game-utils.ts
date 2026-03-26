@@ -90,8 +90,7 @@ export function generateAssignmentsWithResult(participants: Participant[], exclu
     if (valid) return { assignments, exclusionsHonored: true }
   }
 
-  // Fallback: return assignments without exclusion enforcement and log a warning
-  console.warn('⚠️ Could not generate assignments respecting all exclusion rules after 200 attempts. Falling back to unrestricted assignments.')
+  // Fallback: return assignments without exclusion enforcement
   const shuffled = secureShuffle(participants)
   const assignments: Assignment[] = []
 

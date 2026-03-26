@@ -6,8 +6,13 @@ let initialized = false
 // Query params that may carry sensitive tokens or game codes
 const SENSITIVE_PARAMS = ['code', 'organizer', 'participant', 'invitation']
 
+// Regex to redact 6-digit game codes embedded in API path segments (e.g. /api/games/123456)
+const SENSITIVE_PATH_PATTERN = /(\/(games|archive)\/)\d{6}(?=\/|$|\?)/g
+
 /**
- * Strip sensitive query params from a URL string, replacing their values with '[redacted]'.
+ * Strip sensitive data from a URL string:
+ * - Replaces values of sensitive query params with '[redacted]'
+ * - Replaces 6-digit game codes in known path segments with '[redacted]'
  * Non-URL strings are returned unchanged.
  */
 function sanitizeSensitiveUrl(url: string | undefined): string | undefined {
@@ -21,9 +26,16 @@ function sanitizeSensitiveUrl(url: string | undefined): string | undefined {
         changed = true
       }
     }
+    // Redact game codes in path (e.g. /api/games/123456)
+    const sanitizedPathname = parsed.pathname.replace(SENSITIVE_PATH_PATTERN, '$1[redacted]')
+    if (sanitizedPathname !== parsed.pathname) {
+      parsed.pathname = sanitizedPathname
+      changed = true
+    }
     return changed ? parsed.toString() : url
   } catch {
-    return url
+    // Fallback: apply path redaction directly on the raw string for non-absolute URLs
+    return url.replace(SENSITIVE_PATH_PATTERN, '$1[redacted]')
   }
 }
 

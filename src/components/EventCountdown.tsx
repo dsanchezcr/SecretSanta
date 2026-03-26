@@ -28,7 +28,10 @@ export function EventCountdown({ targetDate, targetTime, label }: CountdownProps
   useEffect(() => {
     // Parse YYYY-MM-DD into numeric components once; validate to avoid NaN dates
     const dateParts = targetDate.split('-').map(Number)
-    if (dateParts.length !== 3 || dateParts.some(isNaN)) return
+    if (dateParts.length !== 3 || dateParts.some(isNaN)) {
+      setTimeLeft('')
+      return
+    }
     const [year, month, day] = dateParts
 
     const calculate = () => {
@@ -36,7 +39,10 @@ export function EventCountdown({ targetDate, targetTime, label }: CountdownProps
       if (targetTime) {
         // Parse components explicitly to use local time (ISO string T-format may vary across engines)
         const timeParts = targetTime.split(':').map(Number)
-        if (timeParts.length < 2 || timeParts.some(isNaN)) return
+        if (timeParts.length < 2 || timeParts.some(isNaN)) {
+          setTimeLeft('')
+          return
+        }
         const [hour, minute] = timeParts
         target = new Date(year, month - 1, day, hour, minute)
       } else {

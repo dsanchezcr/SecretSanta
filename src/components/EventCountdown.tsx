@@ -27,9 +27,17 @@ export function EventCountdown({ targetDate, targetTime, label }: CountdownProps
 
   useEffect(() => {
     const calculate = () => {
-      const target = targetTime
-        ? new Date(`${targetDate}T${targetTime}`)
-        : new Date(`${targetDate}T23:59:59`)
+      let target: Date
+      if (targetTime) {
+        // Parse components explicitly to use local time (ISO string T-format may vary across engines)
+        const [year, month, day] = targetDate.split('-').map(Number)
+        const [hour, minute] = targetTime.split(':').map(Number)
+        target = new Date(year, month - 1, day, hour, minute)
+      } else {
+        // End-of-day fallback: 23:59:59 local time
+        const [year, month, day] = targetDate.split('-').map(Number)
+        target = new Date(year, month - 1, day, 23, 59, 59)
+      }
       const now = new Date()
       const diff = target.getTime() - now.getTime()
 

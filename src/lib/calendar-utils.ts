@@ -91,24 +91,28 @@ function escapeICS(text: string): string {
 
 /**
  * RFC 5545 line folding: lines longer than 75 octets are folded with CRLF + space.
+ * Folds on code-point boundaries to avoid splitting surrogate pairs (e.g. emoji).
  */
 function foldLine(line: string): string {
   const MAX_OCTETS = 75
   if (new TextEncoder().encode(line).length <= MAX_OCTETS) return line
   const encoder = new TextEncoder()
+  const codePoints = [...line] // iterate by code point to avoid splitting surrogate pairs
   const parts: string[] = []
-  let remaining = line
   let isFirst = true
-  while (remaining.length > 0) {
-    const limit = isFirst ? MAX_OCTETS : MAX_OCTETS - 1 // subsequent lines have leading space
-    let end = remaining.length
-    while (encoder.encode(remaining.slice(0, end)).length > limit && end > 1) {
-      end--
+  let chunk = ''
+  for (const cp of codePoints) {
+    const limit = isFirst ? MAX_OCTETS : MAX_OCTETS - 1 // continuation lines have a leading space
+    const candidate = chunk + cp
+    if (encoder.encode(candidate).length > limit) {
+      parts.push(chunk)
+      chunk = cp
+      isFirst = false
+    } else {
+      chunk = candidate
     }
-    parts.push(remaining.slice(0, end))
-    remaining = remaining.slice(end)
-    isFirst = false
   }
+  if (chunk.length > 0) parts.push(chunk)
   return parts.join('\r\n ')
 }
 

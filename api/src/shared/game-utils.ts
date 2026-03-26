@@ -19,6 +19,7 @@ const MAX_TOKEN_LENGTH = 512
 
 export function safeCompare(a: string | undefined, b: string | undefined): boolean {
   if (!a || !b) return false
+  if (typeof a !== 'string' || typeof b !== 'string') return false
   if (a.length > MAX_TOKEN_LENGTH || b.length > MAX_TOKEN_LENGTH) return false
   const bufA = Buffer.from(a)
   const bufB = Buffer.from(b)
@@ -154,8 +155,8 @@ export function generateAssignmentsWithLocks(
 
   // Validate we have enough available receivers for unlocked participants
   if (availableReceivers.length < unlockedParticipants.length) {
-    // Edge case: not enough available receivers - fall back to full regeneration
-    return generateAssignments(participants)
+    // Edge case: not enough available receivers - fall back to full regeneration (with exclusions)
+    return generateAssignments(participants, exclusions)
   }
 
   // Shuffle unlocked participants and available receivers

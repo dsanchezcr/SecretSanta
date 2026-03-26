@@ -26,16 +26,21 @@ export function EventCountdown({ targetDate, targetTime, label }: CountdownProps
   const units = timeUnits[language] || timeUnits.en
 
   useEffect(() => {
+    // Parse YYYY-MM-DD into numeric components once; validate to avoid NaN dates
+    const dateParts = targetDate.split('-').map(Number)
+    if (dateParts.length !== 3 || dateParts.some(isNaN)) return
+    const [year, month, day] = dateParts
+
     const calculate = () => {
       let target: Date
       if (targetTime) {
         // Parse components explicitly to use local time (ISO string T-format may vary across engines)
-        const [year, month, day] = targetDate.split('-').map(Number)
-        const [hour, minute] = targetTime.split(':').map(Number)
+        const timeParts = targetTime.split(':').map(Number)
+        if (timeParts.length < 2 || timeParts.some(isNaN)) return
+        const [hour, minute] = timeParts
         target = new Date(year, month - 1, day, hour, minute)
       } else {
         // End-of-day fallback: 23:59:59 local time
-        const [year, month, day] = targetDate.split('-').map(Number)
         target = new Date(year, month - 1, day, 23, 59, 59)
       }
       const now = new Date()

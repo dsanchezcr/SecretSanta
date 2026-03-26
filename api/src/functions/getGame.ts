@@ -1,7 +1,13 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { getGameByCode, getDatabaseStatus, Game } from '../shared/cosmosdb'
+import { safeCompare } from '../shared/game-utils'
+import { checkRateLimit } from '../shared/rate-limiter'
 
 export async function getGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  // Rate limit check
+  const rateLimitResponse = checkRateLimit(request, 'default')
+  if (rateLimitResponse) return rateLimitResponse
+
   const code = request.params.code
   
   if (!code) {
@@ -13,10 +19,10 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
   
   context.log(`Getting game with code: ${code}`)
   
-  // Get optional query parameters for token-based access
-  const participantToken = request.query.get('participantToken')
-  const organizerToken = request.query.get('organizerToken')
-  const participantId = request.query.get('participantId') // For non-protected games to filter assignments
+  // Get optional parameters for token-based access (support both query params and headers)
+  const participantToken = request.query.get('participantToken') || request.headers.get('x-participant-token')
+  const organizerToken = request.query.get('organizerToken') || request.headers.get('x-organizer-token')
+  const participantId = request.query.get('participantId')
   
   // Check database connectivity first
   const dbStatus = getDatabaseStatus()
@@ -24,8 +30,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
     return {
       status: 503,
       jsonBody: { 
-        error: 'Database not available',
-        details: dbStatus.error
+        error: 'Database not available'
       }
     }
   }
@@ -43,7 +48,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
     // If game is protected, handle access control
     if (game.isProtected) {
       // Organizer has full access
-      if (organizerToken && organizerToken === game.organizerToken) {
+      if (organizerToken && safeCompare(organizerToken, game.organizerToken)) {
         return {
           status: 200,
           jsonBody: game
@@ -52,7 +57,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
       
       // Participant with valid token gets limited view (only their participant info)
       if (participantToken) {
-        const participant = game.participants.find(p => p.token === participantToken)
+        const participant = game.participants.find(p => safeCompare(participantToken, p.token))
         if (participant) {
           // Find who this participant is giving to (their assignment)
           const participantAssignment = game.assignments.find(a => a.giverId === participant.id)
@@ -110,7 +115,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
     
     // Non-protected game
     // If organizer token is provided and valid, return full game
-    if (organizerToken && organizerToken === game.organizerToken) {
+    if (organizerToken && safeCompare(organizerToken, game.organizerToken)) {
       return {
         status: 200,
         jsonBody: game
@@ -189,7 +194,7 @@ export async function getGameHandler(request: HttpRequest, context: InvocationCo
     context.error('Error getting game:', error)
     return {
       status: 500,
-      jsonBody: { error: 'Failed to get game', details: error.message }
+      jsonBody: { error: 'Failed to get game' }
     }
   }
 }

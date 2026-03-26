@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Gift, Users, Gear, PaperPlaneTilt, ChartBar, UserCirclePlus, ArrowsClockwise, Trash, Link as LinkIcon, Key } from '@phosphor-icons/react'
+import { ArrowLeft, Gift, Users, Gear, PaperPlaneTilt, ChartBar, UserCirclePlus, ArrowsClockwise, Trash, Link as LinkIcon, Key, QrCode, Moon, Prohibit } from '@phosphor-icons/react'
 import { useLanguage } from './useLanguage'
 import { LanguageToggle } from './LanguageToggle'
 
@@ -186,6 +186,46 @@ export function OrganizerGuideView({ onBack }: OrganizerGuideViewProps) {
             <h3 className="text-lg font-semibold">{t('guideFeatureDelete')}</h3>
           </div>
           <p className="text-sm text-muted-foreground">{t('guideFeatureDeleteDesc')}</p>
+        </Card>
+
+        <Separator />
+
+        {/* New Features Section */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-center">{t('guideNewFeaturesTitle')}</h2>
+        </div>
+
+        {/* QR Code Sharing */}
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-full">
+              <QrCode size={24} className="text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <h3 className="text-lg font-semibold">{t('guideFeatureQrCode')}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">{t('guideFeatureQrCodeDesc')}</p>
+        </Card>
+
+        {/* Exclusion Rules */}
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-pink-100 dark:bg-pink-900/30 p-2 rounded-full">
+              <Prohibit size={24} className="text-pink-600 dark:text-pink-400" />
+            </div>
+            <h3 className="text-lg font-semibold">{t('guideFeatureExclusions')}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">{t('guideFeatureExclusionsDesc')}</p>
+        </Card>
+
+        {/* Dark Mode */}
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-slate-100 dark:bg-slate-900/30 p-2 rounded-full">
+              <Moon size={24} className="text-slate-600 dark:text-slate-400" />
+            </div>
+            <h3 className="text-lg font-semibold">{t('guideFeatureDarkMode')}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">{t('guideFeatureDarkModeDesc')}</p>
         </Card>
 
         {/* Tips */}

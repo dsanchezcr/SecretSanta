@@ -6,6 +6,7 @@ import { Copy, Gift, Key, Users, WhatsappLogo, FacebookLogo, XLogo, MessengerLog
 import { Game } from '@/lib/types'
 import { useLanguage } from './useLanguage'
 import { copyToClipboard, buildShareableUrl } from '@/lib/game-utils'
+import { QRCodeDisplay } from './QRCodeDisplay'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { checkApiStatus, sendOrganizerEmailAPI, sendAllParticipantEmailsAPI } from '@/lib/api'
@@ -413,6 +414,17 @@ export function GameCreatedView({ game, onContinue, emailResults }: GameCreatedV
                   <Copy size={16} />
                   {t('copyInvitationLink')}
                 </Button>
+                {/* QR Code for invitation link */}
+                <div className="flex flex-col items-center pt-2 gap-1">
+                  <QRCodeDisplay
+                    value={buildShareableUrl({ code: game.code, invitation: game.invitationToken, lang: language })}
+                    size={160}
+                    ariaLabel={t('qrCodeAriaLabel')}
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {t('qrInviteOnly')}
+                  </p>
+                </div>
               </div>
             )}
 

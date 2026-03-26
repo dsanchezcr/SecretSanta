@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ArrowLeft, ShieldCheck, Database, Lock, Trash, Globe } from '@phosphor-icons/react'
+import { ArrowLeft, ShieldCheck, Database, Lock, Trash, Globe, Shield } from '@phosphor-icons/react'
 import { useLanguage } from './useLanguage'
 import { LanguageToggle } from './LanguageToggle'
 import { motion } from 'framer-motion'
@@ -24,11 +24,11 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
     if (consent) {
       setAnalyticsConsent(true)
       setAnalyticsConsentState(true)
-      toast.success(t('analyticsEnabled') || 'Analytics enabled')
+      toast.success(t('analyticsEnabled'))
     } else {
       setAnalyticsDeclined()
       setAnalyticsConsentState(false)
-      toast.success(t('analyticsDisabled') || 'Analytics disabled')
+      toast.success(t('analyticsDisabled'))
     }
   }
 
@@ -126,6 +126,7 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
               <ul className="list-disc list-inside space-y-2 ml-2">
                 <li>{t('privacyDataRetentionItem1')}</li>
                 <li>{t('privacyDataRetentionItem2')}</li>
+                <li>{t('privacyDataRetentionItem3')}</li>
               </ul>
             </div>
           </Card>
@@ -144,6 +145,30 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
             </h2>
             <div className="space-y-3 text-muted-foreground">
               <p>{t('privacyThirdPartiesDesc')}</p>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Security & Data Protection */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+        >
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+              <Shield size={20} className="text-primary" />
+              {t('privacySecurityTitle')}
+            </h2>
+            <div className="space-y-3 text-muted-foreground">
+              <p>{t('privacySecurityDesc')}</p>
+              <ul className="list-disc list-inside space-y-2 ml-2">
+                <li>{t('privacySecurityItem1')}</li>
+                <li>{t('privacySecurityItem2')}</li>
+                <li>{t('privacySecurityItem3')}</li>
+                <li>{t('privacySecurityItem4')}</li>
+                <li>{t('privacySecurityItem5')}</li>
+              </ul>
             </div>
           </Card>
         </motion.div>
@@ -167,12 +192,12 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-foreground">
-                      {t('analyticsConsentStatus') || 'Analytics Status'}
+                      {t('analyticsConsentStatus')}
                     </p>
                     <p className="text-sm">
                       {analyticsConsent 
-                        ? (t('analyticsCurrentlyEnabled') || 'Analytics are currently enabled')
-                        : (t('analyticsCurrentlyDisabled') || 'Analytics are currently disabled')
+                        ? t('analyticsCurrentlyEnabled')
+                        : t('analyticsCurrentlyDisabled')
                       }
                     </p>
                   </div>
@@ -185,7 +210,7 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
                       onClick={() => handleConsentChange(true)}
                       className="flex-1 sm:flex-none"
                     >
-                      {t('enableAnalytics') || 'Enable Analytics'}
+                      {t('enableAnalytics')}
                     </Button>
                   )}
                   {analyticsConsent && (
@@ -196,7 +221,7 @@ export function PrivacyView({ onBack }: PrivacyViewProps) {
                       onClick={() => handleConsentChange(false)}
                       className="flex-1 sm:flex-none"
                     >
-                      {t('disableAnalytics') || 'Disable Analytics'}
+                      {t('disableAnalytics')}
                     </Button>
                   )}
                 </div>

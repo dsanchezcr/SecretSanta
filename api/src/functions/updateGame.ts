@@ -1,7 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { getGameByCode, updateGame, getDatabaseStatus, Participant, Game, GameUpdatePayload, ReassignmentRequest } from '../shared/cosmosdb'
-import { reassignParticipant, generateAssignments, generateAssignmentsWithLocks, generateId } from '../shared/game-utils'
-import { JoinInvitationPayload } from '../shared/types'
+import { reassignParticipant, generateAssignments, generateAssignmentsWithLocks, generateId, safeCompare } from '../shared/game-utils'
+import { JoinInvitationPayload, INPUT_LIMITS, validateLength } from '../shared/types'
 import { 
   getEmailServiceStatus,
   sendParticipantConfirmedEmail,
@@ -14,8 +14,13 @@ import {
   sendNewOrganizerLinkEmail,
   EventChanges
 } from '../shared/email-service'
+import { checkRateLimit } from '../shared/rate-limiter'
 
 export async function updateGameHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  // Rate limit check
+  const rateLimitResponse = checkRateLimit(request, 'default')
+  if (rateLimitResponse) return rateLimitResponse
+
   const code = request.params.code
   
   if (!code) {
@@ -33,8 +38,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
     return {
       status: 503,
       jsonBody: { 
-        error: 'Database not available',
-        details: dbStatus.error
+        error: 'Database not available'
       }
     }
   }
@@ -54,7 +58,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
     if (body.action === 'updateGameDetails' || body.action === 'addParticipant' || body.action === 'removeParticipant' || body.action === 'updateParticipantDetails' || body.action === 'approveReassignment' || body.action === 'approveAllReassignments' || body.action === 'reassignAll' || body.action === 'cancelReassignmentRequest' || body.action === 'regenerateToken' || body.action === 'regenerateOrganizerToken' || body.action === 'forceReassignParticipant') {
       const organizerToken = (body as any).organizerToken
       
-      if (!organizerToken || organizerToken !== game.organizerToken) {
+      if (!organizerToken || !safeCompare(organizerToken, game.organizerToken)) {
         return {
           status: 403,
           jsonBody: { error: 'Invalid organizer token' }
@@ -67,6 +71,19 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       }
 
       if (body.action === 'updateGameDetails') {
+        // Validate input lengths
+        const lengthErrors = [
+          validateLength('Game name', body.name, INPUT_LIMITS.GAME_NAME),
+          validateLength('Location', body.location, INPUT_LIMITS.LOCATION),
+          validateLength('Amount', body.amount, INPUT_LIMITS.AMOUNT),
+          validateLength('Currency', body.currency, INPUT_LIMITS.CURRENCY),
+          validateLength('General notes', body.generalNotes, INPUT_LIMITS.GENERAL_NOTES),
+        ].filter(Boolean)
+
+        if (lengthErrors.length > 0) {
+          return { status: 400, jsonBody: { error: lengthErrors[0] } }
+        }
+
         // Track changes for email notification
         const changes: EventChanges = {}
         const emailStatus = getEmailServiceStatus()
@@ -127,6 +144,18 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
           }
         }
 
+        // Validate input lengths
+        const nameErr = validateLength('Participant name', participantName, INPUT_LIMITS.PARTICIPANT_NAME)
+        const emailErr = validateLength('Email', participantEmail, INPUT_LIMITS.EMAIL)
+        if (nameErr || emailErr) {
+          return { status: 400, jsonBody: { error: nameErr || emailErr } }
+        }
+
+        // Check max participants
+        if (game.participants.length >= INPUT_LIMITS.MAX_PARTICIPANTS) {
+          return { status: 400, jsonBody: { error: `Maximum ${INPUT_LIMITS.MAX_PARTICIPANTS} participants reached` } }
+        }
+
         // Check for duplicate names
         if (game.participants.some(p => p.name.toLowerCase() === participantName.toLowerCase())) {
           return {
@@ -157,8 +186,17 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
         game.participants.push(newParticipant)
         
         // Regenerate assignments if we have at least 3 participants
+        // Preserve confirmed participants' assignments when possible
         if (game.participants.length >= 3) {
-          game.assignments = generateAssignments(game.participants)
+          const confirmedCount = game.participants.filter(p => p.hasConfirmedAssignment).length
+          if (confirmedCount === game.participants.length - 1) {
+            // All existing participants confirmed - can't reassign without disrupting
+            // Keep existing assignments, new participant has no assignment yet
+            context.log(`All existing participants confirmed in game ${code}. New participant '${participantName}' added without assignment. Organizer must reassign all.`)
+          } else {
+            // Use lock-based assignment to preserve confirmed participants
+            game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments, game.exclusions)
+          }
         }
         
         // Send invitation email to new participant if they have email
@@ -394,7 +432,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
         const confirmedBeforeReassignment = game.participants.filter(p => p.hasConfirmedAssignment && p.email)
         
         // Generate new assignments while preserving confirmed participants' assignments
-        game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments)
+        game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments, game.exclusions)
         
         // Clear pending reassignment requests for ALL participants
         game.reassignmentRequests = []
@@ -761,9 +799,18 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       const desiredGift = payload.desiredGift?.trim() || ''
       const wish = payload.wish?.trim() || ''
       const language = payload.language
+
+      // Validate input lengths
+      const nameErr = validateLength('Participant name', participantName, INPUT_LIMITS.PARTICIPANT_NAME)
+      const emailErr = validateLength('Email', participantEmail, INPUT_LIMITS.EMAIL)
+      const giftErr = validateLength('Desired gift', desiredGift, INPUT_LIMITS.DESIRED_GIFT)
+      const wishErr = validateLength('Wish', wish, INPUT_LIMITS.WISH)
+      if (nameErr || emailErr || giftErr || wishErr) {
+        return { status: 400, jsonBody: { error: nameErr || emailErr || giftErr || wishErr } }
+      }
       
       // Validate invitation token
-      if (!invitationToken || invitationToken !== game.invitationToken) {
+      if (!invitationToken || !safeCompare(invitationToken, game.invitationToken)) {
         return {
           status: 403,
           jsonBody: { 
@@ -828,14 +875,19 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
       // Add participant to game
       game.participants.push(newParticipant)
       
-      // Regenerate assignments to include new participant
-      game.assignments = generateAssignments(game.participants)
+      // Regenerate assignments to include new participant, preserving confirmed ones
+      const confirmedCount = game.participants.filter(p => p.hasConfirmedAssignment).length
+      if (confirmedCount === game.participants.length - 1) {
+        // All existing participants confirmed - keep existing assignments
+        context.log(`All existing participants confirmed in game ${code}. New participant '${participantName}' added without assignment.`)
+      } else {
+        game.assignments = generateAssignmentsWithLocks(game.participants, game.assignments, game.exclusions)
+      }
       
-      // Clear any pending reassignment requests since we're regenerating all assignments
+      // Clear any pending reassignment requests since we're regenerating assignments
       game.reassignmentRequests = []
       game.participants.forEach(p => {
         p.hasPendingReassignmentRequest = false
-        p.hasConfirmedAssignment = false // Clear confirmations when regenerating
       })
       
       context.log(`New participant '${participantName}' joined game via invitation: ${code}`)
@@ -875,7 +927,7 @@ export async function updateGameHandler(request: HttpRequest, context: Invocatio
     context.error('Error updating game:', error)
     return {
       status: 500,
-      jsonBody: { error: 'Failed to update game', details: error.message }
+      jsonBody: { error: 'Failed to update game' }
     }
   }
 }

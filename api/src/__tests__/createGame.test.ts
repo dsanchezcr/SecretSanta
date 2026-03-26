@@ -5,30 +5,57 @@ import { Game } from '../shared/types'
 // Mock the modules
 jest.mock('../shared/cosmosdb', () => ({
   createGame: jest.fn(),
-  getDatabaseStatus: jest.fn()
+  getDatabaseStatus: jest.fn(),
+  getGameByCode: jest.fn().mockResolvedValue(null)
+}))
+
+jest.mock('../shared/rate-limiter', () => ({
+  checkRateLimit: jest.fn().mockReturnValue(null)
 }))
 
 jest.mock('../shared/game-utils', () => ({
   generateGameCode: jest.fn().mockReturnValue('123456'),
   generateId: jest.fn().mockImplementation(() => 'mock-id-' + Math.random().toString(36).substr(2, 9)),
+  generateAssignmentsWithResult: jest.fn().mockImplementation((participants) => ({
+    assignments: participants.map((p: any, i: number) => ({
+      giverId: p.id,
+      receiverId: participants[(i + 1) % participants.length].id
+    })),
+    exclusionsHonored: true
+  })),
   generateAssignments: jest.fn().mockImplementation((participants) => 
     participants.map((p: any, i: number) => ({
       giverId: p.id,
       receiverId: participants[(i + 1) % participants.length].id
     }))
   ),
+  safeCompare: jest.fn().mockImplementation((a: string, b: string) => a === b),
   validateDateString: jest.fn().mockImplementation((dateString: string) => {
-    // Use the actual validation logic
-    const actualModule = jest.requireActual('../shared/game-utils')
-    return actualModule.validateDateString(dateString)
+    // Inline validation logic (matches the real implementation)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return { valid: false, error: 'Invalid date format. Expected YYYY-MM-DD' }
+    }
+    const parts = dateString.split('-')
+    const year = parseInt(parts[0], 10)
+    const month = parseInt(parts[1], 10)
+    const day = parseInt(parts[2], 10)
+    if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+      return { valid: false, error: 'Invalid date values. Year must be 1900-2100, month 1-12, day 1-31' }
+    }
+    const eventDate = new Date(year, month - 1, day)
+    if (eventDate.getFullYear() !== year || eventDate.getMonth() !== month - 1 || eventDate.getDate() !== day) {
+      return { valid: false, error: 'Invalid calendar date. The date does not exist (e.g., February 31, April 31).' }
+    }
+    return { valid: true, year, month, day }
   })
 }))
 
-import { createGame, getDatabaseStatus } from '../shared/cosmosdb'
+import { createGame, getDatabaseStatus, getGameByCode } from '../shared/cosmosdb'
 import { generateGameCode, generateId, generateAssignments } from '../shared/game-utils'
 
 const mockCreateGame = createGame as jest.Mock
 const mockGetDatabaseStatus = getDatabaseStatus as jest.Mock
+const mockGetGameByCode = getGameByCode as jest.Mock
 const mockGenerateGameCode = generateGameCode as jest.Mock
 const mockGenerateId = generateId as jest.Mock
 const mockGenerateAssignments = generateAssignments as jest.Mock
@@ -226,8 +253,7 @@ describe('createGame function', () => {
 
     expect(response.status).toBe(500)
     expect(response.jsonBody).toEqual({
-      error: 'Failed to create game',
-      details: 'Database write failed'
+      error: 'Failed to create game'
     })
   })
 
@@ -393,9 +419,13 @@ describe('createGame function', () => {
     })
 
     it('should reject past dates', async () => {
+      // Use a date far enough in the past to avoid timezone edge cases
       const pastDate = new Date()
-      pastDate.setDate(pastDate.getDate() - 1)
-      const dateStr = pastDate.toISOString().split('T')[0]
+      pastDate.setDate(pastDate.getDate() - 7)
+      const year = pastDate.getFullYear()
+      const month = String(pastDate.getMonth() + 1).padStart(2, '0')
+      const day = String(pastDate.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
       
       const requestBody = {
         name: 'Past Game',
@@ -693,5 +723,157 @@ describe('createGame function', () => {
       })
     })
 
+  })
+
+  describe('input length validation', () => {
+    it('should reject when participant count exceeds MAX_PARTICIPANTS', async () => {
+      const participants = Array.from({ length: 101 }, (_, i) => ({ name: `Participant${i + 1}` }))
+      const requestBody = {
+        name: 'Too Many Participants',
+        participants
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Maximum')
+      })
+    })
+
+    it('should reject when game name exceeds max length', async () => {
+      const requestBody = {
+        name: 'A'.repeat(101), // INPUT_LIMITS.GAME_NAME = 100
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Game name must be')
+      })
+    })
+
+    it('should reject when participant name exceeds max length', async () => {
+      const requestBody = {
+        name: 'Test Game',
+        participants: [
+          { name: 'A'.repeat(81) }, // INPUT_LIMITS.PARTICIPANT_NAME = 80
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Participant #1 name must be')
+      })
+    })
+
+    it('should reject when participant email exceeds max length', async () => {
+      const requestBody = {
+        name: 'Test Game',
+        participants: [
+          { name: 'Alice', email: 'a'.repeat(250) + '@test.com' }, // > EMAIL limit of 254
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Participant #1 email must be')
+      })
+    })
+
+    it('should reject when location exceeds max length', async () => {
+      const requestBody = {
+        name: 'Test Game',
+        location: 'A'.repeat(201), // INPUT_LIMITS.LOCATION = 200
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(400)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Location must be')
+      })
+    })
+  })
+
+  describe('game code collision handling', () => {
+    it('should return 503 when all retry attempts for unique code are exhausted', async () => {
+      // Make getGameByCode always return a mock game (all codes already taken)
+      const mockExistingGame = { id: 'existing-game', code: '123456' }
+      mockGetGameByCode.mockResolvedValue(mockExistingGame)
+
+      const requestBody = {
+        name: 'Collision Test',
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(503)
+      expect(response.jsonBody).toMatchObject({
+        error: expect.stringContaining('Failed to generate unique game code')
+      })
+
+      // getGameByCode should have been called 5 times (one per retry)
+      expect(mockGetGameByCode).toHaveBeenCalledTimes(5)
+
+      // Restore default mock
+      mockGetGameByCode.mockResolvedValue(null)
+    })
+
+    it('should succeed after a code collision on first attempt', async () => {
+      const mockExistingGame = { id: 'existing-game', code: '123456' }
+      // First call returns existing (collision), second returns null (unique)
+      mockGetGameByCode
+        .mockResolvedValueOnce(mockExistingGame)
+        .mockResolvedValueOnce(null)
+
+      const requestBody = {
+        name: 'One Collision Game',
+        participants: [
+          { name: 'Alice' },
+          { name: 'Bob' },
+          { name: 'Charlie' }
+        ]
+      }
+
+      const mockRequest = createMockRequest(requestBody)
+      const response = await createGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(201)
+      expect(mockGetGameByCode).toHaveBeenCalledTimes(2)
+
+      // Restore default mock
+      mockGetGameByCode.mockResolvedValue(null)
+    })
   })
 })

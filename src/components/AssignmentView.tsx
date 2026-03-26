@@ -36,9 +36,12 @@ import { Game, Participant } from '@/lib/types'
 import { useLanguage } from './useLanguage'
 import { formatDate } from '@/lib/game-utils'
 import { formatAmount } from '@/lib/currency-utils'
+import { generateICS, downloadICS } from '@/lib/calendar-utils'
+import { EventCountdown } from './EventCountdown'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { LanguageToggle } from './LanguageToggle'
+import { DarkModeToggle } from './DarkModeToggle'
 import { updateWishAPI, updateGameAPI, checkApiStatus, updateParticipantEmailAPI, getGameAPI, confirmAssignmentAPI } from '@/lib/api'
 import { requestReassignmentLocal, updateWishLocal, updateParticipantEmailLocal, confirmAssignmentLocal } from '@/lib/local-game-operations'
 
@@ -419,7 +422,35 @@ export function AssignmentView({
     })
   }
 
-  if (!currentReceiver) return null
+  if (!currentReceiver) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="flex justify-between items-center p-4 border-b">
+          <Button variant="ghost" onClick={onBack} className="gap-2">
+            <ArrowLeft size={20} />
+            {t('back')}
+          </Button>
+          <div className="flex items-center gap-2">
+            <DarkModeToggle />
+            <LanguageToggle />
+          </div>
+        </header>
+        <div className="max-w-3xl mx-auto px-4 py-8">
+          <Card className="p-8 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-amber-100 p-4 rounded-full">
+                <Clock size={48} weight="duotone" className="text-amber-600" />
+              </div>
+            </div>
+            <h2 className="text-xl font-bold mb-2">{t('pendingAssignment')}</h2>
+            <p className="text-muted-foreground">
+              {t('pendingAssignmentDesc')}
+            </p>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -438,6 +469,7 @@ export function AssignmentView({
           >
             <ArrowsClockwise size={20} className={isRefreshing ? 'animate-spin' : ''} />
           </Button>
+          <DarkModeToggle />
           <LanguageToggle />
         </div>
       </header>
@@ -654,6 +686,42 @@ export function AssignmentView({
                   </div>
                 )}
               </div>
+
+              {/* Countdown timer */}
+              {game.date && (
+                <EventCountdown
+                  targetDate={game.date}
+                  targetTime={game.time}
+                  label={t('eventCountdown')}
+                />
+              )}
+
+              {/* Add to Calendar button */}
+              {game.date && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={() => {
+                    const ics = generateICS({
+                      name: game.name,
+                      date: game.date,
+                      time: game.time,
+                      location: game.location,
+                      assignedTo: currentReceiver?.name,
+                      desiredGift: currentReceiver?.desiredGift,
+                      wish: currentReceiver?.wish,
+                      amount: game.amount,
+                      currency: game.currency,
+                      generalNotes: game.generalNotes,
+                    })
+                    downloadICS(ics, `${game.name.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-').slice(0, 50) || 'event'}.ics`)
+                  }}
+                >
+                  <CalendarBlank size={16} />
+                  {t('addToCalendar')}
+                </Button>
+              )}
             </div>
 
             <div className="flex justify-between gap-3 pt-4">

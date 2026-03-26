@@ -1,4 +1,4 @@
-import { getEmailServiceStatus, initializeEmailService } from '../shared/email-service'
+import { getEmailServiceStatus, initializeEmailService, escapeHtml } from '../shared/email-service'
 
 // Mock the EmailClient
 jest.mock('@azure/communication-email', () => ({
@@ -50,6 +50,62 @@ describe('Email Service', () => {
         expect(status.configured).toBe(true)
         expect(status.error).toBeNull()
       })
+    })
+  })
+
+  describe('initializeEmailService', () => {
+    it('should handle EmailClient constructor throwing', async () => {
+      process.env.ACS_CONNECTION_STRING = 'invalid-connection-string'
+      process.env.ACS_SENDER_ADDRESS = 'test@test.com'
+
+      const EmailClientMock = jest.requireMock('@azure/communication-email').EmailClient
+      EmailClientMock.mockImplementationOnce(() => {
+        throw new Error('Invalid connection string format')
+      })
+
+      await initializeEmailService()
+
+      const status = getEmailServiceStatus()
+      expect(status.configured).toBe(false)
+      expect(status.error).toBe('Invalid connection string format')
+    })
+  })
+
+  describe('escapeHtml', () => {
+    it('should escape ampersands', () => {
+      expect(escapeHtml('Tom & Jerry')).toBe('Tom &amp; Jerry')
+    })
+
+    it('should escape less-than signs', () => {
+      expect(escapeHtml('<script>')).toBe('&lt;script&gt;')
+    })
+
+    it('should escape double quotes', () => {
+      expect(escapeHtml('"Hello"')).toBe('&quot;Hello&quot;')
+    })
+
+    it('should escape single quotes', () => {
+      expect(escapeHtml("It's fine")).toBe('It&#039;s fine')
+    })
+
+    it('should escape multiple special characters', () => {
+      const input = '<a href="test">Tom & Jerry\'s</a>'
+      const result = escapeHtml(input)
+      expect(result).not.toContain('<')
+      expect(result).not.toContain('>')
+      expect(result).not.toContain('"')
+      expect(result).not.toContain("'")
+      expect(result).toContain('&amp;')
+      expect(result).toContain('&lt;')
+      expect(result).toContain('&gt;')
+    })
+
+    it('should return plain text unchanged', () => {
+      expect(escapeHtml('Hello World')).toBe('Hello World')
+    })
+
+    it('should handle empty string', () => {
+      expect(escapeHtml('')).toBe('')
     })
   })
 })

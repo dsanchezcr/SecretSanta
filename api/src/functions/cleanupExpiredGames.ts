@@ -89,6 +89,55 @@ export async function performCleanup(context: InvocationContext): Promise<{ arch
 }
 
 /**
+ * Hard-delete games that have been archived for more than 30 days.
+ * This ensures personal data (names, emails, wishes) doesn't persist indefinitely.
+ */
+export async function performHardDelete(context: InvocationContext): Promise<{ deletedCount: number; failedCount: number }> {
+  const requestId = context.invocationId
+
+  const dbStatus = getDatabaseStatus()
+  if (!dbStatus.connected) {
+    return { deletedCount: 0, failedCount: 0 }
+  }
+
+  const container = await getContainer()
+
+  // Calculate 30 days ago in milliseconds
+  const cutoffMs = Date.now() - (30 * 24 * 60 * 60 * 1000)
+
+  const querySpec = {
+    query: 'SELECT * FROM c WHERE c.isArchived = true AND c.archivedAt <= @cutoffMs',
+    parameters: [{ name: '@cutoffMs', value: cutoffMs }]
+  }
+
+  const { resources: oldArchivedGames } = await container.items.query<Game>(querySpec).fetchAll()
+
+  let deletedCount = 0
+  let failedCount = 0
+
+  for (const game of oldArchivedGames) {
+    try {
+      await container.item(game.id, game.id).delete()
+      deletedCount++
+      context.log(`🗑️ Hard-deleted game: ${game.code} (archived at: ${new Date(game.archivedAt || 0).toISOString()})`)
+    } catch (error: any) {
+      failedCount++
+      context.error(`Failed to hard-delete game ${game.code}: ${error.message}`)
+    }
+  }
+
+  if (deletedCount > 0 || failedCount > 0) {
+    trackEvent(context, 'HardDeleteGames', {
+      requestId,
+      deletedCount: String(deletedCount),
+      failedCount: String(failedCount)
+    })
+  }
+
+  return { deletedCount, failedCount }
+}
+
+/**
  * HTTP trigger that replaces the unsupported timer trigger for Azure Static Web Apps
  * Managed Functions (which only support HTTP triggers).
  *
@@ -116,7 +165,13 @@ export async function cleanupExpiredGamesHandler(request: HttpRequest, context: 
     try {
       const a = Buffer.from(providedSecret)
       const b = Buffer.from(cleanupSecret)
-      secretsMatch = a.length === b.length && timingSafeEqual(a, b)
+      if (a.length !== b.length) {
+        // Perform dummy comparison to prevent timing leak on length mismatch
+        timingSafeEqual(a, Buffer.alloc(a.length))
+        secretsMatch = false
+      } else {
+        secretsMatch = timingSafeEqual(a, b)
+      }
     } catch {
       secretsMatch = false
     }
@@ -133,7 +188,10 @@ export async function cleanupExpiredGamesHandler(request: HttpRequest, context: 
       return { status: 503, jsonBody: { error: 'Database not available' } }
     }
 
-    return { status: 200, jsonBody: result }
+    // Also perform hard-delete of games archived > 30 days (GDPR compliance)
+    const hardDeleteResult = await performHardDelete(context)
+
+    return { status: 200, jsonBody: { ...result, hardDeleted: hardDeleteResult.deletedCount, hardDeleteFailed: hardDeleteResult.failedCount } }
   } catch (error: any) {
     context.error('❌ Error during cleanup:', error)
     trackError(context, error, { requestId })

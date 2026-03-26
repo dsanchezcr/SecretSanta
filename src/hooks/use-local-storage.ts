@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
  * A localStorage-based state hook with persistence.
  * Data persists in browser localStorage.
  */
+export const LOCAL_STORAGE_PREFIX = 'secretsanta:'
+
 export function useLocalStorage<T>(
   key: string,
   initialValue: T

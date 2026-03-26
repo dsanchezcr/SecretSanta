@@ -52,9 +52,10 @@ import {
   Key,
   Download,
 } from '@phosphor-icons/react'
-import { Game, Participant } from '@/lib/types'
+import { Game, Participant, CURRENCIES } from '@/lib/types'
 import { useLanguage } from './useLanguage'
 import { LanguageToggle } from './LanguageToggle'
+import { DarkModeToggle } from './DarkModeToggle'
 import { formatDate, copyToClipboard, buildShareableUrl, isValidDate } from '@/lib/game-utils'
 import { formatAmount } from '@/lib/currency-utils'
 import { isValidEmail } from '@/lib/utils'
@@ -585,7 +586,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
     }
   }
 
-  // Handle force reassign participant
+  // Handle force reassign participant (via confirmation dialog, for confirmed participants)
   const handleForceReassignParticipant = async () => {
     if (!participantToForceReassign) return
     
@@ -608,9 +609,9 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
       }
       toast.success(t('forceReassignSuccess'))
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to force reassign participant'
-      if (message.includes('no valid swap') || message.includes('No valid swap')) {
-        toast.error(t('reassignmentFailed'))
+      const message = error instanceof Error ? error.message : 'Failed to reassign participant'
+      if (message.includes('no valid swap') || message.includes('No valid swap') || message.includes('Cannot reassign')) {
+        toast.error(t('reassignmentFailedSuggestAll'))
       } else {
         toast.error(message)
       }
@@ -618,6 +619,37 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
       setIsForcingReassignment(false)
       setShowForceReassignDialog(false)
       setParticipantToForceReassign(null)
+    }
+  }
+
+  // Handle direct reassign (no confirmation dialog, for unconfirmed participants)
+  const handleReassignParticipantDirect = async (participant: Participant) => {
+    if (isForcingReassignment) return
+    setIsForcingReassignment(true)
+    try {
+      const apiStatus = await checkApiStatus()
+      if (apiStatus.available && apiStatus.databaseConnected) {
+        try {
+          const updatedGame = await forceReassignParticipantAPI(game.code, game.organizerToken, participant.id)
+          onUpdateGame(updatedGame)
+        } catch {
+          const updatedGame = forceReassignParticipantLocal(game, participant.id)
+          onUpdateGame(updatedGame)
+        }
+      } else {
+        const updatedGame = forceReassignParticipantLocal(game, participant.id)
+        onUpdateGame(updatedGame)
+      }
+      toast.success(t('forceReassignSuccess'))
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to reassign participant'
+      if (message.includes('no valid swap') || message.includes('No valid swap') || message.includes('Cannot reassign')) {
+        toast.error(t('reassignmentFailedSuggestAll'))
+      } else {
+        toast.error(message)
+      }
+    } finally {
+      setIsForcingReassignment(false)
     }
   }
 
@@ -1013,6 +1045,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
           >
             <ArrowsClockwise size={20} className={isRefreshing ? 'animate-spin' : ''} />
           </Button>
+          <DarkModeToggle />
           <LanguageToggle />
         </div>
       </header>
@@ -1411,6 +1444,29 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
 
             <Separator className="my-4" />
 
+            {/* Warning: participants without assignments */}
+            {game.participants.length >= 3 && (() => {
+              const unassigned = game.participants.filter(p => !game.assignments.some(a => a.giverId === p.id))
+              if (unassigned.length > 0) {
+                const allOthersConfirmed = game.participants
+                  .filter(p => !unassigned.includes(p))
+                  .every(p => p.hasConfirmedAssignment)
+                return (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                    <p className="text-amber-800 font-medium text-sm">
+                      ⚠️ {unassigned.map(p => p.name).join(', ')} {unassigned.length === 1 ? t('pendingAssignmentSingular') : t('pendingAssignmentPlural')}.
+                    </p>
+                    {allOthersConfirmed && (
+                      <p className="text-amber-700 text-sm mt-1">
+                        {t('allConfirmedReassignNeeded')}
+                      </p>
+                    )}
+                  </div>
+                )
+              }
+              return null
+            })()}
+
             {game.participants.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">{t('noParticipantsYet')}</p>
             ) : (
@@ -1540,7 +1596,19 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
                         <PencilSimple size={16} />
                       </Button>
 
-                      {/* Force Reassign button - only show for confirmed participants */}
+                      {/* Reassign button - for any participant */}
+                      {!participant.hasConfirmedAssignment && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleReassignParticipantDirect(participant)}
+                          disabled={isForcingReassignment}
+                          className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                          title={t('reassignParticipant')}
+                        >
+                          <Shuffle size={16} />
+                        </Button>
+                      )}
                       {participant.hasConfirmedAssignment && (
                         <Button
                           variant="ghost"

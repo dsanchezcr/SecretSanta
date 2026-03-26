@@ -8,17 +8,25 @@ Secret Santa gift exchange web application built with React + Vite, Azure Functi
 ## ✨ Features
 
 - 🌍 **Multilingual**: Full support for 9 languages - English, Spanish, Portuguese, Italian, French, Japanese, Chinese, German, and Dutch
-- 🎲 **Random Assignments**: Fair circular shuffle algorithm
-- 🔒 **Protected Games**: Optional participant tokens for privacy
+- 🎲 **Crypto-Secure Assignments**: Fair circular shuffle using `crypto.randomInt` + Fisher-Yates algorithm
+- 🔒 **Protected Games**: Optional participant tokens with timing-safe comparison
 - 📧 **Email Notifications**: Optional Azure Communication Services integration with 13+ notification types
-- 🔄 **Reassignment Requests**: Participants can request new assignments
-- 👤 **Organizer Panel**: Full game management for organizers
-- 🗑️ **Game Deletion**: Organizers can permanently delete games
-- 📅 **Date Validation**: Games can only be created for today or future dates
-- 🧹 **Auto-Cleanup**: Games automatically deleted 3 days after the event
-- 🔐 **Privacy Policy**: Clear data handling and retention information
-- 📱 **Responsive Design**: Works on all devices
-- 📊 **Application Insights**: Built-in monitoring and error tracking
+- 🔄 **Reassignment**: Organizers can reassign individual participants or all at once; participants can request new assignments
+- 👤 **Organizer Panel**: Full game management with individual/bulk reassignment, participant editing, and status tracking
+- 🚫 **Exclusion Rules**: Prevent specific pairs from being matched (e.g., couples) — currently API-only; UI configuration planned
+- 📅 **Date Validation**: Games can only be created for today or future dates with input length limits
+- ⏱️ **Event Countdown**: Live countdown timer showing time until the event
+- 📅 **Calendar Integration**: Download `.ics` files to add events to any calendar app
+- 📱 **QR Code Sharing**: Generate QR codes for invitation links with invite-only labels
+- 🌙 **Dark Mode**: Toggle dark theme on all pages with OS preference detection
+- 📱 **PWA Support**: Installable as a Progressive Web App with offline caching
+- 🔐 **API Rate Limiting**: IP-based rate limiting on all API endpoints (game creation, retrieval, updates, email)
+- 🛡️ **Hardened CSP & HSTS**: Strict CSP, HSTS, `Permissions-Policy`, no `unsafe-eval`, `frame-ancestors 'none'`
+- 🧹 **Auto-Cleanup**: Games archived 3 days after event, permanently deleted after 30 days (GDPR compliant)
+- 📤 **Web Share API**: Native mobile sharing via `navigator.share()` when available
+- 📊 **Application Insights**: Frontend and backend monitoring, error tracking, and performance telemetry
+- ♿ **Accessibility Testing**: Automated WCAG 2.0 AA checks via axe-core in E2E tests
+- 🧪 **Cross-Browser E2E**: Playwright tests support Chromium, Firefox, and WebKit locally; CI runs Chromium by default
 
 ## 🏗️ Environment Strategy
 
@@ -171,23 +179,26 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed setup instru
 ```
 ├── src/                 # React frontend
 │   ├── components/      # UI components (views, forms, dialogs)
-│   ├── lib/            # Utilities, types, translations
-│   └── hooks/          # Custom React hooks
+│   ├── lib/            # Utilities, types, translations, calendar, sharing
+│   ├── hooks/          # Custom React hooks (dark mode, localStorage, mobile)
+│   └── styles/         # CSS theme (light/dark mode)
 ├── api/                # Azure Functions backend
 │   └── src/
-│       ├── functions/  # HTTP endpoints + timer triggers
-│       └── shared/     # Cosmos DB, email, telemetry
-├── e2e/                # Playwright E2E tests
+│       ├── functions/  # HTTP endpoints
+│       └── shared/     # Cosmos DB, email, telemetry, rate limiter
+├── e2e/                # Playwright E2E tests (Chromium, Firefox, WebKit)
 ├── infra/              # Bicep infrastructure templates
+├── public/             # PWA manifest, service worker, static assets
+├── scripts/            # Utility scripts (type validation, setup)
 └── .github/workflows/  # CI/CD pipeline
 ```
 
 ### Frontend Views
-- **HomeView**: Landing page with game code entry
-- **CreateGameView**: Game creation form with date validation
-- **GameCreatedView**: Success page with organizer token
+- **HomeView**: Landing page with game code entry and dark mode toggle
+- **CreateGameView**: Game creation form with date validation and exclusion rules
+- **GameCreatedView**: Success page with organizer token and QR code sharing
 - **ParticipantSelectionView**: Participant login for protected games
-- **AssignmentView**: Shows who you're buying for
+- **AssignmentView**: Shows assignment with event countdown, calendar download, and wish editing
 - **OrganizerPanelView**: Full game management (includes delete)
 - **PrivacyView**: Data handling and retention policy
 - **GameNotFoundView**: Error page for deleted/invalid games
@@ -199,7 +210,7 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed setup instru
 | Variable | Description | Auto-Set |
 |----------|-------------|:--------:|
 | `COSMOS_ENDPOINT` | Cosmos DB endpoint URL | ✅ |
-| `COSMOS_KEY` | Cosmos DB primary key | ✅ |
+| `COSMOS_KEY` | Cosmos DB primary key (omitted when Managed Identity enabled) | ✅ |
 | `COSMOS_DATABASE_NAME` | Database name | ✅ |
 | `COSMOS_CONTAINER_NAME` | Container name | ✅ |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | App Insights connection | ✅ |
@@ -228,15 +239,20 @@ Resource group names and deployment URLs are now dynamically generated and outpu
 ## 🧪 Testing
 
 ```bash
-# API unit tests
+# API unit tests (248 tests across 13 suites)
 cd api && npm test
 
-# E2E tests
+# Validate shared types stay in sync between frontend and API
+npm run validate:types
+
+# E2E tests (runs in Chromium, Firefox, and WebKit)
 npm run test:e2e
 
 # E2E with UI
 npm run test:e2e:ui
 ```
+
+E2E tests include automated accessibility scanning with [axe-core](https://github.com/dequelabs/axe-core) for WCAG 2.0 AA compliance.
 
 ## 🔄 CI/CD Pipeline
 
@@ -271,7 +287,22 @@ Each environment includes Application Insights for:
 - **Manual Deletion**: Organizers can delete games at any time from the Organizer Panel
 - **Privacy**: See the in-app Privacy page for full data handling details
 - **No External Sharing**: Data is never shared with third parties
+## 🔒 Security Highlights
 
+- **Crypto-secure randomness**: All tokens, game codes, and assignments use `crypto.randomInt` / `crypto.randomUUID` — including client-side offline operations
+- **Timing-safe comparisons**: All token validations use `crypto.timingSafeEqual` with dummy comparison on length mismatch to prevent timing side-channels
+- **Input validation & length limits**: Max lengths enforced on all fields (names: 80 chars, notes: 2000 chars, max 100 participants)
+- **Rate limiting**: IP-based rate limiting on all API endpoints — game creation (10/min), email (20/min), general (60/min)
+- **Content Security Policy**: Strict CSP with HSTS, no `unsafe-eval`, `frame-ancestors 'none'`, and `Permissions-Policy`
+- **No error leaking**: API error responses never expose internal details or stack traces
+- **HTML-escaped emails**: All user content is HTML-escaped before embedding in email templates
+- **Game code collision detection**: New game codes are checked against existing codes to prevent collisions
+- **Production TLS guard**: Cosmos DB emulator's TLS bypass is blocked in production environments
+- **GDPR-compliant data retention**: Archived games are permanently deleted after 30 days
+- **Service worker safety**: Only static assets are cached — never API responses or dynamic content
+- **localStorage TTL**: Old game data is automatically cleaned up after 30 days
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting and full security policy.
 ## 📜 License
 
 MIT - See [LICENSE](LICENSE)

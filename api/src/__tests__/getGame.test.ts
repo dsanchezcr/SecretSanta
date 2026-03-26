@@ -8,6 +8,17 @@ jest.mock('../shared/cosmosdb', () => ({
   getDatabaseStatus: jest.fn()
 }))
 
+jest.mock('../shared/game-utils', () => ({
+  safeCompare: jest.fn().mockImplementation((a: string, b: string) => {
+    if (!a || !b) return false
+    return a === b
+  })
+}))
+
+jest.mock('../shared/rate-limiter', () => ({
+  checkRateLimit: jest.fn().mockReturnValue(null)
+}))
+
 import { getGameByCode, getDatabaseStatus } from '../shared/cosmosdb'
 
 const mockGetGameByCode = getGameByCode as jest.Mock
@@ -124,8 +135,7 @@ describe('getGame function', () => {
 
     expect(response.status).toBe(503)
     expect(response.jsonBody).toEqual({
-      error: 'Database not available',
-      details: 'Connection timeout'
+      error: 'Database not available'
     })
   })
 
@@ -137,8 +147,7 @@ describe('getGame function', () => {
 
     expect(response.status).toBe(500)
     expect(response.jsonBody).toEqual({
-      error: 'Failed to get game',
-      details: 'Query failed'
+      error: 'Failed to get game'
     })
   })
 
@@ -296,6 +305,17 @@ describe('getGame function', () => {
 
       expect(response.status).toBe(404)
       expect(response.jsonBody).toEqual({ error: 'Participant not found' })
+    })
+
+    it('should return full game for organizer of non-protected game with valid token', async () => {
+      mockGetGameByCode.mockResolvedValueOnce(testGame)
+
+      const mockRequest = createMockRequest('123456', { organizerToken: 'token-123' })
+      const response = await getGameHandler(mockRequest, mockContext)
+
+      expect(response.status).toBe(200)
+      const body = response.jsonBody as any
+      expect(body.organizerToken).toBe('token-123')
     })
   })
 })

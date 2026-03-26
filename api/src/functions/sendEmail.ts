@@ -1,7 +1,10 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { getGameByCode, getDatabaseStatus } from '../shared/cosmosdb'
-import { 
-  getEmailServiceStatus, 
+import { safeCompare } from '../shared/game-utils'
+import { checkRateLimit } from '../shared/rate-limiter'
+import { SendEmailPayload, INPUT_LIMITS } from '../shared/types'
+import {
+  getEmailServiceStatus,
   sendOrganizerEmail, 
   sendParticipantAssignmentEmail,
   sendAllParticipantEmails,
@@ -13,6 +16,10 @@ import {
 
 export async function sendEmailHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   context.log('Processing send email request')
+
+  // Rate limit check
+  const rateLimitResponse = checkRateLimit(request, 'sendEmail')
+  if (rateLimitResponse) return rateLimitResponse
 
   // Check if email service is configured
   const emailStatus = getEmailServiceStatus()
@@ -32,15 +39,22 @@ export async function sendEmailHandler(request: HttpRequest, context: Invocation
     return {
       status: 503,
       jsonBody: {
-        error: 'Database not available',
-        details: dbStatus.error
+        error: 'Database not available'
       }
     }
   }
 
   try {
-    const body = await request.json() as any
+    const body = await request.json() as SendEmailPayload
     const { code, type, organizerToken, participantId, language = 'es', customMessage } = body
+
+    // Validate custom message length
+    if (customMessage && customMessage.length > INPUT_LIMITS.GENERAL_NOTES) {
+      return {
+        status: 400,
+        jsonBody: { error: `Custom message must be ${INPUT_LIMITS.GENERAL_NOTES} characters or less` }
+      }
+    }
 
     if (!code) {
       return {
@@ -175,7 +189,7 @@ export async function sendEmailHandler(request: HttpRequest, context: Invocation
     }
 
     // For organizer-level actions, require organizer token
-    if (['organizer', 'allParticipants', 'reminder', 'reminderAll'].includes(type) && game.organizerToken !== organizerToken) {
+    if (['organizer', 'allParticipants', 'reminder', 'reminderAll'].includes(type) && !safeCompare(organizerToken, game.organizerToken)) {
       return {
         status: 403,
         jsonBody: { error: 'Invalid organizer token' }

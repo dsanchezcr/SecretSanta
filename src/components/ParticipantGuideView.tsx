@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Gift, Link as LinkIcon, Eye, Star, ArrowsClockwise, CheckCircle, Envelope } from '@phosphor-icons/react'
+import { ArrowLeft, Gift, Link as LinkIcon, Eye, Star, ArrowsClockwise, CheckCircle, Envelope, CalendarBlank, Timer, Moon } from '@phosphor-icons/react'
 import { useLanguage } from './useLanguage'
 import { LanguageToggle } from './LanguageToggle'
 
@@ -150,6 +150,39 @@ export function ParticipantGuideView({ onBack }: ParticipantGuideViewProps) {
             <h2 className="text-xl font-semibold">{t('guideEmailTitle')}</h2>
           </div>
           <p className="text-muted-foreground">{t('guideEmailDesc')}</p>
+        </Card>
+
+        {/* Event Countdown & Calendar */}
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-teal-100 dark:bg-teal-900/30 p-2 rounded-full">
+              <Timer size={24} className="text-teal-600 dark:text-teal-400" />
+            </div>
+            <h2 className="text-xl font-semibold">{t('guideFeatureCountdown')}</h2>
+          </div>
+          <p className="text-muted-foreground">{t('guideFeatureCountdownDesc')}</p>
+        </Card>
+
+        {/* Calendar Download */}
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-cyan-100 dark:bg-cyan-900/30 p-2 rounded-full">
+              <CalendarBlank size={24} className="text-cyan-600 dark:text-cyan-400" />
+            </div>
+            <h2 className="text-xl font-semibold">{t('guideFeatureCalendar')}</h2>
+          </div>
+          <p className="text-muted-foreground">{t('guideFeatureCalendarDesc')}</p>
+        </Card>
+
+        {/* Dark Mode */}
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-slate-100 dark:bg-slate-900/30 p-2 rounded-full">
+              <Moon size={24} className="text-slate-600 dark:text-slate-400" />
+            </div>
+            <h2 className="text-xl font-semibold">{t('guideFeatureDarkMode')}</h2>
+          </div>
+          <p className="text-muted-foreground">{t('guideFeatureDarkModeDesc')}</p>
         </Card>
 
         {/* Tips */}

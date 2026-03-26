@@ -122,7 +122,9 @@ export function initializeAnalytics(): void {
     window.dataLayer.push(args)
   }
   window.gtag('js', new Date())
-  window.gtag('config', GA_TRACKING_ID)
+  // Disable automatic page view on config so the app controls when page views are tracked
+  // and can sanitize URLs before sending them (prevents tokens in query params being sent)
+  window.gtag('config', GA_TRACKING_ID, { send_page_view: false })
 }
 
 /**

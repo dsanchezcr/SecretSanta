@@ -7,200 +7,151 @@ import { getTelemetryConfig, trackEvent } from '../shared/telemetry'
 const BUILD_VERSION = process.env.BUILD_VERSION || 'local'
 const BUILD_DATE = process.env.BUILD_DATE || new Date().toISOString().split('T')[0]
 
-interface HealthCheckResult {
-  status: 'healthy' | 'degraded' | 'unhealthy'
-  version: string
-  buildDate: string
-  environment: string
-  uptime: number
-  timestamp: string
-  checks: {
-    database: DependencyCheck
-    email: DependencyCheck
-    telemetry: DependencyCheck
-  }
-  system?: SystemInfo
-}
-
-interface DependencyCheck {
-  status: 'ok' | 'degraded' | 'error' | 'not_configured'
-  latencyMs?: number
-  error?: string
-  details?: Record<string, unknown>
-}
-
-interface SystemInfo {
-  nodeVersion: string
-  platform: string
-  memoryUsage: {
-    heapUsed: number
-    heapTotal: number
-    external: number
-    rss: number
-  }
+interface ServiceCheck {
+  name: string
+  status: 'Healthy' | 'Degraded' | 'Unhealthy'
+  message: string
+  responseTimeMs: number | null
 }
 
 // Track when the API started
 const startTime = Date.now()
 
-async function checkDatabaseHealth(): Promise<DependencyCheck> {
+async function checkDatabaseService(): Promise<ServiceCheck> {
   const start = Date.now()
   const dbStatus = getDatabaseStatus()
   
   if (!dbStatus.connected) {
     return {
-      status: 'error',
-      latencyMs: Date.now() - start,
-      error: dbStatus.error || 'Database not connected'
+      name: 'Azure Cosmos DB',
+      status: 'Unhealthy',
+      message: dbStatus.error || 'Database not connected',
+      responseTimeMs: Date.now() - start
     }
   }
   
   try {
-    // Perform a lightweight query to verify actual connectivity
-    // Use a non-existent code to minimize data transfer
     await getGameByCode('__health_check__')
-    
     return {
-      status: 'ok',
-      latencyMs: Date.now() - start,
-      details: {
-        database: process.env.COSMOS_DATABASE_NAME || 'secretsanta',
-        container: process.env.COSMOS_CONTAINER_NAME || 'games'
-      }
+      name: 'Azure Cosmos DB',
+      status: 'Healthy',
+      message: 'Database operational',
+      responseTimeMs: Date.now() - start
     }
-  } catch (error: any) {
+  } catch {
     return {
-      status: 'error',
-      latencyMs: Date.now() - start,
-      error: error.message || 'Database query failed'
+      name: 'Azure Cosmos DB',
+      status: 'Unhealthy',
+      message: 'Database query failed',
+      responseTimeMs: Date.now() - start
     }
   }
 }
 
-function checkEmailHealth(): DependencyCheck {
+function checkEmailService(): ServiceCheck {
   const emailStatus = getEmailServiceStatus()
   
   if (!emailStatus.configured) {
     return {
-      status: 'not_configured',
-      details: {
-        message: 'Email service is optional - set ACS_CONNECTION_STRING to enable'
-      }
+      name: 'Azure Communication Services (Email)',
+      status: 'Degraded',
+      message: 'Not configured',
+      responseTimeMs: null
     }
   }
   
   if (emailStatus.error) {
     return {
-      status: 'error',
-      error: emailStatus.error
+      name: 'Azure Communication Services (Email)',
+      status: 'Unhealthy',
+      message: 'Service error',
+      responseTimeMs: null
     }
   }
   
   return {
-    status: 'ok',
-    details: {
-      provider: 'Azure Communication Services'
-    }
+    name: 'Azure Communication Services (Email)',
+    status: 'Healthy',
+    message: 'Configuration valid',
+    responseTimeMs: null
   }
 }
 
-function checkTelemetryHealth(): DependencyCheck {
+function checkTelemetryService(): ServiceCheck {
   const telemetryConfig = getTelemetryConfig()
   
   if (!telemetryConfig.configured) {
     return {
-      status: 'not_configured',
-      details: {
-        message: 'Application Insights is optional - set APPLICATIONINSIGHTS_CONNECTION_STRING to enable'
-      }
+      name: 'Azure Application Insights',
+      status: 'Degraded',
+      message: 'Not configured',
+      responseTimeMs: null
     }
   }
   
   return {
-    status: 'ok',
-    details: {
-      provider: 'Azure Application Insights'
-    }
+    name: 'Azure Application Insights',
+    status: 'Healthy',
+    message: 'Configuration valid',
+    responseTimeMs: null
   }
 }
 
-function getSystemInfo(): SystemInfo {
-  const memUsage = process.memoryUsage()
-  
-  return {
-    nodeVersion: process.version,
-    platform: process.platform,
-    memoryUsage: {
-      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
-      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
-      external: Math.round(memUsage.external / 1024 / 1024), // MB
-      rss: Math.round(memUsage.rss / 1024 / 1024) // MB
-    }
+function determineOverallStatus(services: ServiceCheck[]): 'Healthy' | 'Degraded' | 'Unhealthy' {
+  if (services.some(s => s.name === 'Azure Cosmos DB' && s.status === 'Unhealthy')) {
+    return 'Unhealthy'
   }
-}
-
-function determineOverallStatus(checks: HealthCheckResult['checks']): 'healthy' | 'degraded' | 'unhealthy' {
-  // Database is required - if it's down, we're unhealthy
-  if (checks.database.status === 'error') {
-    return 'unhealthy'
+  if (services.some(s => s.status === 'Unhealthy' || s.status === 'Degraded')) {
+    return 'Degraded'
   }
-  
-  // If database is ok but optional services have issues, we're degraded
-  const hasOptionalIssues = 
-    checks.email.status === 'error' || 
-    checks.telemetry.status === 'error'
-  
-  if (hasOptionalIssues) {
-    return 'degraded'
-  }
-  
-  return 'healthy'
+  return 'Healthy'
 }
 
 export async function healthHandler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   context.log('Health check requested')
   
-  // Check if verbose mode is requested (for debugging)
-  const verbose = request.query.get('verbose') === 'true'
+  const databaseService = await checkDatabaseService()
+  const emailService = checkEmailService()
+  const telemetryService = checkTelemetryService()
   
-  // Perform health checks
-  const databaseCheck = await checkDatabaseHealth()
-  const emailCheck = checkEmailHealth()
-  const telemetryCheck = checkTelemetryHealth()
-  
-  const checks = {
-    database: databaseCheck,
-    email: emailCheck,
-    telemetry: telemetryCheck
-  }
-  
-  const overallStatus = determineOverallStatus(checks)
-  
-  const result: HealthCheckResult = {
-    status: overallStatus,
-    version: BUILD_VERSION,
-    buildDate: BUILD_DATE,
-    environment: process.env.AZURE_FUNCTIONS_ENVIRONMENT || 'Development',
-    uptime: Math.round((Date.now() - startTime) / 1000), // seconds
-    timestamp: new Date().toISOString(),
-    checks
-  }
-  
-  // Include system info in verbose mode
-  if (verbose) {
-    result.system = getSystemInfo()
-  }
+  const services = [databaseService, emailService, telemetryService]
+  const overallStatus = determineOverallStatus(services)
   
   // Track health check event
   trackEvent(context, 'HealthCheck', {
     status: overallStatus,
-    databaseStatus: databaseCheck.status,
-    emailStatus: emailCheck.status
+    databaseStatus: databaseService.status,
+    emailStatus: emailService.status
   })
   
-  // Return appropriate HTTP status
-  const httpStatus = overallStatus === 'unhealthy' ? 503 : 200
-  
+  const httpStatus = overallStatus === 'Unhealthy' ? 503 : 200
+
+  const result: Record<string, unknown> = {
+    overallStatus,
+    // Legacy top-level status field for backward compatibility
+    status: overallStatus,
+    timestamp: new Date().toISOString(),
+    version: BUILD_VERSION,
+    buildDate: BUILD_DATE,
+    environment: process.env.ENVIRONMENT || 'Development',
+    uptime: Math.round((Date.now() - startTime) / 1000),
+    // Legacy checks object for backward compatibility with existing frontend code
+    // Maps new ServiceCheck statuses (Healthy/Degraded/Unhealthy) to legacy values (ok/not_configured/error)
+    checks: {
+      database: {
+        status: databaseService.status === 'Healthy' ? 'ok'
+               : databaseService.status === 'Degraded' ? 'not_configured'
+               : 'error'
+      },
+      email: {
+        status: emailService.status === 'Healthy' ? 'ok'
+              : emailService.status === 'Degraded' ? 'not_configured'
+              : 'error'
+      }
+    },
+    services
+  }
+
   return {
     status: httpStatus,
     headers: {

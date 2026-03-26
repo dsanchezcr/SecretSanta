@@ -9,6 +9,7 @@ import { Game, Participant } from '@/lib/types'
 import { useLanguage } from './useLanguage'
 import { ArrowLeft, Gift, CircleNotch, Envelope, CalendarBlank, MapPin, CurrencyDollar, Note } from '@phosphor-icons/react'
 import { LanguageToggle } from './LanguageToggle'
+import { DarkModeToggle } from './DarkModeToggle'
 import { updateWishAPI, updateParticipantEmailAPI, checkApiStatus } from '@/lib/api'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/game-utils'
@@ -122,7 +123,10 @@ export function ParticipantSelectionView({
             <ArrowLeft size={20} />
             {t('back')}
           </Button>
-          <LanguageToggle />
+          <div className="flex items-center gap-2">
+            <DarkModeToggle />
+            <LanguageToggle />
+          </div>
         </header>
 
         <div className="max-w-2xl mx-auto px-4 py-8">
@@ -212,7 +216,10 @@ export function ParticipantSelectionView({
           <ArrowLeft size={20} />
           {t('back')}
         </Button>
-        <LanguageToggle />
+        <div className="flex items-center gap-2">
+          <DarkModeToggle />
+          <LanguageToggle />
+        </div>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-8">

@@ -21,6 +21,9 @@ import { useLocalStorage } from '@/hooks/use-local-storage'
 import { checkApiStatus, getGameAPI, CreateGameResponse } from '@/lib/api'
 import { initializeAnalytics } from '@/lib/analytics'
 
+// TTL constant for game data cleanup (30 days in ms)
+const GAME_DATA_TTL_MS = 30 * 24 * 60 * 60 * 1000
+
 // API health check configuration for initial load
 const INITIAL_CHECK_RETRIES = 2
 const INITIAL_CHECK_RETRY_DELAY = 1000 // ms
@@ -121,12 +124,30 @@ function App() {
     // Initialize Google Analytics if user has consented
     initializeAnalytics()
     
+    // Clean up old game data via React state so localStorage stays in sync (>30 days)
+    setGames(prev => {
+      if (!prev) return prev
+      const cutoff = Date.now() - GAME_DATA_TTL_MS
+      const cleaned: Record<string, Game> = {}
+      let changed = false
+      for (const [code, game] of Object.entries(prev)) {
+        // Treat entries without createdAt as expired (legacy data)
+        if (game.createdAt && game.createdAt >= cutoff) {
+          cleaned[code] = game
+        } else {
+          changed = true
+        }
+      }
+      return changed ? cleaned : prev
+    })
+    
     // Re-check every 30 seconds (without retries)
     const interval = setInterval(() => checkStatus(false), 30000)
     return () => clearInterval(interval)
   }, [])
 
   const handleCreateGame = () => {
+    window.history.pushState({ view: 'create-game' }, '', '#create')
     setView('create-game')
   }
 
@@ -137,6 +158,9 @@ function App() {
     }))
     setCurrentGameCode(game.code)
     setEmailResults(results)
+    // Clear the #create hash so that refreshing the page doesn't reopen the create-game view.
+    // Preserve existing query params (e.g. ?lang=...) so a reload doesn't drop the language setting.
+    window.history.replaceState({ view: 'game-created' }, '', window.location.pathname + window.location.search)
     setView('game-created')
   }
 
@@ -341,6 +365,12 @@ function App() {
       setTimeout(() => handleJoinGame(code, participantParam), 0)
     } else if (code) {
       setTimeout(() => handleJoinGame(code), 0)
+    } else if (pathname === '/' && !code) {
+      // Handle hash-based routing on initial load (e.g., /#create shared links)
+      const hash = window.location.hash.replace('#', '')
+      if (hash === 'create') {
+        setTimeout(() => setView('create-game'), 0)
+      }
     }
   }, [handleJoinGame, handleOrganizerAccess])
 
@@ -381,6 +411,12 @@ function App() {
       
       // Default to home if no special route
       if (pathname === '/' && !params.get('code')) {
+        // Check hash-based routing
+        const hash = window.location.hash.replace('#', '')
+        if (hash === 'create') {
+          setView('create-game')
+          return
+        }
         setView('home')
         setCurrentGameCode('')
         setCurrentParticipant(null)

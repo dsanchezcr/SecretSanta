@@ -5,14 +5,14 @@
 
 import { Game, Participant, Assignment } from './types'
 
-// Generate a simple unique ID
+// Crypto-secure ID generation (browser-native)
 function generateId(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+  return crypto.randomUUID()
 }
 
-// Generate a simple token
+// Crypto-secure token generation
 function generateToken(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+  return crypto.randomUUID()
 }
 
 /**
@@ -334,8 +334,8 @@ export function reassignAllLocal(game: Game): Game {
     .map(p => p.id)
 
   // Shuffle unconfirmed participants and available receivers
-  const shuffledUnconfirmed = [...unconfirmedParticipants].sort(() => Math.random() - 0.5)
-  const shuffledReceivers = [...availableReceivers].sort(() => Math.random() - 0.5)
+  const shuffledUnconfirmed = secureShuffleLocal(unconfirmedParticipants)
+  const shuffledReceivers = secureShuffleLocal(availableReceivers)
 
   // Create new assignments, avoiding self-assignment
   const newAssignments: Assignment[] = [...lockedAssignments]
@@ -370,7 +370,9 @@ export function reassignAllLocal(game: Game): Game {
     }
     
     // Shuffle receivers again and retry
-    shuffledReceivers.sort(() => Math.random() - 0.5)
+    const reshuffled = secureShuffleLocal(shuffledReceivers)
+    shuffledReceivers.length = 0
+    shuffledReceivers.push(...reshuffled)
     assignmentAttempts++
   }
   
@@ -449,12 +451,28 @@ export function regenerateParticipantTokenLocal(game: Game, participantId: strin
   return { ...game, participants: updatedParticipants }
 }
 
+// Crypto-secure Fisher-Yates shuffle with rejection sampling (browser-native)
+function secureShuffleLocal<T>(arr: T[]): T[] {
+  const shuffled = [...arr]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    // Rejection sampling to eliminate modulo bias
+    const range = i + 1
+    const limit = 2 ** 32 - (2 ** 32 % range)
+    const randomValues = new Uint32Array(1)
+    do {
+      crypto.getRandomValues(randomValues)
+    } while (randomValues[0] >= limit)
+    const j = randomValues[0] % range
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
 // Helper: Generate assignments using circular shuffle
 function generateAssignments(participants: Participant[]): Assignment[] {
   if (participants.length < 2) return []
 
-  // Shuffle participants
-  const shuffled = [...participants].sort(() => Math.random() - 0.5)
+  const shuffled = secureShuffleLocal(participants)
 
   // Create circular assignments
   const assignments: Assignment[] = []
@@ -493,8 +511,13 @@ function findValidSwapPartner(game: Game, participantId: string): Participant | 
 
   if (eligiblePartners.length === 0) return null
 
-  // Return a random eligible partner
-  return eligiblePartners[Math.floor(Math.random() * eligiblePartners.length)]
+  // Use rejection sampling for unbiased random selection
+  const limit = 2 ** 32 - (2 ** 32 % eligiblePartners.length)
+  const randomValues = new Uint32Array(1)
+  do {
+    crypto.getRandomValues(randomValues)
+  } while (randomValues[0] >= limit)
+  return eligiblePartners[randomValues[0] % eligiblePartners.length]
 }
 
 // Helper: Perform assignment swap between two participants

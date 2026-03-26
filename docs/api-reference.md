@@ -27,40 +27,56 @@ Use the `language` parameter in request bodies to specify the language for the g
 ### Full Health Check
 ```
 GET /api/health
-GET /api/health?verbose=true
 ```
-Returns comprehensive API status including version, uptime, and dependency health.
+Returns comprehensive API status including version, uptime, and service health checks. Does not expose any sensitive configuration values.
 
 **Response (200):**
 ```json
 {
-  "status": "healthy",
-  "version": "prod-abc123",
-  "environment": "prod",
+  "overallStatus": "Healthy",
+  "status": "Healthy",
   "timestamp": "2025-01-01T00:00:00.000Z",
+  "version": "prod-abc123",
+  "buildDate": "2025-01-01",
+  "environment": "prod",
   "uptime": 3600,
   "checks": {
-    "database": {
-      "status": "healthy",
-      "latencyMs": 45
+    "database": { "status": "ok" },
+    "email": { "status": "ok" }
+  },
+  "services": [
+    {
+      "name": "Azure Cosmos DB",
+      "status": "Healthy",
+      "message": "Database operational",
+      "responseTimeMs": 45
     },
-    "email": {
-      "status": "healthy",
-      "configured": true
+    {
+      "name": "Azure Communication Services (Email)",
+      "status": "Healthy",
+      "message": "Configuration valid",
+      "responseTimeMs": null
+    },
+    {
+      "name": "Azure Application Insights",
+      "status": "Healthy",
+      "message": "Configuration valid",
+      "responseTimeMs": null
     }
-  }
+  ]
 }
 ```
 
-With `?verbose=true`, includes memory usage:
+### Frontend Configuration
+```
+GET /api/config
+```
+Returns non-secret configuration values needed by the frontend (e.g., Application Insights connection string).
+
+**Response (200):**
 ```json
 {
-  "memory": {
-    "heapUsed": "50.5 MB",
-    "heapTotal": "100.2 MB",
-    "external": "5.1 MB",
-    "rss": "120.3 MB"
-  }
+  "appInsightsConnectionString": "InstrumentationKey=..."
 }
 ```
 

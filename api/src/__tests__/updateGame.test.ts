@@ -13,7 +13,12 @@ jest.mock('../shared/game-utils', () => ({
   reassignParticipant: jest.fn(),
   generateAssignments: jest.fn(),
   generateAssignmentsWithLocks: jest.fn(),
-  generateId: jest.fn().mockReturnValue('new-participant-id')
+  generateId: jest.fn().mockReturnValue('new-participant-id'),
+  safeCompare: jest.fn().mockImplementation((a: string, b: string) => a === b)
+}))
+
+jest.mock('../shared/rate-limiter', () => ({
+  checkRateLimit: jest.fn().mockReturnValue(null)
 }))
 
 import { getGameByCode, updateGame, getDatabaseStatus } from '../shared/cosmosdb'
@@ -107,8 +112,7 @@ describe('updateGame function', () => {
 
       expect(response.status).toBe(503)
       expect(response.jsonBody).toEqual({
-        error: 'Database not available',
-        details: 'Connection failed'
+        error: 'Database not available'
       })
     })
 
@@ -304,7 +308,7 @@ describe('updateGame function', () => {
     it('should add participant with valid token', async () => {
       const testGame = createTestGame()
       mockGetGameByCode.mockResolvedValueOnce(testGame)
-      mockGenerateAssignments.mockReturnValueOnce([
+      mockGenerateAssignmentsWithLocks.mockReturnValueOnce([
         { giverId: 'p1', receiverId: 'p2' },
         { giverId: 'p2', receiverId: 'p3' },
         { giverId: 'p3', receiverId: 'new-participant-id' },
@@ -420,7 +424,7 @@ describe('updateGame function', () => {
       ]
       testGame.assignments = []
       mockGetGameByCode.mockResolvedValueOnce(testGame)
-      mockGenerateAssignments.mockReturnValueOnce([
+      mockGenerateAssignmentsWithLocks.mockReturnValueOnce([
         { giverId: 'p1', receiverId: 'p2' },
         { giverId: 'p2', receiverId: 'new-participant-id' },
         { giverId: 'new-participant-id', receiverId: 'p1' }
@@ -437,7 +441,7 @@ describe('updateGame function', () => {
       expect(response.status).toBe(200)
       const updatedGame = response.jsonBody as Game
       expect(updatedGame.participants).toHaveLength(3)
-      expect(mockGenerateAssignments).toHaveBeenCalled()
+      expect(mockGenerateAssignmentsWithLocks).toHaveBeenCalled()
       expect(updatedGame.assignments).toHaveLength(3)
     })
   })
@@ -1371,8 +1375,7 @@ describe('updateGame function', () => {
 
       expect(response.status).toBe(500)
       expect(response.jsonBody).toEqual({
-        error: 'Failed to update game',
-        details: 'Database error'
+        error: 'Failed to update game'
       })
     })
 
@@ -1402,7 +1405,7 @@ describe('updateGame function', () => {
         { giverId: 'p3', receiverId: 'new-participant-id' },
         { giverId: 'new-participant-id', receiverId: 'p1' }
       ]
-      mockGenerateAssignments.mockReturnValue(newAssignments)
+      mockGenerateAssignmentsWithLocks.mockReturnValue(newAssignments)
 
       const mockRequest = createMockRequest(game.code, {
         action: 'joinInvitation',
@@ -1524,7 +1527,7 @@ describe('updateGame function', () => {
         { giverId: 'p3', receiverId: 'new-participant-id' },
         { giverId: 'new-participant-id', receiverId: 'p1' }
       ]
-      mockGenerateAssignments.mockReturnValue(newAssignments)
+      mockGenerateAssignmentsWithLocks.mockReturnValue(newAssignments)
 
       const mockRequest = createMockRequest(game.code, {
         action: 'joinInvitation',
@@ -1537,9 +1540,8 @@ describe('updateGame function', () => {
       expect(response.status).toBe(200)
       
       const updatedGame = mockUpdateGame.mock.calls[0][0]
-      // All participants should have cleared states
-      updatedGame.participants.forEach((p: { hasConfirmedAssignment: boolean; hasPendingReassignmentRequest: boolean }) => {
-        expect(p.hasConfirmedAssignment).toBe(false)
+      // Pending reassignment requests should be cleared
+      updatedGame.participants.forEach((p: { hasPendingReassignmentRequest: boolean }) => {
         expect(p.hasPendingReassignmentRequest).toBe(false)
       })
       expect(updatedGame.reassignmentRequests).toEqual([])
@@ -1558,7 +1560,7 @@ describe('updateGame function', () => {
         { giverId: 'p3', receiverId: 'new-participant-id' },
         { giverId: 'new-participant-id', receiverId: 'p1' }
       ]
-      mockGenerateAssignments.mockReturnValue(newAssignments)
+      mockGenerateAssignmentsWithLocks.mockReturnValue(newAssignments)
 
       const mockRequest = createMockRequest(game.code, {
         action: 'joinInvitation',
@@ -1585,7 +1587,7 @@ describe('updateGame function', () => {
         { giverId: 'p3', receiverId: 'new-participant-id' },
         { giverId: 'new-participant-id', receiverId: 'p1' }
       ]
-      mockGenerateAssignments.mockReturnValue(newAssignments)
+      mockGenerateAssignmentsWithLocks.mockReturnValue(newAssignments)
 
       const mockRequest = createMockRequest(game.code, {
         action: 'joinInvitation',

@@ -19,6 +19,7 @@ import { Game, Participant, CURRENCIES } from '@/lib/types'
 import { createGameAPI, CreateGameResponse, checkApiStatus } from '@/lib/api'
 import { useLanguage } from './useLanguage'
 import { LanguageToggle } from './LanguageToggle'
+import { DarkModeToggle } from './DarkModeToggle'
 import { toast } from 'sonner'
 
 interface CreateGameViewProps {
@@ -169,7 +170,7 @@ export function CreateGameView({ onGameCreated, onBack, emailConfigured = false 
       language
     }
 
-    toast.info(t('gameCreatedLocally') || 'Game created in demo mode (local storage only)')
+    toast.info(t('gameCreatedLocally'))
     onGameCreated(game)
   }
 
@@ -241,7 +242,10 @@ export function CreateGameView({ onGameCreated, onBack, emailConfigured = false 
           <ArrowLeft size={20} />
           {t('back')}
         </Button>
-        <LanguageToggle />
+        <div className="flex items-center gap-2">
+          <DarkModeToggle />
+          <LanguageToggle />
+        </div>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-8">

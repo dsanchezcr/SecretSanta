@@ -355,10 +355,6 @@
     "resourceGroupName": {
       "type": "string",
       "value": "[resourceGroup().name]"
-    },
-    "deploymentToken": {
-      "type": "string",
-      "value": "[listSecrets(resourceId('Microsoft.Web/staticSites', variables('staticWebAppName')), '2024-11-01').properties.apiKey]"
     }
   }
 }

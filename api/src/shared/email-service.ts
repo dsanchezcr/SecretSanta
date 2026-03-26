@@ -4,6 +4,19 @@ import { Game, Participant, Assignment, ReassignmentRequest, Language } from './
 // Supported languages array for type safety
 const SUPPORTED_LANGUAGES: Language[] = ['en', 'es', 'pt', 'fr', 'it', 'ja', 'zh', 'de', 'nl']
 
+/**
+ * HTML-escape user-provided content to prevent XSS in email templates.
+ */
+export function escapeHtml(text: string | undefined): string {
+  if (!text) return ''
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 // Helper function to get translation with fallback to English
 function getTranslation<T extends Record<Language, any>>(translations: T, language: Language): T[Language] {
   if (language in translations) {
@@ -383,18 +396,18 @@ export function generateOrganizerEmailContent(data: GameEmailTemplateData): { su
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 8px 0; font-weight: bold; width: 40%;">${t.name}:</td>
-          <td style="padding: 8px 0;">${game.name}</td>
+          <td style="padding: 8px 0;">${escapeHtml(game.name)}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; font-weight: bold;">${t.code}:</td>
           <td style="padding: 8px 0;"><code style="background: #e0e0e0; padding: 4px 8px; border-radius: 4px; font-size: 18px; font-weight: bold;">${game.code}</code></td>
         </tr>
         ${game.date ? `<tr><td style="padding: 8px 0; font-weight: bold;">${t.date}:</td><td style="padding: 8px 0;">${game.date}</td></tr>` : ''}
-        ${game.location ? `<tr><td style="padding: 8px 0; font-weight: bold;">${t.location}:</td><td style="padding: 8px 0;">${game.location}</td></tr>` : ''}
-        ${game.amount ? `<tr><td style="padding: 8px 0; font-weight: bold;">${t.amount}:</td><td style="padding: 8px 0;">${currencySymbol}${game.amount}</td></tr>` : ''}
+        ${game.location ? `<tr><td style="padding: 8px 0; font-weight: bold;">${t.location}:</td><td style="padding: 8px 0;">${escapeHtml(game.location)}</td></tr>` : ''}
+        ${game.amount ? `<tr><td style="padding: 8px 0; font-weight: bold;">${t.amount}:</td><td style="padding: 8px 0;">${currencySymbol}${escapeHtml(game.amount)}</td></tr>` : ''}
         <tr>
           <td style="padding: 8px 0; font-weight: bold;">${t.participants}:</td>
-          <td style="padding: 8px 0;">${game.participants.map(p => p.name).join(', ')}</td>
+          <td style="padding: 8px 0;">${game.participants.map(p => escapeHtml(p.name)).join(', ')}</td>
         </tr>
       </table>
     </div>
@@ -711,9 +724,9 @@ export function generateParticipantEmailContent(data: ParticipantEmailTemplateDa
     <div style="background: linear-gradient(135deg, #c41e3a 0%, #165B33 100%); padding: 25px; border-radius: 12px; margin: 25px 0; text-align: center; color: white;">
       <h2 style="margin: 0 0 15px 0; font-size: 20px;">${t.yourAssignment}</h2>
       <p style="margin: 0; font-size: 14px; opacity: 0.9;">${t.youGiftTo}</p>
-      <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold;">🎄 ${receiver.name} 🎄</p>
-      ${receiver.desiredGift ? `<p style="margin: 15px 0 0 0; font-size: 14px;"><strong>${t.theirDesiredGift}</strong> ${receiver.desiredGift}</p>` : ''}
-      ${receiver.wish ? `<p style="margin: 10px 0 0 0; font-size: 14px;"><strong>${t.theirWish}</strong> ${receiver.wish}</p>` : ''}
+      <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold;">🎄 ${escapeHtml(receiver.name)} 🎄</p>
+      ${receiver.desiredGift ? `<p style="margin: 15px 0 0 0; font-size: 14px;"><strong>${t.theirDesiredGift}</strong> ${escapeHtml(receiver.desiredGift)}</p>` : ''}
+      ${receiver.wish ? `<p style="margin: 10px 0 0 0; font-size: 14px;"><strong>${t.theirWish}</strong> ${escapeHtml(receiver.wish)}</p>` : ''}
     </div>
     
     <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
@@ -723,12 +736,12 @@ export function generateParticipantEmailContent(data: ParticipantEmailTemplateDa
     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
       <h3 style="margin-top: 0; color: #165B33;">📋 ${t.gameDetails}</h3>
       <table style="width: 100%; border-collapse: collapse;">
-        <tr><td style="padding: 6px 0; font-weight: bold;">${t.name}:</td><td style="padding: 6px 0;">${game.name}</td></tr>
+        <tr><td style="padding: 6px 0; font-weight: bold;">${t.name}:</td><td style="padding: 6px 0;">${escapeHtml(game.name)}</td></tr>
         ${game.date ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.date}:</td><td style="padding: 6px 0;">${game.date}</td></tr>` : ''}
-        ${game.location ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.location}:</td><td style="padding: 6px 0;">${game.location}</td></tr>` : ''}
-        ${game.amount ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.amount}:</td><td style="padding: 6px 0;">${currencySymbol}${game.amount}</td></tr>` : ''}
+        ${game.location ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.location}:</td><td style="padding: 6px 0;">${escapeHtml(game.location)}</td></tr>` : ''}
+        ${game.amount ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.amount}:</td><td style="padding: 6px 0;">${currencySymbol}${escapeHtml(game.amount)}</td></tr>` : ''}
       </table>
-      ${game.generalNotes ? `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;"><strong>${t.notes}:</strong><br>${game.generalNotes}</div>` : ''}
+      ${game.generalNotes ? `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;"><strong>${t.notes}:</strong><br>${escapeHtml(game.generalNotes)}</div>` : ''}
     </div>
     
     <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
@@ -1005,7 +1018,7 @@ export function generateOrganizerRecoveryEmailContent(data: OrganizerRecoveryEma
             <td style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 32px; text-align: center;">
               <div style="font-size: 48px; margin-bottom: 16px;">🔑</div>
               <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">${t.headerTitle}</h1>
-              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">${game.name}</p>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">${escapeHtml(game.name)}</p>
             </td>
           </tr>
           
@@ -1258,7 +1271,7 @@ export function generateParticipantRecoveryEmailContent(data: ParticipantRecover
             <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px; text-align: center;">
               <div style="font-size: 48px; margin-bottom: 16px;">🔑</div>
               <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">${t.headerTitle}</h1>
-              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">${game.name}</p>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">${escapeHtml(game.name)}</p>
             </td>
           </tr>
           
@@ -1515,7 +1528,7 @@ export function generateParticipantConfirmedEmailContent(data: ParticipantConfir
     <p style="font-size: 16px;">${t.confirmed}</p>
     
     <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #165B33;">
-      <p style="margin: 0;"><strong>${t.participantName}:</strong> ${participant.name}</p>
+      <p style="margin: 0;"><strong>${t.participantName}:</strong> ${escapeHtml(participant.name)}</p>
       <p style="margin: 10px 0 0 0;"><strong>${t.totalConfirmed}:</strong> ${confirmedCount}/${totalCount}</p>
     </div>
     
@@ -1692,7 +1705,7 @@ export function generateReassignmentRequestedEmailContent(data: ReassignmentRequ
     <p style="font-size: 16px;">${t.requested}</p>
     
     <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f57c00;">
-      <p style="margin: 0;"><strong>${t.participantName}:</strong> ${participant.name}</p>
+      <p style="margin: 0;"><strong>${t.participantName}:</strong> ${escapeHtml(participant.name)}</p>
       <p style="margin: 10px 0 0 0;"><strong>${t.pendingRequests}:</strong> ${pendingCount}</p>
     </div>
     
@@ -1865,7 +1878,7 @@ export function generateReassignmentResultEmailContent(data: ReassignmentResultE
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: ${approved ? 'linear-gradient(135deg, #165B33 0%, #2e7d32 100%)' : 'linear-gradient(135deg, #c41e3a 0%, #d32f2f 100%)'}; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">${approved ? '✅' : '❌'} ${game.name}</h1>
+    <h1 style="color: white; margin: 0; font-size: 28px;">${approved ? '✅' : '❌'} ${escapeHtml(game.name)}</h1>
   </div>
   
   <div style="background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
@@ -1876,7 +1889,7 @@ export function generateReassignmentResultEmailContent(data: ReassignmentResultE
     <div style="background: linear-gradient(135deg, #c41e3a 0%, #165B33 100%); padding: 25px; border-radius: 12px; margin: 25px 0; text-align: center; color: white;">
       <h2 style="margin: 0 0 15px 0; font-size: 20px;">${t.newAssignment}</h2>
       <p style="margin: 0; font-size: 14px; opacity: 0.9;">${t.youGiftTo}</p>
-      <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold;">🎄 ${newReceiver.name} 🎄</p>
+      <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold;">🎄 ${escapeHtml(newReceiver.name)} 🎄</p>
     </div>
     ` : ''}
     
@@ -2041,9 +2054,9 @@ export function generateWishUpdatedEmailContent(data: WishUpdatedEmailData): { s
     <p style="font-size: 16px;">${t.updated}</p>
     
     <div style="background: #f3e5f5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #9c27b0;">
-      <p style="margin: 0; font-size: 18px; font-weight: bold;">🎁 ${receiver.name}</p>
-      ${receiver.wish ? `<p style="margin: 15px 0 0 0;"><strong>${t.theirWish}:</strong> ${receiver.wish}</p>` : ''}
-      ${receiver.desiredGift ? `<p style="margin: 10px 0 0 0;"><strong>${t.theirDesiredGift}:</strong> ${receiver.desiredGift}</p>` : ''}
+      <p style="margin: 0; font-size: 18px; font-weight: bold;">🎁 ${escapeHtml(receiver.name)}</p>
+      ${receiver.wish ? `<p style="margin: 15px 0 0 0;"><strong>${t.theirWish}:</strong> ${escapeHtml(receiver.wish)}</p>` : ''}
+      ${receiver.desiredGift ? `<p style="margin: 10px 0 0 0;"><strong>${t.theirDesiredGift}:</strong> ${escapeHtml(receiver.desiredGift)}</p>` : ''}
     </div>
     
     <p style="font-size: 14px; color: #666; margin-top: 30px; text-align: center;">${t.footer}</p>
@@ -2254,11 +2267,11 @@ export function generateEventDetailsChangedEmailContent(data: EventDetailsChange
     changesText += `${t.time}: ${changes.time.old || '-'} → ${changes.time.new || '-'}\n`
   }
   if (changes.location) {
-    changesHtml += `<tr><td style="padding: 8px; font-weight: bold;">${t.location}</td><td style="padding: 8px; text-decoration: line-through; color: #999;">${changes.location.old || '-'}</td><td style="padding: 8px; color: #165B33; font-weight: bold;">${changes.location.new}</td></tr>`
+    changesHtml += `<tr><td style="padding: 8px; font-weight: bold;">${t.location}</td><td style="padding: 8px; text-decoration: line-through; color: #999;">${escapeHtml(changes.location.old) || '-'}</td><td style="padding: 8px; color: #165B33; font-weight: bold;">${escapeHtml(changes.location.new) || '-'}</td></tr>`
     changesText += `${t.location}: ${changes.location.old || '-'} → ${changes.location.new}\n`
   }
   if (changes.generalNotes) {
-    changesHtml += `<tr><td style="padding: 8px; font-weight: bold;">${t.notes}</td><td style="padding: 8px; text-decoration: line-through; color: #999;">${changes.generalNotes.old || '-'}</td><td style="padding: 8px; color: #165B33; font-weight: bold;">${changes.generalNotes.new}</td></tr>`
+    changesHtml += `<tr><td style="padding: 8px; font-weight: bold;">${t.notes}</td><td style="padding: 8px; text-decoration: line-through; color: #999;">${escapeHtml(changes.generalNotes.old) || '-'}</td><td style="padding: 8px; color: #165B33; font-weight: bold;">${escapeHtml(changes.generalNotes.new) || '-'}</td></tr>`
     changesText += `${t.notes}: ${changes.generalNotes.old || '-'} → ${changes.generalNotes.new}\n`
   }
 
@@ -2271,7 +2284,7 @@ export function generateEventDetailsChangedEmailContent(data: EventDetailsChange
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">📝 ${game.name}</h1>
+    <h1 style="color: white; margin: 0; font-size: 28px;">📝 ${escapeHtml(game.name)}</h1>
   </div>
   
   <div style="background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
@@ -2543,20 +2556,20 @@ export function generateReminderEmailContent(data: ReminderEmailData, recipientN
     ${customMessage ? `
     <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f57c00;">
       <h3 style="margin-top: 0; color: #e65100;">💬 ${t.customMessageLabel}</h3>
-      <p style="margin: 0;">${customMessage}</p>
+      <p style="margin: 0;">${escapeHtml(customMessage)}</p>
     </div>
     ` : ''}
     
     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
       <h3 style="margin-top: 0; color: #165B33;">📋 ${t.eventDetails}</h3>
       <table style="width: 100%; border-collapse: collapse;">
-        <tr><td style="padding: 6px 0; font-weight: bold;">${t.name}:</td><td style="padding: 6px 0;">${game.name}</td></tr>
+        <tr><td style="padding: 6px 0; font-weight: bold;">${t.name}:</td><td style="padding: 6px 0;">${escapeHtml(game.name)}</td></tr>
         ${game.date ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.date}:</td><td style="padding: 6px 0;">${game.date}</td></tr>` : ''}
         ${game.time ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.time}:</td><td style="padding: 6px 0;">${game.time}</td></tr>` : ''}
-        ${game.location ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.location}:</td><td style="padding: 6px 0;">${game.location}</td></tr>` : ''}
-        ${game.amount ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.amount}:</td><td style="padding: 6px 0;">${currencySymbol}${game.amount}</td></tr>` : ''}
+        ${game.location ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.location}:</td><td style="padding: 6px 0;">${escapeHtml(game.location)}</td></tr>` : ''}
+        ${game.amount ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.amount}:</td><td style="padding: 6px 0;">${currencySymbol}${escapeHtml(game.amount)}</td></tr>` : ''}
       </table>
-      ${game.generalNotes ? `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;"><strong>${t.notes}:</strong><br>${game.generalNotes}</div>` : ''}
+      ${game.generalNotes ? `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;"><strong>${t.notes}:</strong><br>${escapeHtml(game.generalNotes)}</div>` : ''}
     </div>
     
     <p style="font-size: 14px; color: #666; text-align: center;">${t.confirmReminder}</p>
@@ -2800,13 +2813,13 @@ export function generateParticipantInvitationEmailContent(data: ParticipantInvit
     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
       <h3 style="margin-top: 0; color: #165B33;">📋 ${t.eventDetails}</h3>
       <table style="width: 100%; border-collapse: collapse;">
-        <tr><td style="padding: 6px 0; font-weight: bold;">${t.name}:</td><td style="padding: 6px 0;">${game.name}</td></tr>
+        <tr><td style="padding: 6px 0; font-weight: bold;">${t.name}:</td><td style="padding: 6px 0;">${escapeHtml(game.name)}</td></tr>
         ${game.date ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.date}:</td><td style="padding: 6px 0;">${game.date}</td></tr>` : ''}
         ${game.time ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.time}:</td><td style="padding: 6px 0;">${game.time}</td></tr>` : ''}
-        ${game.location ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.location}:</td><td style="padding: 6px 0;">${game.location}</td></tr>` : ''}
-        ${game.amount ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.amount}:</td><td style="padding: 6px 0;">${currencySymbol}${game.amount}</td></tr>` : ''}
+        ${game.location ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.location}:</td><td style="padding: 6px 0;">${escapeHtml(game.location)}</td></tr>` : ''}
+        ${game.amount ? `<tr><td style="padding: 6px 0; font-weight: bold;">${t.amount}:</td><td style="padding: 6px 0;">${currencySymbol}${escapeHtml(game.amount)}</td></tr>` : ''}
       </table>
-      ${game.generalNotes ? `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;"><strong>${t.notes}:</strong><br>${game.generalNotes}</div>` : ''}
+      ${game.generalNotes ? `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;"><strong>${t.notes}:</strong><br>${escapeHtml(game.generalNotes)}</div>` : ''}
     </div>
     
     <p style="font-size: 14px; color: #666; text-align: center;">${t.action}</p>

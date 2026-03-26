@@ -1,9 +1,17 @@
 import { test, expect } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
 
 /**
  * Optimized E2E tests for Secret Santa
  * Focus on critical user flows only - not individual UI elements
  */
+
+// Helper to generate a future date string for tests
+function getFutureDate(daysFromNow = 60): string {
+  const d = new Date()
+  d.setDate(d.getDate() + daysFromNow)
+  return d.toISOString().split('T')[0]
+}
 
 // Global setup to handle cookie banner in all tests
 test.beforeEach(async ({ context }) => {
@@ -33,10 +41,10 @@ test.describe('Core User Flows', () => {
     await page.getByRole('button', { name: /crear nuevo juego|create new game/i }).click()
     await expect(page.getByText(/detalles del evento|event details/i)).toBeVisible()
     
-    // Fill event details
-    await page.getByLabel(/nombre del evento|event name/i).fill('Test Secret Santa 2025')
+    // Fill event details (use dynamic future date to avoid date validation failures)
+    await page.getByLabel(/nombre del evento|event name/i).fill('Test Secret Santa')
     await page.getByLabel(/monto del regalo|gift amount/i).fill('50')
-    await page.getByLabel(/fecha del evento|event date/i).fill('2025-12-25')
+    await page.getByLabel(/fecha del evento|event date/i).fill(getFutureDate())
     await page.getByLabel(/lugar del evento|event location/i).fill('Office Party')
     await page.getByRole('button', { name: /siguiente|next/i }).click()
     
@@ -116,7 +124,7 @@ test.describe('Core User Flows', () => {
     // Fill step 1
     await page.getByLabel(/nombre del evento|event name/i).fill('Test Event')
     await page.getByLabel(/monto del regalo|gift amount/i).fill('25')
-    await page.getByLabel(/fecha del evento|event date/i).fill('2025-12-25')
+    await page.getByLabel(/fecha del evento|event date/i).fill(getFutureDate())
     await page.getByLabel(/lugar del evento|event location/i).fill('Test Location')
     await page.getByRole('button', { name: /siguiente|next/i }).click()
     
@@ -271,7 +279,7 @@ test.describe('Core User Flows', () => {
     await page.getByRole('button', { name: /crear nuevo juego|create new game/i }).click()
     await page.getByLabel(/nombre del evento|event name/i).fill('Protected Test')
     await page.getByLabel(/monto del regalo|gift amount/i).fill('50')
-    await page.getByLabel(/fecha del evento|event date/i).fill('2025-12-25')
+    await page.getByLabel(/fecha del evento|event date/i).fill(getFutureDate())
     await page.getByLabel(/lugar del evento|event location/i).fill('Office')
     await page.getByRole('button', { name: /siguiente|next/i }).click()
     
@@ -417,7 +425,7 @@ test.describe('Error Handling and Token Entry', () => {
     await page.getByRole('button', { name: /crear nuevo juego|create new game/i }).click()
     await page.getByLabel(/nombre del evento|event name/i).fill('Token Test Game')
     await page.getByLabel(/monto del regalo|gift amount/i).fill('30')
-    await page.getByLabel(/fecha del evento|event date/i).fill('2025-12-25')
+    await page.getByLabel(/fecha del evento|event date/i).fill(getFutureDate())
     await page.getByLabel(/lugar del evento|event location/i).fill('Test Location')
     await page.getByRole('button', { name: /siguiente|next/i }).click()
     
@@ -472,7 +480,7 @@ test.describe('Error Handling and Token Entry', () => {
     await page.getByRole('button', { name: /crear nuevo juego|create new game/i }).click()
     await page.getByLabel(/nombre del evento|event name/i).fill('Hint Test Game')
     await page.getByLabel(/monto del regalo|gift amount/i).fill('25')
-    await page.getByLabel(/fecha del evento|event date/i).fill('2025-12-25')
+    await page.getByLabel(/fecha del evento|event date/i).fill(getFutureDate())
     await page.getByLabel(/lugar del evento|event location/i).fill('Office')
     await page.getByRole('button', { name: /siguiente|next/i }).click()
     
@@ -490,5 +498,19 @@ test.describe('Error Handling and Token Entry', () => {
     
     // Verify game was created
     await expect(page.getByRole('heading', { name: /juego creado|game created/i })).toBeVisible()
+  })
+})
+
+test.describe('Accessibility', () => {
+  test('home page should have no critical accessibility violations', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByRole('heading', { name: /secret santa|amigo secreto/i })).toBeVisible()
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .disableRules(['color-contrast']) // Allow theme-managed contrast
+      .analyze()
+
+    expect(results.violations.filter(v => v.impact === 'critical')).toHaveLength(0)
   })
 })

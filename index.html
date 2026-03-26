@@ -4,15 +4,57 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Secret Santa</title>
+    <title>Secret Santa - Gift Exchange Organizer</title>
+    <meta name="description" content="Organize your Secret Santa gift exchange easily. Create games, assign participants, set budgets, and send invitations — all in one place." />
+    <meta name="keywords" content="Secret Santa, gift exchange, Amigo Secreto, Christmas, holiday" />
+    <meta name="author" content="dsanchezcr" />
+
+    <!-- Open Graph / Social sharing -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Secret Santa - Gift Exchange Organizer" />
+    <meta property="og:description" content="Organize your Secret Santa gift exchange easily. Create games, assign participants, set budgets, and send invitations." />
+    <meta property="og:site_name" content="Secret Santa" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Secret Santa - Gift Exchange Organizer" />
+    <meta name="twitter:description" content="Organize your Secret Santa gift exchange easily." />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#dc2626" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Secret Santa" />
+
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <link href="/src/main.css" rel="stylesheet" />
+
+    <!-- JSON-LD structured data for search engine crawlers.
+         Note: <script type="application/ld+json"> is a non-executable data block per the HTML spec
+         and is NOT subject to CSP script-src restrictions (only JavaScript MIME types are restricted).
+         It is safe to include inline even without 'unsafe-inline' in script-src. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Secret Santa",
+      "description": "Organize your Secret Santa gift exchange easily. Create games, assign participants, set budgets, and send invitations.",
+      "applicationCategory": "EntertainmentApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
 </head>
 
-<body>
+<body class="bg-background text-foreground">
     <div id="app"></div>
     <script type="module" src="/src/main.tsx"></script>
 </body>

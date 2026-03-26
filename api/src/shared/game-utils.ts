@@ -1,19 +1,97 @@
-import { Assignment, Participant } from './types'
+import { randomInt, randomUUID, timingSafeEqual } from 'crypto'
+import { Assignment, Participant, ExclusionPair } from './types'
 
 export function generateGameCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  return randomInt(100000, 1000000).toString()
 }
 
 export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2)
+  return randomUUID()
 }
 
-export function generateAssignments(participants: Participant[]): Assignment[] {
+/**
+ * Constant-time string comparison to prevent timing attacks on token validation.
+ * Returns false if either value is empty/undefined.
+ * Performs a dummy comparison on length mismatch to avoid leaking length info.
+ * Rejects inputs exceeding MAX_TOKEN_LENGTH to prevent DoS via large allocations.
+ */
+const MAX_TOKEN_LENGTH = 512
+
+export function safeCompare(a: string | undefined, b: string | undefined): boolean {
+  if (!a || !b) return false
+  if (typeof a !== 'string' || typeof b !== 'string') return false
+  if (a.length > MAX_TOKEN_LENGTH || b.length > MAX_TOKEN_LENGTH) return false
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) {
+    // Perform a dummy comparison to prevent timing leak on length mismatch
+    timingSafeEqual(bufA, Buffer.alloc(bufA.length))
+    return false
+  }
+  return timingSafeEqual(bufA, bufB)
+}
+
+// Crypto-secure Fisher-Yates shuffle
+function secureShuffle<T>(arr: T[]): T[] {
+  const shuffled = [...arr]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = randomInt(0, i + 1)
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
+export interface AssignmentResult {
+  assignments: Assignment[]
+  exclusionsHonored: boolean
+}
+
+export function generateAssignments(participants: Participant[], exclusions: ExclusionPair[] = []): Assignment[] {
+  const result = generateAssignmentsWithResult(participants, exclusions)
+  return result.assignments
+}
+
+export function generateAssignmentsWithResult(participants: Participant[], exclusions: ExclusionPair[] = []): AssignmentResult {
   if (participants.length < 3) {
     throw new Error('Need at least 3 participants')
   }
 
-  const shuffled = [...participants].sort(() => Math.random() - 0.5)
+  // Precompute a lookup set for exclusion pairs to avoid repeated linear scans
+  const exclusionSet = new Set<string>()
+  for (const e of exclusions) {
+    const id1 = e.participantId1
+    const id2 = e.participantId2
+    if (!id1 || !id2) continue
+    const [minId, maxId] = id1 < id2 ? [id1, id2] : [id2, id1]
+    exclusionSet.add(`${minId}|${maxId}`)
+  }
+
+  const isExcluded = (giverId: string, receiverId: string): boolean => {
+    const [minId, maxId] = giverId < receiverId ? [giverId, receiverId] : [receiverId, giverId]
+    return exclusionSet.has(`${minId}|${maxId}`)
+  }
+
+  // Retry shuffling to find a valid assignment that respects exclusions
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const shuffled = secureShuffle(participants)
+    const assignments: Assignment[] = []
+    let valid = true
+
+    for (let i = 0; i < shuffled.length; i++) {
+      const giver = shuffled[i]
+      const receiver = shuffled[(i + 1) % shuffled.length]
+      if (isExcluded(giver.id, receiver.id)) {
+        valid = false
+        break
+      }
+      assignments.push({ giverId: giver.id, receiverId: receiver.id })
+    }
+
+    if (valid) return { assignments, exclusionsHonored: true }
+  }
+
+  // Fallback: return assignments without exclusion enforcement
+  const shuffled = secureShuffle(participants)
   const assignments: Assignment[] = []
 
   for (let i = 0; i < shuffled.length; i++) {
@@ -26,7 +104,7 @@ export function generateAssignments(participants: Participant[]): Assignment[] {
     })
   }
 
-  return assignments
+  return { assignments, exclusionsHonored: false }
 }
 
 /**
@@ -39,7 +117,8 @@ export function generateAssignments(participants: Participant[]): Assignment[] {
  */
 export function generateAssignmentsWithLocks(
   participants: Participant[],
-  currentAssignments: Assignment[]
+  currentAssignments: Assignment[],
+  exclusions: ExclusionPair[] = []
 ): Assignment[] {
   if (participants.length < 3) {
     throw new Error('Need at least 3 participants')
@@ -56,9 +135,9 @@ export function generateAssignmentsWithLocks(
     return [...currentAssignments]
   }
 
-  // If no locked assignments, generate fresh assignments
+  // If no locked assignments, generate fresh assignments (with exclusions)
   if (lockedAssignments.length === 0) {
-    return generateAssignments(participants)
+    return generateAssignments(participants, exclusions)
   }
 
   // Build maps for quick lookup
@@ -75,18 +154,32 @@ export function generateAssignmentsWithLocks(
 
   // Validate we have enough available receivers for unlocked participants
   if (availableReceivers.length < unlockedParticipants.length) {
-    // Edge case: not enough available receivers - fall back to full regeneration
-    return generateAssignments(participants)
+    // Edge case: not enough available receivers - fall back to full regeneration (with exclusions)
+    return generateAssignments(participants, exclusions)
   }
 
   // Shuffle unlocked participants and available receivers
-  const shuffledUnlocked = [...unlockedParticipants].sort(() => Math.random() - 0.5)
-  const shuffledReceivers = [...availableReceivers].sort(() => Math.random() - 0.5)
+  const shuffledUnlocked = secureShuffle(unlockedParticipants)
+  const shuffledReceivers = secureShuffle(availableReceivers)
 
-  // Create new assignments for unlocked participants, avoiding self-assignment
+  // Precompute exclusion lookup set (same approach as generateAssignmentsWithResult)
+  const exclusionSet = new Set<string>()
+  for (const e of exclusions) {
+    const id1 = e.participantId1
+    const id2 = e.participantId2
+    if (!id1 || !id2) continue
+    const [minId, maxId] = id1 < id2 ? [id1, id2] : [id2, id1]
+    exclusionSet.add(`${minId}|${maxId}`)
+  }
+  const isPairExcluded = (giverId: string, receiverId: string): boolean => {
+    const [minId, maxId] = giverId < receiverId ? [giverId, receiverId] : [receiverId, giverId]
+    return exclusionSet.has(`${minId}|${maxId}`)
+  }
+
+  // Create new assignments for unlocked participants, avoiding self-assignment and exclusions
   const newAssignments: Assignment[] = [...lockedAssignments]
   
-  // Try to assign receivers to givers, avoiding self-assignment
+  // Try to assign receivers to givers, avoiding self-assignment and exclusion violations
   let assignmentAttempts = 0
   const maxAttempts = 100
   
@@ -98,8 +191,8 @@ export function generateAssignmentsWithLocks(
       const giver = shuffledUnlocked[i]
       const receiver = shuffledReceivers[i]
       
-      // Check for self-assignment
-      if (giver.id === receiver) {
+      // Check for self-assignment or exclusion violation
+      if (giver.id === receiver || isPairExcluded(giver.id, receiver)) {
         hasError = true
         break
       }
@@ -116,13 +209,15 @@ export function generateAssignmentsWithLocks(
     }
     
     // Shuffle receivers again and retry
-    shuffledReceivers.sort(() => Math.random() - 0.5)
+    const reshuffled = secureShuffle(shuffledReceivers)
+    shuffledReceivers.length = 0
+    shuffledReceivers.push(...reshuffled)
     assignmentAttempts++
   }
   
-  // If we couldn't avoid self-assignment after many attempts, fall back to full regeneration
+  // If we couldn't avoid self-assignment/exclusions after many attempts, fall back to full regeneration
   if (assignmentAttempts >= maxAttempts) {
-    return generateAssignments(participants)
+    return generateAssignments(participants, exclusions)
   }
 
   return newAssignments
@@ -187,8 +282,8 @@ export function reassignParticipant(
   })
   
   const swapPartner = unconfirmedPartners.length > 0
-    ? unconfirmedPartners[Math.floor(Math.random() * unconfirmedPartners.length)]
-    : sortedSwapPartners[Math.floor(Math.random() * sortedSwapPartners.length)]
+    ? unconfirmedPartners[randomInt(0, unconfirmedPartners.length)]
+    : sortedSwapPartners[randomInt(0, sortedSwapPartners.length)]
   
   // Perform the swap:
   // Before: A → B, C → D

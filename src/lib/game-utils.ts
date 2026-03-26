@@ -1,11 +1,47 @@
 import { Assignment, Participant, Language } from './types'
 
+// Generate a cryptographically secure random integer in [0, maxExclusive)
+// Uses rejection sampling to eliminate modulo bias
+function getSecureRandomInt(maxExclusive: number): number {
+  if (maxExclusive <= 0) {
+    throw new Error('maxExclusive must be positive')
+  }
+  // Rejection sampling: discard values in the biased tail
+  const limit = 2 ** 32 - (2 ** 32 % maxExclusive)
+  const array = new Uint32Array(1)
+  do {
+    window.crypto.getRandomValues(array)
+  } while (array[0] >= limit)
+  return array[0] % maxExclusive
+}
+
+// Generate a cryptographically secure base-36 string of at least the given length
+function getSecureRandomBase36(length: number): string {
+  if (length <= 0) {
+    throw new Error('length must be positive')
+  }
+  let result = ''
+  const buffer = new Uint32Array(4)
+  while (result.length < length) {
+    window.crypto.getRandomValues(buffer)
+    for (let i = 0; i < buffer.length && result.length < length; i++) {
+      result += buffer[i].toString(36)
+    }
+  }
+  return result.slice(0, length)
+}
+
 export function generateGameCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  // Preserve the original 6-digit range [100000, 999999]
+  const value = 100000 + getSecureRandomInt(900000)
+  return value.toString()
 }
 
 export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2)
+  // Date prefix plus secure random suffix
+  const prefix = Date.now().toString(36)
+  const suffix = getSecureRandomBase36(10)
+  return prefix + suffix
 }
 
 /**
@@ -62,7 +98,12 @@ export function generateAssignments(participants: Participant[]): Assignment[] {
     throw new Error('Need at least 3 participants')
   }
 
-  const shuffled = [...participants].sort(() => Math.random() - 0.5)
+  const shuffled = [...participants]
+  // Crypto-secure Fisher-Yates shuffle
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = getSecureRandomInt(i + 1)
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
   const assignments: Assignment[] = []
 
   for (let i = 0; i < shuffled.length; i++) {

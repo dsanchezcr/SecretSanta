@@ -26,15 +26,18 @@ export function EventCountdown({ targetDate, targetTime, label }: CountdownProps
   const units = timeUnits[language] || timeUnits.en
 
   useEffect(() => {
-    // Parse YYYY-MM-DD into numeric components once; validate to avoid NaN dates
+    // Parse YYYY-MM-DD into numeric components once; validate to avoid NaN dates.
+    // Validation is done here so calculate() can clear stale state when props become invalid.
     const dateParts = targetDate.split('-').map(Number)
-    if (dateParts.length !== 3 || dateParts.some(isNaN)) {
-      setTimeLeft('')
-      return
-    }
-    const [year, month, day] = dateParts
+    const dateValid = dateParts.length === 3 && !dateParts.some(isNaN)
 
     const calculate = () => {
+      if (!dateValid) {
+        setTimeLeft('')
+        return
+      }
+      const [year, month, day] = dateParts
+
       let target: Date
       if (targetTime) {
         // Parse components explicitly to use local time (ISO string T-format may vary across engines)

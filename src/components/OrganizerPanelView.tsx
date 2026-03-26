@@ -586,7 +586,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
     }
   }
 
-  // Handle force reassign participant
+  // Handle force reassign participant (via confirmation dialog, for confirmed participants)
   const handleForceReassignParticipant = async () => {
     if (!participantToForceReassign) return
     
@@ -619,6 +619,37 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
       setIsForcingReassignment(false)
       setShowForceReassignDialog(false)
       setParticipantToForceReassign(null)
+    }
+  }
+
+  // Handle direct reassign (no confirmation dialog, for unconfirmed participants)
+  const handleReassignParticipantDirect = async (participant: Participant) => {
+    if (isForcingReassignment) return
+    setIsForcingReassignment(true)
+    try {
+      const apiStatus = await checkApiStatus()
+      if (apiStatus.available && apiStatus.databaseConnected) {
+        try {
+          const updatedGame = await forceReassignParticipantAPI(game.code, game.organizerToken, participant.id)
+          onUpdateGame(updatedGame)
+        } catch {
+          const updatedGame = forceReassignParticipantLocal(game, participant.id)
+          onUpdateGame(updatedGame)
+        }
+      } else {
+        const updatedGame = forceReassignParticipantLocal(game, participant.id)
+        onUpdateGame(updatedGame)
+      }
+      toast.success(t('forceReassignSuccess'))
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to reassign participant'
+      if (message.includes('no valid swap') || message.includes('No valid swap') || message.includes('Cannot reassign')) {
+        toast.error(t('reassignmentFailedSuggestAll'))
+      } else {
+        toast.error(message)
+      }
+    } finally {
+      setIsForcingReassignment(false)
     }
   }
 
@@ -1570,41 +1601,7 @@ export function OrganizerPanelView({ game, onUpdateGame, onBack, onGameDeleted }
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            setParticipantToForceReassign(participant)
-                            // No confirmation needed — participant hasn't confirmed yet
-                            // Set state and trigger reassign immediately via effect-like pattern
-                            setIsForcingReassignment(true)
-                            const doReassign = async () => {
-                              try {
-                                const apiStatus = await checkApiStatus()
-                                if (apiStatus.available && apiStatus.databaseConnected) {
-                                  try {
-                                    const updatedGame = await forceReassignParticipantAPI(game.code, game.organizerToken, participant.id)
-                                    onUpdateGame(updatedGame)
-                                  } catch {
-                                    const updatedGame = forceReassignParticipantLocal(game, participant.id)
-                                    onUpdateGame(updatedGame)
-                                  }
-                                } else {
-                                  const updatedGame = forceReassignParticipantLocal(game, participant.id)
-                                  onUpdateGame(updatedGame)
-                                }
-                                toast.success(t('forceReassignSuccess'))
-                              } catch (error: unknown) {
-                                const message = error instanceof Error ? error.message : 'Failed to reassign participant'
-                                if (message.includes('no valid swap') || message.includes('No valid swap') || message.includes('Cannot reassign')) {
-                                  toast.error(t('reassignmentFailedSuggestAll'))
-                                } else {
-                                  toast.error(message)
-                                }
-                              } finally {
-                                setIsForcingReassignment(false)
-                                setParticipantToForceReassign(null)
-                              }
-                            }
-                            doReassign()
-                          }}
+                          onClick={() => handleReassignParticipantDirect(participant)}
                           disabled={isForcingReassignment}
                           className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                           title={t('reassignParticipant')}

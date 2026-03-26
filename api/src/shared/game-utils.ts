@@ -163,10 +163,24 @@ export function generateAssignmentsWithLocks(
   const shuffledUnlocked = secureShuffle(unlockedParticipants)
   const shuffledReceivers = secureShuffle(availableReceivers)
 
-  // Create new assignments for unlocked participants, avoiding self-assignment
+  // Precompute exclusion lookup set (same approach as generateAssignmentsWithResult)
+  const exclusionSet = new Set<string>()
+  for (const e of exclusions) {
+    const id1 = e.participantId1
+    const id2 = e.participantId2
+    if (!id1 || !id2) continue
+    const [minId, maxId] = id1 < id2 ? [id1, id2] : [id2, id1]
+    exclusionSet.add(`${minId}|${maxId}`)
+  }
+  const isPairExcluded = (giverId: string, receiverId: string): boolean => {
+    const [minId, maxId] = giverId < receiverId ? [giverId, receiverId] : [receiverId, giverId]
+    return exclusionSet.has(`${minId}|${maxId}`)
+  }
+
+  // Create new assignments for unlocked participants, avoiding self-assignment and exclusions
   const newAssignments: Assignment[] = [...lockedAssignments]
   
-  // Try to assign receivers to givers, avoiding self-assignment
+  // Try to assign receivers to givers, avoiding self-assignment and exclusion violations
   let assignmentAttempts = 0
   const maxAttempts = 100
   
@@ -178,8 +192,8 @@ export function generateAssignmentsWithLocks(
       const giver = shuffledUnlocked[i]
       const receiver = shuffledReceivers[i]
       
-      // Check for self-assignment
-      if (giver.id === receiver) {
+      // Check for self-assignment or exclusion violation
+      if (giver.id === receiver || isPairExcluded(giver.id, receiver)) {
         hasError = true
         break
       }
@@ -202,7 +216,7 @@ export function generateAssignmentsWithLocks(
     assignmentAttempts++
   }
   
-  // If we couldn't avoid self-assignment after many attempts, fall back to full regeneration
+  // If we couldn't avoid self-assignment/exclusions after many attempts, fall back to full regeneration
   if (assignmentAttempts >= maxAttempts) {
     return generateAssignments(participants, exclusions)
   }

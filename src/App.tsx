@@ -163,8 +163,9 @@ function App() {
     }))
     setCurrentGameCode(game.code)
     setEmailResults(results)
-    // Clear the #create hash so that refreshing the page doesn't reopen the create-game view
-    window.history.replaceState({ view: 'game-created' }, '', '/')
+    // Clear the #create hash so that refreshing the page doesn't reopen the create-game view.
+    // Preserve existing query params (e.g. ?lang=...) so a reload doesn't drop the language setting.
+    window.history.replaceState({ view: 'game-created' }, '', window.location.pathname + window.location.search)
     setView('game-created')
   }
 

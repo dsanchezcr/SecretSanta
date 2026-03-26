@@ -14,13 +14,15 @@ export function QRCodeDisplay({ value, size = 200, className, ariaLabel }: QRCod
 
   useEffect(() => {
     if (!canvasRef.current) return
+    let cancelled = false
     QRCode.toCanvas(canvasRef.current, value, {
       width: size,
       margin: 2,
       color: { dark: '#000000', light: '#ffffff' },
     })
-      .then(() => setError(false))
-      .catch(() => setError(true))
+      .then(() => { if (!cancelled) setError(false) })
+      .catch(() => { if (!cancelled) setError(true) })
+    return () => { cancelled = true }
   }, [value, size])
 
   if (error) {

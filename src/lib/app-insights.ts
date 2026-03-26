@@ -34,8 +34,13 @@ function sanitizeSensitiveUrl(url: string | undefined): string | undefined {
     }
     return changed ? parsed.toString() : url
   } catch {
-    // Fallback: apply path redaction directly on the raw string for non-absolute URLs
-    return url.replace(SENSITIVE_PATH_PATTERN, '$1[redacted]')
+    // Fallback for relative/non-parseable URLs (e.g. dependency 'name' fields with method prefix):
+    // apply both path and query-param redaction directly on the raw string.
+    let sanitized = url.replace(SENSITIVE_PATH_PATTERN, '$1[redacted]')
+    for (const param of SENSITIVE_PARAMS) {
+      sanitized = sanitized.replace(new RegExp(`([?&]${param}=)[^&]*`, 'g'), '$1[redacted]')
+    }
+    return sanitized
   }
 }
 

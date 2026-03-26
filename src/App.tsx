@@ -17,31 +17,12 @@ import { JoinInvitationView } from '@/components/JoinInvitationView'
 import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { LoadingView } from '@/components/LoadingView'
 import { Game, Participant } from '@/lib/types'
-import { useLocalStorage, LOCAL_STORAGE_PREFIX } from '@/hooks/use-local-storage'
+import { useLocalStorage } from '@/hooks/use-local-storage'
 import { checkApiStatus, getGameAPI, CreateGameResponse } from '@/lib/api'
 import { initializeAnalytics } from '@/lib/analytics'
 
-// Clean up old game data from localStorage (TTL: 30 days)
-function cleanupOldGameData() {
-  try {
-    const raw = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}games`)
-    if (!raw) return
-    const games = JSON.parse(raw) as Record<string, { createdAt?: number }>
-    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
-    let changed = false
-    for (const code of Object.keys(games)) {
-      const createdAt = games[code]?.createdAt
-      // Treat entries without createdAt as expired (legacy data)
-      if (!createdAt || createdAt < cutoff) {
-        delete games[code]
-        changed = true
-      }
-    }
-    if (changed) {
-      localStorage.setItem(`${LOCAL_STORAGE_PREFIX}games`, JSON.stringify(games))
-    }
-  } catch { /* ignore */ }
-}
+// TTL constant for game data cleanup (30 days in ms)
+const GAME_DATA_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 // API health check configuration for initial load
 const INITIAL_CHECK_RETRIES = 2
@@ -143,8 +124,22 @@ function App() {
     // Initialize Google Analytics if user has consented
     initializeAnalytics()
     
-    // Clean up old game data from localStorage (>30 days)
-    cleanupOldGameData()
+    // Clean up old game data via React state so localStorage stays in sync (>30 days)
+    setGames(prev => {
+      if (!prev) return prev
+      const cutoff = Date.now() - GAME_DATA_TTL_MS
+      const cleaned: Record<string, Game> = {}
+      let changed = false
+      for (const [code, game] of Object.entries(prev)) {
+        // Treat entries without createdAt as expired (legacy data)
+        if (game.createdAt && game.createdAt >= cutoff) {
+          cleaned[code] = game
+        } else {
+          changed = true
+        }
+      }
+      return changed ? cleaned : prev
+    })
     
     // Re-check every 30 seconds (without retries)
     const interval = setInterval(() => checkStatus(false), 30000)

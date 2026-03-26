@@ -86,7 +86,9 @@ export function generateICS(event: {
 }
 
 function escapeICS(text: string): string {
-  return text.replace(/[\\;,]/g, (c) => `\\${c}`).replace(/\n/g, '\\n')
+  // Normalize line endings first to prevent ICS line-structure breaks or property injection via \r
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  return normalized.replace(/[\\;,]/g, (c) => `\\${c}`).replace(/\n/g, '\\n')
 }
 
 /**

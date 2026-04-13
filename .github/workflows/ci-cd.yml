@@ -33,7 +33,7 @@ on:
     branches: [main]
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '20.19.0'
   AZURE_LOCATION: 'centralus'
   PROJECT_NAME: 'secretsanta'
   AZURE_RESOURCE_GROUP: 'secretsanta'

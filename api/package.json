@@ -26,10 +26,10 @@
     "ts-jest": "^29.2.5",
     "typescript": "^5.9.3"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
   "overrides": {
     "minimatch": "^8.0.7"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }
